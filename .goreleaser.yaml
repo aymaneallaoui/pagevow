@@ -1,0 +1,54 @@
+version: 2
+
+project_name: pagevow
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: pagevow
+    main: ./cmd/pagevow
+    binary: pagevow
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/aymaneallaoui/pagevow/internal/version.version={{ .Version }}
+      - -X github.com/aymaneallaoui/pagevow/internal/version.commit={{ .Commit }}
+      - -X github.com/aymaneallaoui/pagevow/internal/version.date={{ .Date }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: pagevow
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - NOTICE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

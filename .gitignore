@@ -1,0 +1,11 @@
+/bin/
+/dist/
+/.pagevow/
+*.test
+*.out
+coverage.txt
+.env
+.env.*
+.DS_Store
+.idea/
+.vscode/

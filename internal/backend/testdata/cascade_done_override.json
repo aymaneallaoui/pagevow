@@ -1,0 +1,272 @@
+{
+  "name": "done_override",
+  "steps": [
+    {
+      "expected": {
+        "cache_len": 0,
+        "calls": [
+          "primary",
+          "verifier"
+        ],
+        "cascade": {
+          "primary": {
+            "answers": {
+              "click_target": {
+                "choice": "1",
+                "confidence": 0.6,
+                "probabilities": {
+                  "1": 0.6,
+                  "2": 0.2,
+                  "3": 0.2
+                }
+              },
+              "operation": {
+                "choice": "DONE",
+                "confidence": 1.0,
+                "probabilities": {
+                  "BLOCKED": 0.0,
+                  "CLICK": 0.0,
+                  "DONE": 1.0,
+                  "TYPE_TEXT": 0.0,
+                  "WAIT": 0.0
+                }
+              },
+              "type_text_target": {
+                "choice": "1",
+                "confidence": 0.6,
+                "probabilities": {
+                  "1": 1.0
+                }
+              }
+            },
+            "model": "small"
+          },
+          "reason": "done",
+          "used": "verifier",
+          "verifier": {
+            "answers": {
+              "click_target": {
+                "choice": "1",
+                "confidence": 1.0,
+                "probabilities": {
+                  "1": 1.0,
+                  "2": 0.0,
+                  "3": 0.0
+                }
+              },
+              "operation": {
+                "choice": "CLICK",
+                "confidence": 1.0,
+                "probabilities": {
+                  "BLOCKED": 0.0,
+                  "CLICK": 1.0,
+                  "DONE": 0.0,
+                  "TYPE_TEXT": 0.0,
+                  "WAIT": 0.0
+                }
+              },
+              "type_text_target": {
+                "choice": "1",
+                "confidence": 0.6,
+                "probabilities": {
+                  "1": 1.0
+                }
+              }
+            },
+            "model": "large"
+          }
+        },
+        "decision": {
+          "choice": "e2",
+          "confidence": 1.0,
+          "model": "large",
+          "operation": "CLICK",
+          "operation_probabilities": {
+            "BLOCKED": 0.0,
+            "CLICK": 1.0,
+            "DONE": 0.0,
+            "TYPE_TEXT": 0.0,
+            "WAIT": 0.0
+          },
+          "probabilities": {
+            "e2": 1.0,
+            "e3": 0.0,
+            "e4": 0.0
+          },
+          "raw_answers": {
+            "click_target": {
+              "choice": "1",
+              "confidence": 1.0,
+              "probabilities": {
+                "1": 1.0,
+                "2": 0.0,
+                "3": 0.0
+              }
+            },
+            "operation": {
+              "choice": "CLICK",
+              "confidence": 1.0,
+              "probabilities": {
+                "BLOCKED": 0.0,
+                "CLICK": 1.0,
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.0,
+                "WAIT": 0.0
+              }
+            },
+            "type_text_target": {
+              "choice": "1",
+              "confidence": 0.6,
+              "probabilities": {
+                "1": 1.0
+              }
+            }
+          },
+          "target": "1",
+          "target_confidence": 1.0,
+          "target_ids": {
+            "e2": "1",
+            "e3": "2",
+            "e4": "3"
+          },
+          "target_probabilities": {
+            "1": 1.0,
+            "2": 0.0,
+            "3": 0.0
+          },
+          "usage": {
+            "input_tokens": 120,
+            "output_tokens": 4
+          }
+        }
+      },
+      "mutate_click_choice": "",
+      "responses": {
+        "primary": {
+          "answers": {
+            "click_target": {
+              "choice": "1",
+              "confidence": 0.6,
+              "probabilities": {
+                "1": 0.6,
+                "2": 0.2,
+                "3": 0.2
+              }
+            },
+            "operation": {
+              "choice": "DONE",
+              "confidence": 1.0,
+              "probabilities": {
+                "BLOCKED": 0.0,
+                "CLICK": 0.0,
+                "DONE": 1.0,
+                "TYPE_TEXT": 0.0,
+                "WAIT": 0.0
+              }
+            },
+            "type_text_target": {
+              "choice": "1",
+              "confidence": 0.6,
+              "probabilities": {
+                "1": 1.0
+              }
+            }
+          },
+          "model": "small",
+          "usage": {
+            "input_tokens": 120,
+            "output_tokens": 4
+          }
+        },
+        "verifier": {
+          "answers": {
+            "click_target": {
+              "choice": "1",
+              "confidence": 1.0,
+              "probabilities": {
+                "1": 1.0,
+                "2": 0.0,
+                "3": 0.0
+              }
+            },
+            "operation": {
+              "choice": "CLICK",
+              "confidence": 1.0,
+              "probabilities": {
+                "BLOCKED": 0.0,
+                "CLICK": 1.0,
+                "DONE": 0.0,
+                "TYPE_TEXT": 0.0,
+                "WAIT": 0.0
+              }
+            },
+            "type_text_target": {
+              "choice": "1",
+              "confidence": 0.6,
+              "probabilities": {
+                "1": 1.0
+              }
+            }
+          },
+          "model": "large",
+          "usage": {
+            "input_tokens": 120,
+            "output_tokens": 4
+          }
+        }
+      },
+      "state": {
+        "actions": [
+          {
+            "id": "e1",
+            "kind": "fill",
+            "label": "Search",
+            "node": 10,
+            "role": "textbox",
+            "value": ""
+          },
+          {
+            "id": "e2",
+            "kind": "click",
+            "label": "Open Search",
+            "node": 10,
+            "role": "textbox",
+            "value": ""
+          },
+          {
+            "id": "e3",
+            "kind": "click",
+            "label": "Go",
+            "node": 20,
+            "role": "button",
+            "value": ""
+          },
+          {
+            "id": "e4",
+            "kind": "click",
+            "label": "More",
+            "node": 30,
+            "role": "button",
+            "value": ""
+          },
+          {
+            "id": "wait",
+            "kind": "wait",
+            "label": "Wait for the page to update"
+          }
+        ],
+        "scroll": {
+          "height": 1200,
+          "y": 0
+        },
+        "text": "Search",
+        "title": "Search",
+        "url": "https://example.test/"
+      },
+      "trace_step": 0
+    }
+  ],
+  "target_confidence": 0,
+  "verifier": true,
+  "veto_cache": false
+}

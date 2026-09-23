@@ -19,6 +19,7 @@ type field struct {
 type statusReport struct {
 	ConfigFile       string         `json:"config_file"`
 	ConfigFileExists bool           `json:"config_file_exists"`
+	PaidAPI          bool           `json:"paid_api"`
 	Backend          map[string]any `json:"backend"`
 	URLs             map[string]any `json:"urls"`
 	TextHelper       map[string]any `json:"text_helper"`
@@ -69,6 +70,7 @@ func buildStatus(cfg config.Config, path string, exists bool) statusReport {
 	return statusReport{
 		ConfigFile:       path,
 		ConfigFileExists: exists,
+		PaidAPI:          len(paidServices(cfg)) > 0,
 		Backend:          toMap(append([]field{{"name", cfg.Backend}}, activeFields(cfg)...)),
 		URLs: toMap([]field{
 			{"local", cfg.Backends.Local.URL},
@@ -87,6 +89,17 @@ func buildStatus(cfg config.Config, path string, exists bool) statusReport {
 			{"channel", cfg.Browser.Channel},
 		}),
 	}
+}
+
+func paidServices(cfg config.Config) []string {
+	var services []string
+	if cfg.Backend == config.BackendJev {
+		services = append(services, fmt.Sprintf("the jev decision backend at %s", cfg.Backends.Jev.URL))
+	}
+	if helper := cfg.TextHelper.URL; helper != "" && !config.IsLoopbackURL(helper) {
+		services = append(services, fmt.Sprintf("the text helper at %s", helper))
+	}
+	return services
 }
 
 func activeFields(cfg config.Config) []field {
@@ -135,6 +148,8 @@ func display(value any) string {
 func renderStatus(out *ui.Printer, cfg config.Config, report statusReport) {
 	renderBackend(out, cfg)
 	out.Blank()
+	renderPaid(out, cfg, report.PaidAPI)
+	out.Blank()
 	out.Heading("URLs")
 	out.Pairs([]ui.Pair{
 		{Key: "local", Value: display(cfg.Backends.Local.URL)},
@@ -169,5 +184,17 @@ func renderBackend(out *ui.Printer, cfg config.Config) {
 	out.Pairs(append([]ui.Pair{{Key: "active", Value: cfg.Backend}}, pairs(activeFields(cfg))...))
 	if cfg.Backend == config.BackendJev {
 		out.Status(ui.Info, "jev sends page data to a remote service that may bill per request")
+	}
+}
+
+func renderPaid(out *ui.Printer, cfg config.Config, paid bool) {
+	out.Heading("Paid services")
+	out.Pairs([]ui.Pair{{Key: "paid_api", Value: fmt.Sprint(paid)}})
+	if !paid {
+		out.Status(ui.OK, "run would use no paid service: the backend and the text helper are local or not set")
+		return
+	}
+	for _, service := range paidServices(cfg) {
+		out.Status(ui.Warn, "run would call %s, which may bill per request", service)
 	}
 }

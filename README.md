@@ -28,10 +28,10 @@ make install    # installs into GOBIN
 | Command | Phase 0 |
 |---|---|
 | `pagevow version` | works |
-| `pagevow status [--json]` | works: active backend, URLs, browser settings, config file |
+| `pagevow status [--json]` | works: active backend, whether `run` would use a paid API, URLs, browser settings, config file |
 | `pagevow use local\|jev\|custom\|cascade` | works: writes the backend into the config file |
-| `pagevow keys set\|unset\|list` | works: keychain entries, values are never printed |
-| `pagevow init [DIR]` | works: writes a starter `pagevow.yaml` |
+| `pagevow keys set\|unset\|list` | works: keychain entries and a names-only index, values are never printed |
+| `pagevow init [DIR]` | works: writes a starter `pagevow.yaml`, refuses when a tests file already exists |
 | `pagevow run`, `start`, `stop`, `doctor` | phases 2 and 3 |
 | `pagevow install`, `update` | phase 5 |
 | `pagevow hook stop`, `plugin install\|uninstall\|path` | phase 4 |
@@ -47,6 +47,15 @@ pagevow keys set typesafe < key.txt    # value comes from stdin or a hidden prom
 pagevow use jev
 pagevow status
 ```
+
+`keys set` and `keys unset` keep an index of stored names (names only) in `keys.json` next to `config.yaml`.
+`keys list` shows every indexed name and every name the config references, each as `stored` (in the keychain), `env`
+(resolved from the environment) or `missing`.
+
+`status` prints `paid_api`: true when the backend is `jev`, or when the text helper URL is set and is not a loopback
+address. The variables of the Python agent are read as a fallback: `TYPESAFE_BASE_URL` applies to
+`backends.custom.url` only (`jev` keeps `https://api.typesafe.ai`), and `TYPESAFE_API_KEY` applies to both keys as
+`env:TYPESAFE_API_KEY`.
 
 ## Development
 

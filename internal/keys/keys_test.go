@@ -1,6 +1,9 @@
 package keys_test
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -97,4 +100,55 @@ func TestValidateName(t *testing.T) {
 	for _, name := range []string{"", "-lead", "has space", "a/b", "a:b"} {
 		assert.Error(t, keys.ValidateName(name), name)
 	}
+}
+
+func TestIndexPathSitsNextToTheConfigFile(t *testing.T) {
+	assert.Equal(t, filepath.Join("cfg", "keys.json"), keys.IndexPath(filepath.Join("cfg", "config.yaml")))
+}
+
+func TestIndexAddRemoveKeepsSortedUniqueNames(t *testing.T) {
+	index := keys.NewIndex(filepath.Join(t.TempDir(), "nested", "keys.json"))
+	names, err := index.Names()
+	require.NoError(t, err)
+	assert.Empty(t, names)
+
+	for _, name := range []string{"b", "a", "b", "c"} {
+		require.NoError(t, index.Add(name))
+	}
+	names, err = index.Names()
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a", "b", "c"}, names)
+
+	require.NoError(t, index.Remove("b"))
+	require.NoError(t, index.Remove("absent"))
+	names, err = index.Names()
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a", "c"}, names)
+}
+
+func TestIndexFileHoldsNamesOnlyAndIsPrivate(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "keys.json")
+	index := keys.NewIndex(path)
+	require.NoError(t, index.Add("typesafe"))
+
+	raw, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"names":["typesafe"]}`, string(raw))
+	if runtime.GOOS != "windows" {
+		info, statErr := os.Stat(path)
+		require.NoError(t, statErr)
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	}
+	entries, err := os.ReadDir(filepath.Dir(path))
+	require.NoError(t, err)
+	assert.Len(t, entries, 1, "no temporary files are left behind")
+}
+
+func TestIndexRejectsCorruptFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "keys.json")
+	require.NoError(t, os.WriteFile(path, []byte("not json"), 0o600))
+	index := keys.NewIndex(path)
+	_, err := index.Names()
+	assert.ErrorContains(t, err, path)
+	assert.Error(t, index.Add("x"))
 }

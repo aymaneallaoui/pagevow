@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -221,6 +222,43 @@ func TestStatusJSON(t *testing.T) {
 	assert.Equal(t, true, report.Browser["headless"])
 }
 
+func TestStatusPaidAPI(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(h *harness)
+		paid  bool
+		text  string
+	}{
+		{"local backend, no helper", func(*harness) {}, false, "no paid service"},
+		{"jev backend", func(h *harness) { h.mustRun("use", "jev") }, true, "jev decision backend at https://api.typesafe.ai"},
+		{"custom backend at a public host", func(h *harness) {
+			h.mustRun("use", "custom", "--url", "https://models.example.test")
+		}, false, "no paid service"},
+		{"loopback helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://127.0.0.1:8081/v1" }, false, "no paid service"},
+		{"localhost helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://localhost:8081/v1" }, false, "no paid service"},
+		{"ipv6 loopback helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://[::1]:8081/v1" }, false, "no paid service"},
+		{"lan helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://192.168.1.20:8081/v1" }, true, "text helper at http://192.168.1.20:8081/v1"},
+		{"public helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "https://api.example.test/v1" }, true, "text helper at https://api.example.test/v1"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newHarness(t)
+			tc.setup(h)
+
+			var report struct {
+				PaidAPI bool `json:"paid_api"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(h.mustRun("status", "--json")), &report))
+			assert.Equal(t, tc.paid, report.PaidAPI)
+
+			out := h.mustRun("status")
+			assert.Contains(t, out, "paid_api")
+			assert.Contains(t, out, strconv.FormatBool(tc.paid))
+			assert.Contains(t, out, tc.text)
+		})
+	}
+}
+
 func TestStatusReflectsConfigFileAndEnvironment(t *testing.T) {
 	h := newHarness(t)
 	h.mustRun("use", "custom", "--url", "http://127.0.0.1:8080")
@@ -404,17 +442,93 @@ func TestKeysUnset(t *testing.T) {
 	assert.Contains(t, out, "was not set")
 }
 
-func TestKeysListShowsReferencesAndStateWithoutValues(t *testing.T) {
+func (h *harness) indexNames() []string {
+	h.t.Helper()
+	names, err := keys.NewIndex(keys.IndexPath(h.configPath)).Names()
+	require.NoError(h.t, err)
+	return names
+}
+
+func TestKeysSetAndUnsetMaintainTheIndex(t *testing.T) {
 	h := newHarness(t)
-	require.NoError(t, h.store.Set("typesafe", "s3cret-value"))
+	for _, name := range []string{"typesafe", "extra", "typesafe"} {
+		_, err := h.runWithStdin("s3cret-value\n", "keys", "set", name)
+		require.NoError(t, err)
+	}
+	assert.Equal(t, []string{"extra", "typesafe"}, h.indexNames())
+
+	raw, err := os.ReadFile(keys.IndexPath(h.configPath))
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "s3cret-value")
+
+	out := h.mustRun("keys", "unset", "extra")
+	assert.Contains(t, out, "removed keychain:extra")
+	assert.Equal(t, []string{"typesafe"}, h.indexNames())
+}
+
+func TestKeysUnsetMissingEntryIsASuccessAndForgetsTheIndexedName(t *testing.T) {
+	h := newHarness(t)
+	require.NoError(t, keys.NewIndex(keys.IndexPath(h.configPath)).Add("ghost"))
+
+	out := h.mustRun("keys", "unset", "ghost")
+	assert.Contains(t, out, "was not set")
+	assert.Empty(t, h.indexNames())
+
+	out = h.mustRun("keys", "unset", "ghost")
+	assert.Contains(t, out, "was not set")
+}
+
+func TestKeysIndexFollowsTheConfigFlagAndStaysOutOfTheRealConfigDirectory(t *testing.T) {
+	h := newHarness(t)
+	other := filepath.Join(t.TempDir(), "elsewhere", "config.yaml")
+	_, err := h.runWithStdin("value\n", "--config", other, "keys", "set", "typesafe")
+	require.NoError(t, err)
+	assert.FileExists(t, keys.IndexPath(other))
+	assert.NoFileExists(t, keys.IndexPath(h.configPath))
+}
+
+func TestKeysListShowsStateWithoutValues(t *testing.T) {
+	h := newHarness(t)
+	h.env["MY_KEY"] = "sk-env-secret"
+	_, err := h.runWithStdin("s3cret-value\n", "keys", "set", "typesafe")
+	require.NoError(t, err)
+	h.mustRun("use", "custom", "--url", "http://127.0.0.1:8080", "--key", "env:MY_KEY")
+
 	out := h.mustRun("keys", "list")
 	assert.NotContains(t, out, "s3cret-value")
-	assert.Contains(t, out, "backends.jev.key")
-	assert.Contains(t, out, "keychain:typesafe")
-	assert.Contains(t, out, "available")
-	assert.Contains(t, out, "text_helper.key")
-	assert.Contains(t, out, "missing")
-	assert.Contains(t, out, "(none)")
+	assert.NotContains(t, out, "sk-env-secret")
+	assert.Regexp(t, `keychain:typesafe\s+index, backends\.jev\.key\s+stored`, out)
+	assert.Regexp(t, `env:MY_KEY\s+backends\.custom\.key\s+env`, out)
+	assert.Regexp(t, `keychain:text-helper\s+text_helper\.key\s+missing`, out)
+	assert.Contains(t, out, "pagevow keys set text-helper")
+}
+
+func TestKeysListReportsIndexedNameMissingFromKeychainAndHowToFixIt(t *testing.T) {
+	h := newHarness(t)
+	require.NoError(t, keys.NewIndex(keys.IndexPath(h.configPath)).Add("lost"))
+
+	out := h.mustRun("keys", "list")
+	assert.Regexp(t, `keychain:lost\s+index\s+missing`, out)
+	assert.Contains(t, out, "pagevow keys set lost")
+	assert.Contains(t, out, "pagevow keys unset lost")
+}
+
+func TestKeysListReportsMissingEnvironmentVariable(t *testing.T) {
+	h := newHarness(t)
+	h.mustRun("use", "custom", "--url", "http://127.0.0.1:8080", "--key", "env:NOT_SET_ANYWHERE")
+
+	out := h.mustRun("keys", "list")
+	assert.Regexp(t, `env:NOT_SET_ANYWHERE\s+backends\.custom\.key\s+missing`, out)
+	assert.Contains(t, out, "export the environment variable")
+}
+
+func TestKeysListWithNothingToShow(t *testing.T) {
+	h := newHarness(t)
+	require.NoError(t, os.MkdirAll(filepath.Dir(h.configPath), 0o750))
+	require.NoError(t, os.WriteFile(h.configPath, []byte("backends:\n  jev:\n    key: \"\"\ntext_helper:\n  key: \"\"\n"), 0o600))
+
+	out := h.mustRun("keys", "list")
+	assert.Contains(t, out, "no keys")
 }
 
 func TestInitWritesStarterTests(t *testing.T) {
@@ -457,6 +571,23 @@ func TestInitRefusesToOverwrite(t *testing.T) {
 	raw, readErr := os.ReadFile(path)
 	require.NoError(t, readErr)
 	assert.Equal(t, "- id: mine\n", string(raw))
+}
+
+func TestInitRefusesWhenAnotherTestsFileExists(t *testing.T) {
+	for _, rel := range []string{"browser-tests.yaml", filepath.Join(".claude", "browser-tests.yaml")} {
+		t.Run(rel, func(t *testing.T) {
+			h := newHarness(t)
+			dir := t.TempDir()
+			existing := filepath.Join(dir, rel)
+			require.NoError(t, os.MkdirAll(filepath.Dir(existing), 0o750))
+			require.NoError(t, os.WriteFile(existing, []byte("- id: mine\n"), 0o600))
+
+			_, err := h.run("init", dir)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), existing)
+			assert.NoFileExists(t, filepath.Join(dir, "pagevow.yaml"))
+		})
+	}
 }
 
 func TestContainerProvidesServices(t *testing.T) {

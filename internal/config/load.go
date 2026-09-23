@@ -34,7 +34,7 @@ type legacyVar struct {
 }
 
 var legacyVars = []legacyVar{
-	{env: "TYPESAFE_BASE_URL", keys: []string{"backends.jev.url", "backends.custom.url"}},
+	{env: "TYPESAFE_BASE_URL", keys: []string{"backends.custom.url"}},
 	{env: "TYPESAFE_API_KEY", keys: []string{"backends.jev.key", "backends.custom.key"}, asRef: true},
 	{env: "JEV_VERIFIER_BASE_URL", keys: []string{"backends.cascade.verifier"}},
 	{env: "TEXT_MODEL_BASE_URL", keys: []string{"text_helper.url"}},

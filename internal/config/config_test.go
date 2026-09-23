@@ -107,9 +107,10 @@ func TestLegacyEnvironmentFallback(t *testing.T) {
 
 	cfg, err := config.Load(config.Options{LookupEnv: lookup})
 	require.NoError(t, err)
-	assert.Equal(t, "http://legacy.example:9000", cfg.Backends.Jev.URL)
+	assert.Equal(t, "https://api.typesafe.ai", cfg.Backends.Jev.URL, "the hosted URL is never replaced by TYPESAFE_BASE_URL")
 	assert.Equal(t, "http://legacy.example:9000", cfg.Backends.Custom.URL)
 	assert.Equal(t, "env:TYPESAFE_API_KEY", cfg.Backends.Jev.Key)
+	assert.Equal(t, "env:TYPESAFE_API_KEY", cfg.Backends.Custom.Key)
 	assert.Equal(t, "http://legacy.example:9010", cfg.Backends.Cascade.Verifier)
 	assert.Equal(t, "http://text.example/v1", cfg.TextHelper.URL)
 	assert.Equal(t, "text-small", cfg.TextHelper.Model)
@@ -126,11 +127,15 @@ func TestLegacyFallbackYieldsToConfigAndEnvironment(t *testing.T) {
 		}
 		return "", false
 	}
-	path := writeFile(t, "backends:\n  jev:\n    url: http://from-file.example\n")
+	path := writeFile(t, "backends:\n  custom:\n    url: http://from-file.example\n")
 
 	cfg, err := config.Load(config.Options{File: path, LookupEnv: lookup})
 	require.NoError(t, err)
-	assert.Equal(t, "http://from-file.example", cfg.Backends.Jev.URL)
+	assert.Equal(t, "http://from-file.example", cfg.Backends.Custom.URL)
+	assert.Equal(t, "https://api.typesafe.ai", cfg.Backends.Jev.URL)
+
+	cfg, err = config.Load(config.Options{LookupEnv: lookup})
+	require.NoError(t, err)
 	assert.Equal(t, "http://legacy.example:9000", cfg.Backends.Custom.URL)
 
 	t.Setenv("PAGEVOW_BACKENDS_CUSTOM_URL", "http://from-env.example")

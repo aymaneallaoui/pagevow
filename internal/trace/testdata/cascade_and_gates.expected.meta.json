@@ -1,0 +1,9 @@
+{
+  "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+  "url": "http://localhost:3000/contact.html",
+  "status": "BLOCKED",
+  "steps": 2,
+  "elapsed_ms": 2000,
+  "verified": false,
+  "reason": "Target refused 2 times: Send: not editable"
+}

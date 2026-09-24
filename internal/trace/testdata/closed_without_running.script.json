@@ -1,0 +1,27 @@
+{
+  "name": "closed_without_running",
+  "url": "http://localhost:3000/contact.html",
+  "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+  "ops": [
+    {
+      "op": "finish",
+      "status": "closed",
+      "elapsed_ms": 0,
+      "error": null,
+      "raw_response": null,
+      "reason": null
+    },
+    {
+      "op": "set_verified",
+      "value": false
+    },
+    {
+      "op": "set_verified",
+      "value": null
+    },
+    {
+      "op": "set_verified",
+      "value": true
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "jev_latency_p50_ms": 600,
+  "jev_latency_max_ms": 900,
+  "input_tokens_total": 200
+}

@@ -1,0 +1,1172 @@
+[
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "https://a.com/post/",
+  "joined": "https://a.com/post/"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "item?id=22",
+  "joined": "https://news.ycombinator.com/item?id=22"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "../x",
+  "joined": "https://news.ycombinator.com/x"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "../../../x",
+  "joined": "https://news.ycombinator.com/x"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "./y",
+  "joined": "https://news.ycombinator.com/y"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "y/../z",
+  "joined": "https://news.ycombinator.com/z"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "/abs?x=1",
+  "joined": "https://news.ycombinator.com/abs?x=1"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "//cdn.example.org/p/",
+  "joined": "https://cdn.example.org/p/"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "?q=3",
+  "joined": "https://news.ycombinator.com/?q=3"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "#top",
+  "joined": "https://news.ycombinator.com/#top"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "",
+  "joined": "https://news.ycombinator.com/"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "https://a.com",
+  "joined": "https://a.com"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "http://b.com/x",
+  "joined": "http://b.com/x"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "javascript:void(0)",
+  "joined": "javascript:void(0)"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "mailto:a@b.c",
+  "joined": "mailto:a@b.c"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "a//b",
+  "joined": "https://news.ycombinator.com/a/b"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "..",
+  "joined": "https://news.ycombinator.com/"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": ".",
+  "joined": "https://news.ycombinator.com/"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "dir/.",
+  "joined": "https://news.ycombinator.com/dir/"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "dir/..",
+  "joined": "https://news.ycombinator.com/"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "x;p=2?y",
+  "joined": "https://news.ycombinator.com/x;p=2?y"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "https://a.com/x;p=1",
+  "joined": "https://a.com/x;p=1"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "vote?id=1&how=up",
+  "joined": "https://news.ycombinator.com/vote?id=1&how=up"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": " space",
+  "joined": "https://news.ycombinator.com/space"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "d/e/../f/",
+  "joined": "https://news.ycombinator.com/d/f/"
+ },
+ {
+  "base": "https://news.ycombinator.com/",
+  "ref": "g//h",
+  "joined": "https://news.ycombinator.com/g/h"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "https://a.com/post/",
+  "joined": "https://a.com/post/"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "item?id=22",
+  "joined": "https://news.ycombinator.com/a/b/item?id=22"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "../x",
+  "joined": "https://news.ycombinator.com/a/x"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "../../../x",
+  "joined": "https://news.ycombinator.com/x"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "./y",
+  "joined": "https://news.ycombinator.com/a/b/y"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "y/../z",
+  "joined": "https://news.ycombinator.com/a/b/z"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "/abs?x=1",
+  "joined": "https://news.ycombinator.com/abs?x=1"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "//cdn.example.org/p/",
+  "joined": "https://cdn.example.org/p/"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "?q=3",
+  "joined": "https://news.ycombinator.com/a/b/c?q=3"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "#top",
+  "joined": "https://news.ycombinator.com/a/b/c?x=1#top"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "",
+  "joined": "https://news.ycombinator.com/a/b/c?x=1#f"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "https://a.com",
+  "joined": "https://a.com"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "http://b.com/x",
+  "joined": "http://b.com/x"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "javascript:void(0)",
+  "joined": "javascript:void(0)"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "mailto:a@b.c",
+  "joined": "mailto:a@b.c"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "a//b",
+  "joined": "https://news.ycombinator.com/a/b/a/b"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "..",
+  "joined": "https://news.ycombinator.com/a/"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": ".",
+  "joined": "https://news.ycombinator.com/a/b/"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "dir/.",
+  "joined": "https://news.ycombinator.com/a/b/dir/"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "dir/..",
+  "joined": "https://news.ycombinator.com/a/b/"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "x;p=2?y",
+  "joined": "https://news.ycombinator.com/a/b/x;p=2?y"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "https://a.com/x;p=1",
+  "joined": "https://a.com/x;p=1"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "vote?id=1&how=up",
+  "joined": "https://news.ycombinator.com/a/b/vote?id=1&how=up"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": " space",
+  "joined": "https://news.ycombinator.com/a/b/space"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "d/e/../f/",
+  "joined": "https://news.ycombinator.com/a/b/d/f/"
+ },
+ {
+  "base": "https://news.ycombinator.com/a/b/c?x=1#f",
+  "ref": "g//h",
+  "joined": "https://news.ycombinator.com/a/b/g/h"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "https://a.com/post/",
+  "joined": "https://a.com/post/"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "item?id=22",
+  "joined": "http://a.com/item?id=22"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "../x",
+  "joined": "http://a.com/x"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "../../../x",
+  "joined": "http://a.com/x"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "./y",
+  "joined": "http://a.com/y"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "y/../z",
+  "joined": "http://a.com/z"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "/abs?x=1",
+  "joined": "http://a.com/abs?x=1"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "//cdn.example.org/p/",
+  "joined": "http://cdn.example.org/p/"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "?q=3",
+  "joined": "http://a.com?q=3"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "#top",
+  "joined": "http://a.com#top"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "",
+  "joined": "http://a.com"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "https://a.com",
+  "joined": "https://a.com"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "http://b.com/x",
+  "joined": "http://b.com/x"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "javascript:void(0)",
+  "joined": "javascript:void(0)"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "mailto:a@b.c",
+  "joined": "mailto:a@b.c"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "a//b",
+  "joined": "http://a.com/a/b"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "..",
+  "joined": "http://a.com/"
+ },
+ {
+  "base": "http://a.com",
+  "ref": ".",
+  "joined": "http://a.com/"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "dir/.",
+  "joined": "http://a.com/dir/"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "dir/..",
+  "joined": "http://a.com/"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "x;p=2?y",
+  "joined": "http://a.com/x;p=2?y"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "https://a.com/x;p=1",
+  "joined": "https://a.com/x;p=1"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "vote?id=1&how=up",
+  "joined": "http://a.com/vote?id=1&how=up"
+ },
+ {
+  "base": "http://a.com",
+  "ref": " space",
+  "joined": "http://a.com/space"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "d/e/../f/",
+  "joined": "http://a.com/d/f/"
+ },
+ {
+  "base": "http://a.com",
+  "ref": "g//h",
+  "joined": "http://a.com/g/h"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "https://a.com/post/",
+  "joined": "https://a.com/post/"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "item?id=22",
+  "joined": "https://a.com/dir/item?id=22"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "../x",
+  "joined": "https://a.com/x"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "../../../x",
+  "joined": "https://a.com/x"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "./y",
+  "joined": "https://a.com/dir/y"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "y/../z",
+  "joined": "https://a.com/dir/z"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "/abs?x=1",
+  "joined": "https://a.com/abs?x=1"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "//cdn.example.org/p/",
+  "joined": "https://cdn.example.org/p/"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "?q=3",
+  "joined": "https://a.com/dir/?q=3"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "#top",
+  "joined": "https://a.com/dir/#top"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "",
+  "joined": "https://a.com/dir/"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "https://a.com",
+  "joined": "https://a.com"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "http://b.com/x",
+  "joined": "http://b.com/x"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "javascript:void(0)",
+  "joined": "javascript:void(0)"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "mailto:a@b.c",
+  "joined": "mailto:a@b.c"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "a//b",
+  "joined": "https://a.com/dir/a/b"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "..",
+  "joined": "https://a.com/"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": ".",
+  "joined": "https://a.com/dir/"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "dir/.",
+  "joined": "https://a.com/dir/dir/"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "dir/..",
+  "joined": "https://a.com/dir/"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "x;p=2?y",
+  "joined": "https://a.com/dir/x;p=2?y"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "https://a.com/x;p=1",
+  "joined": "https://a.com/x;p=1"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "vote?id=1&how=up",
+  "joined": "https://a.com/dir/vote?id=1&how=up"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": " space",
+  "joined": "https://a.com/dir/space"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "d/e/../f/",
+  "joined": "https://a.com/dir/d/f/"
+ },
+ {
+  "base": "https://a.com/dir/",
+  "ref": "g//h",
+  "joined": "https://a.com/dir/g/h"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "https://a.com/post/",
+  "joined": "https://a.com/post/"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "item?id=22",
+  "joined": "https://a.com/dir/item?id=22"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "../x",
+  "joined": "https://a.com/x"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "../../../x",
+  "joined": "https://a.com/x"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "./y",
+  "joined": "https://a.com/dir/y"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "y/../z",
+  "joined": "https://a.com/dir/z"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "/abs?x=1",
+  "joined": "https://a.com/abs?x=1"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "//cdn.example.org/p/",
+  "joined": "https://cdn.example.org/p/"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "?q=3",
+  "joined": "https://a.com/dir/page.html;p=1?q=3"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "#top",
+  "joined": "https://a.com/dir/page.html;p=1?q=2#top"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "",
+  "joined": "https://a.com/dir/page.html;p=1?q=2"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "https://a.com",
+  "joined": "https://a.com"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "http://b.com/x",
+  "joined": "http://b.com/x"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "javascript:void(0)",
+  "joined": "javascript:void(0)"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "mailto:a@b.c",
+  "joined": "mailto:a@b.c"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "a//b",
+  "joined": "https://a.com/dir/a/b"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "..",
+  "joined": "https://a.com/"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": ".",
+  "joined": "https://a.com/dir/"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "dir/.",
+  "joined": "https://a.com/dir/dir/"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "dir/..",
+  "joined": "https://a.com/dir/"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "x;p=2?y",
+  "joined": "https://a.com/dir/x;p=2?y"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "https://a.com/x;p=1",
+  "joined": "https://a.com/x;p=1"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "vote?id=1&how=up",
+  "joined": "https://a.com/dir/vote?id=1&how=up"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": " space",
+  "joined": "https://a.com/dir/space"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "d/e/../f/",
+  "joined": "https://a.com/dir/d/f/"
+ },
+ {
+  "base": "https://a.com/dir/page.html;p=1?q=2",
+  "ref": "g//h",
+  "joined": "https://a.com/dir/g/h"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "https://a.com/post/",
+  "joined": "https://a.com/post/"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "item?id=22",
+  "joined": "file:///a/item?id=22"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "../x",
+  "joined": "file:///x"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "../../../x",
+  "joined": "file:x"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "./y",
+  "joined": "file:///a/y"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "y/../z",
+  "joined": "file:///a/z"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "/abs?x=1",
+  "joined": "file:///abs?x=1"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "//cdn.example.org/p/",
+  "joined": "file://cdn.example.org/p/"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "?q=3",
+  "joined": "file:///a/b?q=3"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "#top",
+  "joined": "file:///a/b#top"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "",
+  "joined": "file:///a/b"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "https://a.com",
+  "joined": "https://a.com"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "http://b.com/x",
+  "joined": "http://b.com/x"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "javascript:void(0)",
+  "joined": "javascript:void(0)"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "mailto:a@b.c",
+  "joined": "mailto:a@b.c"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "a//b",
+  "joined": "file:///a/a/b"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "..",
+  "joined": "file:///"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": ".",
+  "joined": "file:///a/"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "dir/.",
+  "joined": "file:///a/dir/"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "dir/..",
+  "joined": "file:///a/"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "x;p=2?y",
+  "joined": "file:///a/x;p=2?y"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "https://a.com/x;p=1",
+  "joined": "https://a.com/x;p=1"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "vote?id=1&how=up",
+  "joined": "file:///a/vote?id=1&how=up"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": " space",
+  "joined": "file:///a/space"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "d/e/../f/",
+  "joined": "file:///a/d/f/"
+ },
+ {
+  "base": "file:///a/b",
+  "ref": "g//h",
+  "joined": "file:///a/g/h"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "https://a.com/post/",
+  "joined": "https://a.com/post/"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "item?id=22",
+  "joined": "item?id=22"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "../x",
+  "joined": "../x"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "../../../x",
+  "joined": "../../../x"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "./y",
+  "joined": "./y"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "y/../z",
+  "joined": "y/../z"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "/abs?x=1",
+  "joined": "/abs?x=1"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "//cdn.example.org/p/",
+  "joined": "//cdn.example.org/p/"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "?q=3",
+  "joined": "?q=3"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "#top",
+  "joined": "#top"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "",
+  "joined": "mailto:x@y.z"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "https://a.com",
+  "joined": "https://a.com"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "http://b.com/x",
+  "joined": "http://b.com/x"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "javascript:void(0)",
+  "joined": "javascript:void(0)"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "mailto:a@b.c",
+  "joined": "mailto:a@b.c"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "a//b",
+  "joined": "a//b"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "..",
+  "joined": ".."
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": ".",
+  "joined": "."
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "dir/.",
+  "joined": "dir/."
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "dir/..",
+  "joined": "dir/.."
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "x;p=2?y",
+  "joined": "x;p=2?y"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "https://a.com/x;p=1",
+  "joined": "https://a.com/x;p=1"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "vote?id=1&how=up",
+  "joined": "vote?id=1&how=up"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": " space",
+  "joined": " space"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "d/e/../f/",
+  "joined": "d/e/../f/"
+ },
+ {
+  "base": "mailto:x@y.z",
+  "ref": "g//h",
+  "joined": "g//h"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "https://a.com/post/",
+  "joined": "https://a.com/post/"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "item?id=22",
+  "joined": "ftp://f.test/a/item?id=22"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "../x",
+  "joined": "ftp://f.test/x"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "../../../x",
+  "joined": "ftp://f.test/x"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "./y",
+  "joined": "ftp://f.test/a/y"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "y/../z",
+  "joined": "ftp://f.test/a/z"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "/abs?x=1",
+  "joined": "ftp://f.test/abs?x=1"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "//cdn.example.org/p/",
+  "joined": "ftp://cdn.example.org/p/"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "?q=3",
+  "joined": "ftp://f.test/a/b?q=3"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "#top",
+  "joined": "ftp://f.test/a/b#top"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "",
+  "joined": "ftp://f.test/a/b"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "https://a.com",
+  "joined": "https://a.com"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "http://b.com/x",
+  "joined": "http://b.com/x"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "javascript:void(0)",
+  "joined": "javascript:void(0)"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "mailto:a@b.c",
+  "joined": "mailto:a@b.c"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "a//b",
+  "joined": "ftp://f.test/a/a/b"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "..",
+  "joined": "ftp://f.test/"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": ".",
+  "joined": "ftp://f.test/a/"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "dir/.",
+  "joined": "ftp://f.test/a/dir/"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "dir/..",
+  "joined": "ftp://f.test/a/"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "x;p=2?y",
+  "joined": "ftp://f.test/a/x;p=2?y"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "https://a.com/x;p=1",
+  "joined": "https://a.com/x;p=1"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "vote?id=1&how=up",
+  "joined": "ftp://f.test/a/vote?id=1&how=up"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": " space",
+  "joined": "ftp://f.test/a/space"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "d/e/../f/",
+  "joined": "ftp://f.test/a/d/f/"
+ },
+ {
+  "base": "ftp://f.test/a/b",
+  "ref": "g//h",
+  "joined": "ftp://f.test/a/g/h"
+ },
+ {
+  "base": "",
+  "ref": "https://a.com/post/",
+  "joined": "https://a.com/post/"
+ },
+ {
+  "base": "",
+  "ref": "item?id=22",
+  "joined": "item?id=22"
+ },
+ {
+  "base": "",
+  "ref": "../x",
+  "joined": "../x"
+ },
+ {
+  "base": "",
+  "ref": "../../../x",
+  "joined": "../../../x"
+ },
+ {
+  "base": "",
+  "ref": "./y",
+  "joined": "./y"
+ },
+ {
+  "base": "",
+  "ref": "y/../z",
+  "joined": "y/../z"
+ },
+ {
+  "base": "",
+  "ref": "/abs?x=1",
+  "joined": "/abs?x=1"
+ },
+ {
+  "base": "",
+  "ref": "//cdn.example.org/p/",
+  "joined": "//cdn.example.org/p/"
+ },
+ {
+  "base": "",
+  "ref": "?q=3",
+  "joined": "?q=3"
+ },
+ {
+  "base": "",
+  "ref": "#top",
+  "joined": "#top"
+ },
+ {
+  "base": "",
+  "ref": "",
+  "joined": ""
+ },
+ {
+  "base": "",
+  "ref": "https://a.com",
+  "joined": "https://a.com"
+ },
+ {
+  "base": "",
+  "ref": "http://b.com/x",
+  "joined": "http://b.com/x"
+ },
+ {
+  "base": "",
+  "ref": "javascript:void(0)",
+  "joined": "javascript:void(0)"
+ },
+ {
+  "base": "",
+  "ref": "mailto:a@b.c",
+  "joined": "mailto:a@b.c"
+ },
+ {
+  "base": "",
+  "ref": "a//b",
+  "joined": "a//b"
+ },
+ {
+  "base": "",
+  "ref": "..",
+  "joined": ".."
+ },
+ {
+  "base": "",
+  "ref": ".",
+  "joined": "."
+ },
+ {
+  "base": "",
+  "ref": "dir/.",
+  "joined": "dir/."
+ },
+ {
+  "base": "",
+  "ref": "dir/..",
+  "joined": "dir/.."
+ },
+ {
+  "base": "",
+  "ref": "x;p=2?y",
+  "joined": "x;p=2?y"
+ },
+ {
+  "base": "",
+  "ref": "https://a.com/x;p=1",
+  "joined": "https://a.com/x;p=1"
+ },
+ {
+  "base": "",
+  "ref": "vote?id=1&how=up",
+  "joined": "vote?id=1&how=up"
+ },
+ {
+  "base": "",
+  "ref": " space",
+  "joined": " space"
+ },
+ {
+  "base": "",
+  "ref": "d/e/../f/",
+  "joined": "d/e/../f/"
+ },
+ {
+  "base": "",
+  "ref": "g//h",
+  "joined": "g//h"
+ }
+]

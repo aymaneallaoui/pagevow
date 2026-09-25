@@ -1,0 +1,560 @@
+[
+ {
+  "today": "2026-09-28",
+  "text": "on {date+10}",
+  "output": "on October 8, 2026",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+10:%Y-%m-%d}",
+  "output": "2026-10-08",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{weekday+3}",
+  "output": "Thursday",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+4}",
+  "output": "October 2, 2026",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+0}",
+  "output": "September 28, 2026",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+0:%A}",
+  "output": "Monday",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+365}",
+  "output": "September 28, 2027",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+3:%B %-d}",
+  "output": "October 1",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "no placeholders",
+  "output": "no placeholders",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "",
+  "output": "",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+1} and {date+2:%d} and {weekday+0}",
+  "output": "September 29, 2026 and 30 and Monday",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "literal { brace",
+  "output": "literal { brace",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "a } b",
+  "output": "a } b",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{{date+1}}",
+  "output": "{September 29, 2026}",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{}' in '{}'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+1:%Y}{date+2:%Y}",
+  "output": "20262026",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+007}",
+  "output": "October 5, 2026",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+1:%%}",
+  "output": "%",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{month+1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{month+1}' in '{month+1}'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{weekday+1:%A}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{weekday+1:%A}' in '{weekday+1:%A}'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date-1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date-1}' in '{date-1}'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+x}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+x}' in '{date+x}'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+1:}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+1:}' in '{date+1:}'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{Date+1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{Date+1}' in '{Date+1}'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+1 }",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+1 }' in '{date+1 }'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{ date+1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{ date+1}' in '{ date+1}'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+1:%Y\n}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+1:%Y\\n}' in '{date+1:%Y\\n}'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "Find flights on {date+14}, return {date+21:%a}",
+  "output": "Find flights on October 12, 2026, return Mon",
+  "error": null
+ },
+ {
+  "today": "2026-09-28",
+  "text": "\\d{4}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{4}' in '\\\\d{4}'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "x{2,3}y",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{2,3}' in 'x{2,3}y'"
+ },
+ {
+  "today": "2026-09-28",
+  "text": "{date+2:%e}",
+  "output": "30",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "on {date+10}",
+  "output": "on January 9, 2027",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+10:%Y-%m-%d}",
+  "output": "2027-01-09",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{weekday+3}",
+  "output": "Saturday",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+4}",
+  "output": "January 3, 2027",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+0}",
+  "output": "December 30, 2026",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+0:%A}",
+  "output": "Wednesday",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+365}",
+  "output": "December 30, 2027",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+3:%B %-d}",
+  "output": "January 2",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "no placeholders",
+  "output": "no placeholders",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "",
+  "output": "",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+1} and {date+2:%d} and {weekday+0}",
+  "output": "December 31, 2026 and 01 and Wednesday",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "literal { brace",
+  "output": "literal { brace",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "a } b",
+  "output": "a } b",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{{date+1}}",
+  "output": "{December 31, 2026}",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{}' in '{}'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+1:%Y}{date+2:%Y}",
+  "output": "20262027",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+007}",
+  "output": "January 6, 2027",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+1:%%}",
+  "output": "%",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{month+1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{month+1}' in '{month+1}'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{weekday+1:%A}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{weekday+1:%A}' in '{weekday+1:%A}'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date-1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date-1}' in '{date-1}'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+x}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+x}' in '{date+x}'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+1:}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+1:}' in '{date+1:}'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{Date+1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{Date+1}' in '{Date+1}'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+1 }",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+1 }' in '{date+1 }'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{ date+1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{ date+1}' in '{ date+1}'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+1:%Y\n}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+1:%Y\\n}' in '{date+1:%Y\\n}'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "Find flights on {date+14}, return {date+21:%a}",
+  "output": "Find flights on January 13, 2027, return Wed",
+  "error": null
+ },
+ {
+  "today": "2026-12-30",
+  "text": "\\d{4}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{4}' in '\\\\d{4}'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "x{2,3}y",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{2,3}' in 'x{2,3}y'"
+ },
+ {
+  "today": "2026-12-30",
+  "text": "{date+2:%e}",
+  "output": " 1",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "on {date+10}",
+  "output": "on March 8, 2028",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+10:%Y-%m-%d}",
+  "output": "2028-03-08",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{weekday+3}",
+  "output": "Wednesday",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+4}",
+  "output": "March 2, 2028",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+0}",
+  "output": "February 27, 2028",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+0:%A}",
+  "output": "Sunday",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+365}",
+  "output": "February 26, 2029",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+3:%B %-d}",
+  "output": "March 1",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "no placeholders",
+  "output": "no placeholders",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "",
+  "output": "",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+1} and {date+2:%d} and {weekday+0}",
+  "output": "February 28, 2028 and 29 and Sunday",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "literal { brace",
+  "output": "literal { brace",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "a } b",
+  "output": "a } b",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{{date+1}}",
+  "output": "{February 28, 2028}",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{}' in '{}'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+1:%Y}{date+2:%Y}",
+  "output": "20282028",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+007}",
+  "output": "March 5, 2028",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+1:%%}",
+  "output": "%",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{month+1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{month+1}' in '{month+1}'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{weekday+1:%A}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{weekday+1:%A}' in '{weekday+1:%A}'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date-1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date-1}' in '{date-1}'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+x}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+x}' in '{date+x}'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+1:}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+1:}' in '{date+1:}'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{Date+1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{Date+1}' in '{Date+1}'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+1 }",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+1 }' in '{date+1 }'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{ date+1}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{ date+1}' in '{ date+1}'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+1:%Y\n}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{date+1:%Y\\n}' in '{date+1:%Y\\n}'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "Find flights on {date+14}, return {date+21:%a}",
+  "output": "Find flights on March 12, 2028, return Sun",
+  "error": null
+ },
+ {
+  "today": "2028-02-27",
+  "text": "\\d{4}",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{4}' in '\\\\d{4}'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "x{2,3}y",
+  "output": null,
+  "error": "ValueError: Unknown placeholder '{2,3}' in 'x{2,3}y'"
+ },
+ {
+  "today": "2028-02-27",
+  "text": "{date+2:%e}",
+  "output": "29",
+  "error": null
+ }
+]

@@ -1,0 +1,187 @@
+[
+ {
+  "encoded": "eHgyMDI2LTEwLTEyeXk=",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "eHgyMDI2LTEwLTEyeXk",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "+/8yMDI2LTEwLTEy",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "-_8yMDI2LTEwLTEy",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "A",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AA",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AAA",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AAAA",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AAAA=",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AAAA==",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "=",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "==",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "A=",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "A==",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AB=",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AB==",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "ABC=",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "ABC==",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AB=C",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AB==CD",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AB CD",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "AB\nCD",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "A*B*C*D*",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "ünï",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "eHgyMDI2LTEwLTEyeXk=!!",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "!eHgyMDI2LTEwLTEyeXk=",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "eHgy=MDI2LTEwLTEyeXk=",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "eHgyMDI2LTEwLTEyeXk======",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "-_-_",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "+/+/",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "+_+_",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "-/-/",
+  "needle": "2026-10-12",
+  "contains": false
+ },
+ {
+  "encoded": "MjAyNi0xMC0xMg==",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "MjAyNi0xMC0xMg",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "YTIwMjYtMTAtMTI=",
+  "needle": "2026-10-12",
+  "contains": true
+ },
+ {
+  "encoded": "YWIyMDI2LTEwLTEy",
+  "needle": "2026-10-12",
+  "contains": true
+ }
+]

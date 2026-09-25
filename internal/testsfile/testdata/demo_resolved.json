@@ -1,0 +1,263 @@
+[
+ {
+  "id": "nav-to-catalog",
+  "url": "http://localhost:3000/index.html",
+  "goal": "On the Shelf home page, open the Catalog page. Stop when the list of books is visible.",
+  "tags": [
+   "shelf"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "/catalog\\.html"
+   ],
+   "text": [
+    "Catalog",
+    "Showing 12 of 12 books"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "search-book",
+  "url": "http://localhost:3000/catalog.html",
+  "goal": "On the catalog page, type The Glass Lighthouse in the Search books box. Stop when the catalog shows only The Glass Lighthouse.",
+  "tags": [
+   "shelf"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "/catalog\\.html",
+    "[?&]q=[^&]*glass lighthouse"
+   ],
+   "text": [
+    "The Glass Lighthouse",
+    "Showing 1 of 12 books"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "filter-category",
+  "url": "http://localhost:3000/catalog.html",
+  "goal": "On the catalog page, choose Science in the Category filter. Stop when only Science books are listed.",
+  "tags": [
+   "shelf"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "/catalog\\.html",
+    "[?&]category=science"
+   ],
+   "text": [
+    "The Living Cell",
+    "Showing 4 of 12 books"
+   ],
+   "fields": [
+    [
+     "Category",
+     {
+      "type": "string",
+      "text": "Science"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "sort-price",
+  "url": "http://localhost:3000/catalog.html",
+  "goal": "On the catalog page, choose Price low to high in the Sort by menu. Stop when the books are sorted from the cheapest to the most expensive.",
+  "tags": [
+   "shelf"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "/catalog\\.html",
+    "[?&]sort=price-asc"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Sort by",
+     {
+      "type": "string",
+      "text": "Price low to high"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "open-book-detail",
+  "url": "http://localhost:3000/catalog.html",
+  "goal": "On the catalog page, open the detail page of the book The Clockmakers. Stop when the page for The Clockmakers is shown.",
+  "tags": [
+   "shelf"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "/book\\.html\\?id=the-clockmakers"
+   ],
+   "text": [
+    "The Clockmakers",
+    "Paul Mercier"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "add-to-cart",
+  "url": "http://localhost:3000/catalog.html",
+  "goal": "On the catalog page, add the book Winter Orchard to the cart, then open the Cart page. Stop when the cart lists Winter Orchard.",
+  "tags": [
+   "shelf"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "/cart\\.html"
+   ],
+   "text": [
+    "Winter Orchard",
+    "Total: $"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "contact-form",
+  "url": "http://localhost:3000/contact.html",
+  "goal": "On the contact page, enter Ada Lovelace as the name and ada@example.com as the email, choose Returns as the topic, and enter Damaged cover as the message. Do not send the form. Stop when the name, the email, the topic and the message are set.",
+  "tags": [
+   "shelf"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "/contact\\.html"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Name",
+     {
+      "type": "string",
+      "text": "Ada Lovelace"
+     }
+    ],
+    [
+     "Email",
+     {
+      "type": "string",
+      "text": "ada@example.com"
+     }
+    ],
+    [
+     "Topic",
+     {
+      "type": "string",
+      "text": "Returns"
+     }
+    ],
+    [
+     "Message",
+     {
+      "type": "string",
+      "text": "Damaged cover"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "contact-send",
+  "url": "http://localhost:3000/contact.html",
+  "goal": "On the contact page, enter Grace Hopper as the name and grace@example.com as the email, choose Order as the topic, enter Where is my order as the message, and click Send. Stop when a thank you message is shown.",
+  "tags": [
+   "shelf"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "/contact\\.html#sent"
+   ],
+   "text": [
+    "Thanks, Grace Hopper. We will reply to grace@example.com."
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "help-returns",
+  "url": "http://localhost:3000/index.html",
+  "goal": "On the Shelf home page, open the Help page, then follow the Returns policy link. Stop when the Returns policy section is shown.",
+  "tags": [
+   "shelf"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "/help\\.html#returns"
+   ],
+   "text": [
+    "Returns policy",
+    "within 30 days"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "empty-cart-total",
+  "url": "http://localhost:3000/cart.html?seed=1",
+  "goal": "On the cart page, which already holds two books, click Empty cart. Stop when the cart says it is empty.",
+  "tags": [
+   "shelf"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "/cart\\.html"
+   ],
+   "text": [
+    "Your cart is empty.",
+    "Total: $0.00"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ }
+]

@@ -1,0 +1,2228 @@
+[
+ {
+  "id": "flights-zurich-london",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find one-way flights from Zurich to London on October 12, 2026, for one adult in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "one_way"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "Zürich",
+   "destination": "London",
+   "day": "2026-10-12",
+   "return_day": null,
+   "one_way": true,
+   "adults": 1
+  }
+ },
+ {
+  "id": "flights-paris-rome",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find one-way flights from Paris to Rome on October 8, 2026, for one adult in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "one_way"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "Paris",
+   "destination": "Rome",
+   "day": "2026-10-08",
+   "return_day": null,
+   "one_way": true,
+   "adults": 1
+  }
+ },
+ {
+  "id": "flights-berlin-madrid",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find round-trip flights from Berlin to Madrid departing October 18, 2026 and returning October 25, 2026, for one adult in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "round_trip"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "Berlin",
+   "destination": "Madrid",
+   "day": "2026-10-18",
+   "return_day": "2026-10-25",
+   "one_way": false,
+   "adults": 1
+  }
+ },
+ {
+  "id": "flights-newyork-chicago",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find one-way flights from New York to Chicago on October 28, 2026, for two adults in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "one_way"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "New York",
+   "destination": "Chicago",
+   "day": "2026-10-28",
+   "return_day": null,
+   "one_way": true,
+   "adults": 2
+  }
+ },
+ {
+  "id": "flights-sanfrancisco-seattle",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find round-trip flights from San Francisco to Seattle departing October 23, 2026 and returning October 30, 2026, for two adults in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "round_trip"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "San Francisco",
+   "destination": "Seattle",
+   "day": "2026-10-23",
+   "return_day": "2026-10-30",
+   "one_way": false,
+   "adults": 2
+  }
+ },
+ {
+  "id": "flights-tokyo-seoul",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find one-way flights from Tokyo to Seoul on November 2, 2026, for one adult in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "one_way"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "Tokyo",
+   "destination": "Seoul",
+   "day": "2026-11-02",
+   "return_day": null,
+   "one_way": true,
+   "adults": 1
+  }
+ },
+ {
+  "id": "flights-amsterdam-lisbon",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find round-trip flights from Amsterdam to Lisbon departing November 5, 2026 and returning November 12, 2026, for one adult in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "round_trip"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "Amsterdam",
+   "destination": "Lisbon",
+   "day": "2026-11-05",
+   "return_day": "2026-11-12",
+   "one_way": false,
+   "adults": 1
+  }
+ },
+ {
+  "id": "flights-toronto-boston",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find one-way flights from Toronto to Boston on October 10, 2026, for one adult in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "one_way"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "Toronto",
+   "destination": "Boston",
+   "day": "2026-10-10",
+   "return_day": null,
+   "one_way": true,
+   "adults": 1
+  }
+ },
+ {
+  "id": "flights-sydney-melbourne",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find round-trip flights from Sydney to Melbourne departing October 16, 2026 and returning October 20, 2026, for two adults in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "round_trip"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "Sydney",
+   "destination": "Melbourne",
+   "day": "2026-10-16",
+   "return_day": "2026-10-20",
+   "one_way": false,
+   "adults": 2
+  }
+ },
+ {
+  "id": "flights-vienna-dublin",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find one-way flights from Vienna to Dublin on October 26, 2026, for two adults in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "one_way"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "Vienna",
+   "destination": "Dublin",
+   "day": "2026-10-26",
+   "return_day": null,
+   "one_way": true,
+   "adults": 2
+  }
+ },
+ {
+  "id": "flights-singapore-bangkok",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find round-trip flights from Singapore to Bangkok departing October 31, 2026 and returning November 7, 2026, for one adult in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "round_trip"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "Singapore",
+   "destination": "Bangkok",
+   "day": "2026-10-31",
+   "return_day": "2026-11-07",
+   "one_way": false,
+   "adults": 1
+  }
+ },
+ {
+  "id": "flights-barcelona-munich",
+  "url": "https://www.google.com/travel/flights?hl=en&gl=US&curr=USD",
+  "goal": "Find one-way flights from Barcelona to Munich on November 12, 2026, for one adult in economy. Stop when matching flight options are visible. Do not select or book a flight.",
+  "tags": [
+   "google_flights",
+   "one_way"
+  ],
+  "verify": "flights",
+  "repeat": null,
+  "args": {
+   "origin": "Barcelona",
+   "destination": "Munich",
+   "day": "2026-11-12",
+   "return_day": null,
+   "one_way": true,
+   "adults": 1
+  }
+ },
+ {
+  "id": "wikipedia-open-turing",
+  "url": "https://en.wikipedia.org/wiki/Main_Page",
+  "goal": "Find and open the Wikipedia article about Alan Turing. Stop when the Alan Turing article is visible.",
+  "tags": [
+   "wikipedia",
+   "open_article"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "en\\.wikipedia\\.org/wiki/Alan_Turing(#|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "wikipedia-open-godel",
+  "url": "https://en.wikipedia.org/wiki/Main_Page",
+  "goal": "Find and open the Wikipedia article about Gödel's incompleteness theorems. Stop when that article is visible.",
+  "tags": [
+   "wikipedia",
+   "open_article"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "en\\.wikipedia\\.org/wiki/Gödel's_incompleteness_theorems(#|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "wikipedia-open-rhine",
+  "url": "https://en.wikipedia.org/wiki/Main_Page",
+  "goal": "Find and open the Wikipedia article about the Rhine river. Stop when the Rhine article is visible.",
+  "tags": [
+   "wikipedia",
+   "open_article"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "en\\.wikipedia\\.org/wiki/Rhine(#|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "wikipedia-search-rosetta",
+  "url": "https://en.wikipedia.org/wiki/Main_Page",
+  "goal": "Search Wikipedia for the Rosetta Stone and open its article. Stop when the Rosetta Stone article is visible.",
+  "tags": [
+   "wikipedia",
+   "open_article"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "en\\.wikipedia\\.org/wiki/Rosetta_Stone(#|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "wikipedia-section-python-history",
+  "url": "https://en.wikipedia.org/wiki/Python_(programming_language)",
+  "goal": "Go to the History section of this article. Stop when the History section heading is visible.",
+  "tags": [
+   "wikipedia",
+   "section"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "en\\.wikipedia\\.org/wiki/Python_\\(programming_language\\)#History$"
+   ],
+   "text": [
+    "History"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "wikipedia-section-linux-history",
+  "url": "https://en.wikipedia.org/wiki/Linux",
+  "goal": "Go to the History section of this article. Stop when the History section heading is visible.",
+  "tags": [
+   "wikipedia",
+   "section"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "en\\.wikipedia\\.org/wiki/Linux#History$"
+   ],
+   "text": [
+    "History"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "wikipedia-section-photosynthesis-seealso",
+  "url": "https://en.wikipedia.org/wiki/Photosynthesis",
+  "goal": "Go to the See also section of this article. Stop when the See also section heading is visible.",
+  "tags": [
+   "wikipedia",
+   "section"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "en\\.wikipedia\\.org/wiki/Photosynthesis#See_also$"
+   ],
+   "text": [
+    "See also"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "wikipedia-link-turing-bletchley",
+  "url": "https://en.wikipedia.org/wiki/Alan_Turing",
+  "goal": "From this article, follow the link to the Bletchley Park article. Stop when the Bletchley Park article is visible.",
+  "tags": [
+   "wikipedia",
+   "follow_link"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "en\\.wikipedia\\.org/wiki/Bletchley_Park(#|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "wikipedia-link-python-guido",
+  "url": "https://en.wikipedia.org/wiki/Python_(programming_language)",
+  "goal": "From this article, follow the link to the article about Guido van Rossum. Stop when the Guido van Rossum article is visible.",
+  "tags": [
+   "wikipedia",
+   "follow_link"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "en\\.wikipedia\\.org/wiki/Guido_van_Rossum(#|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "wikipedia-link-everest-himalayas",
+  "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+  "goal": "From this article, follow the link to the Himalayas article. Stop when the Himalayas article is visible.",
+  "tags": [
+   "wikipedia",
+   "follow_link"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "en\\.wikipedia\\.org/wiki/Himalayas(#|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "hackernews-top-story",
+  "url": "https://news.ycombinator.com/",
+  "goal": "Open the top story on the Hacker News front page. Stop when the story's own page is visible. Do not sign in, vote, or comment.",
+  "tags": [
+   "hackernews",
+   "open_story"
+  ],
+  "verify": "hn_story",
+  "repeat": null,
+  "args": {
+   "rank": 1,
+   "comments": false
+  }
+ },
+ {
+  "id": "hackernews-comments-1",
+  "url": "https://news.ycombinator.com/",
+  "goal": "Open the comments page for the first story on the Hacker News front page. Stop when that story's comment thread is visible. Do not sign in, vote, or comment.",
+  "tags": [
+   "hackernews",
+   "comments"
+  ],
+  "verify": "hn_story",
+  "repeat": null,
+  "args": {
+   "rank": 1,
+   "comments": true
+  }
+ },
+ {
+  "id": "hackernews-comments-3",
+  "url": "https://news.ycombinator.com/",
+  "goal": "Open the comments page for the third story on the Hacker News front page. Stop when that story's comment thread is visible. Do not sign in, vote, or comment.",
+  "tags": [
+   "hackernews",
+   "comments"
+  ],
+  "verify": "hn_story",
+  "repeat": null,
+  "args": {
+   "rank": 3,
+   "comments": true
+  }
+ },
+ {
+  "id": "hackernews-comments-5",
+  "url": "https://news.ycombinator.com/",
+  "goal": "Open the comments page for the fifth story on the Hacker News front page. Stop when that story's comment thread is visible. Do not sign in, vote, or comment.",
+  "tags": [
+   "hackernews",
+   "comments"
+  ],
+  "verify": "hn_story",
+  "repeat": null,
+  "args": {
+   "rank": 5,
+   "comments": true
+  }
+ },
+ {
+  "id": "hackernews-algolia-rust",
+  "url": "https://hn.algolia.com/",
+  "goal": "Search Hacker News for stories about Rust. Stop when the search results are visible. Do not sign in, vote, or comment.",
+  "tags": [
+   "hackernews",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "hn\\.algolia\\.com/.*[?&]query=rust(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "hackernews-algolia-sqlite",
+  "url": "https://hn.algolia.com/",
+  "goal": "Search Hacker News for stories about SQLite. Stop when the search results are visible. Do not sign in, vote, or comment.",
+  "tags": [
+   "hackernews",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "hn\\.algolia\\.com/.*[?&]query=sqlite(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "github-cpython-readme",
+  "url": "https://github.com/python/cpython",
+  "goal": "Open the README.rst file in this repository. Stop when the README.rst contents are visible. Do not sign in.",
+  "tags": [
+   "github",
+   "open_file"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "github\\.com/python/cpython/blob/[^/]+/README\\.rst$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "github-flask-app",
+  "url": "https://github.com/pallets/flask",
+  "goal": "Open the file src/flask/app.py in this repository. Stop when the contents of app.py are visible. Do not sign in.",
+  "tags": [
+   "github",
+   "open_file"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "github\\.com/pallets/flask/blob/[^/]+/src/flask/app\\.py$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "github-requests-api",
+  "url": "https://github.com/psf/requests",
+  "goal": "Open the file src/requests/api.py in this repository. Stop when the contents of api.py are visible. Do not sign in.",
+  "tags": [
+   "github",
+   "open_file"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "github\\.com/psf/requests/blob/[^/]+/src/requests/api\\.py$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "github-linux-maintainers",
+  "url": "https://github.com/torvalds/linux",
+  "goal": "Open the MAINTAINERS file in this repository. Stop when the MAINTAINERS file contents are visible. Do not sign in.",
+  "tags": [
+   "github",
+   "open_file"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "github\\.com/torvalds/linux/blob/[^/]+/MAINTAINERS$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "github-cpython-issues",
+  "url": "https://github.com/python/cpython",
+  "goal": "Open the Issues tab of this repository. Stop when the list of open issues is visible. Do not sign in.",
+  "tags": [
+   "github",
+   "issues"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "github\\.com/python/cpython/issues/?(\\?|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "github-rust-issues",
+  "url": "https://github.com/rust-lang/rust",
+  "goal": "Open the Issues tab of this repository. Stop when the list of open issues is visible. Do not sign in.",
+  "tags": [
+   "github",
+   "issues"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "github\\.com/rust-lang/rust/issues/?(\\?|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "github-search-browser-automation",
+  "url": "https://github.com/",
+  "goal": "Search GitHub repositories for browser automation. Stop when repository search results are visible. Do not sign in.",
+  "tags": [
+   "github",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "github\\.com/search\\?",
+    "[?&]q=browser automation(&|$)",
+    "[?&]type=repositories(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "github-open-vscode",
+  "url": "https://github.com/",
+  "goal": "Open the microsoft/vscode repository on GitHub. Stop when the repository's main page with its file list is visible. Do not sign in.",
+  "tags": [
+   "github",
+   "open_repo"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "github\\.com/microsoft/vscode/?$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "mdn-fetch",
+  "url": "https://developer.mozilla.org/en-US/",
+  "goal": "Search MDN for the Fetch API and open the reference page for the global fetch() function. Stop when the fetch() reference page is visible.",
+  "tags": [
+   "mdn",
+   "reference"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "developer\\.mozilla\\.org/en-US/docs/Web/API/(Window/)?fetch$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "mdn-array-map",
+  "url": "https://developer.mozilla.org/en-US/",
+  "goal": "Search MDN for Array map and open the Array.prototype.map() reference page. Stop when that reference page is visible.",
+  "tags": [
+   "mdn",
+   "reference"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "developer\\.mozilla\\.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "mdn-intersection-observer",
+  "url": "https://developer.mozilla.org/en-US/",
+  "goal": "Search MDN for IntersectionObserver and open its API reference page. Stop when the IntersectionObserver reference page is visible.",
+  "tags": [
+   "mdn",
+   "reference"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "developer\\.mozilla\\.org/en-US/docs/Web/API/IntersectionObserver$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "mdn-grid-template-columns",
+  "url": "https://developer.mozilla.org/en-US/",
+  "goal": "Search MDN for the CSS grid-template-columns property and open its reference page. Stop when that reference page is visible.",
+  "tags": [
+   "mdn",
+   "reference"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "developer\\.mozilla\\.org/en-US/docs/Web/CSS/.*grid-template-columns$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "mdn-http-404",
+  "url": "https://developer.mozilla.org/en-US/",
+  "goal": "Search MDN for the HTTP 404 status code and open its reference page. Stop when the 404 Not Found reference page is visible.",
+  "tags": [
+   "mdn",
+   "reference"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "developer\\.mozilla\\.org/en-US/docs/Web/HTTP/.*Status/404$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "openstreetmap-eiffel-tower",
+  "url": "https://www.openstreetmap.org/",
+  "goal": "Search the map for the Eiffel Tower in Paris. Stop when it appears in the search results and the map shows its location.",
+  "tags": [
+   "openstreetmap",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "openstreetmap\\.org/(search\\?query=[^&]*eiffel|(node|way|relation)/\\d+)"
+   ],
+   "text": [
+    "Eiffel Tower"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "openstreetmap-brandenburg-gate",
+  "url": "https://www.openstreetmap.org/",
+  "goal": "Search the map for the Brandenburg Gate in Berlin. Stop when it appears in the search results and the map shows its location.",
+  "tags": [
+   "openstreetmap",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "openstreetmap\\.org/(search\\?query=[^&]*brandenburg|(node|way|relation)/\\d+)"
+   ],
+   "text": [
+    "Brandenburg"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "openstreetmap-golden-gate-bridge",
+  "url": "https://www.openstreetmap.org/",
+  "goal": "Search the map for the Golden Gate Bridge in San Francisco. Stop when it appears in the search results and the map shows its location.",
+  "tags": [
+   "openstreetmap",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "openstreetmap\\.org/(search\\?query=[^&]*golden gate|(node|way|relation)/\\d+)"
+   ],
+   "text": [
+    "Golden Gate Bridge"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "openstreetmap-sydney-opera-house",
+  "url": "https://www.openstreetmap.org/",
+  "goal": "Search the map for the Sydney Opera House. Stop when it appears in the search results and the map shows its location.",
+  "tags": [
+   "openstreetmap",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "openstreetmap\\.org/(search\\?query=[^&]*sydney opera|(node|way|relation)/\\d+)"
+   ],
+   "text": [
+    "Sydney Opera House"
+   ],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-httpbin-contact",
+  "url": "https://httpbin.org/forms/post",
+  "goal": "Fill in the pizza order form with customer name Ada Lovelace, telephone 555-0100, and email ada@example.com. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "httpbin"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "httpbin\\.org/forms/post$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Customer name",
+     {
+      "type": "string",
+      "text": "Ada Lovelace"
+     }
+    ],
+    [
+     "Telephone",
+     {
+      "type": "string",
+      "text": "555-0100"
+     }
+    ],
+    [
+     "E-mail address",
+     {
+      "type": "string",
+      "text": "ada@example.com"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-httpbin-toppings",
+  "url": "https://httpbin.org/forms/post",
+  "goal": "In the pizza order form, choose a medium pizza with bacon and onion toppings. Stop when those choices are visibly selected. Do not submit the form.",
+  "tags": [
+   "forms",
+   "httpbin"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "httpbin\\.org/forms/post$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Medium",
+     {
+      "type": "bool",
+      "text": "True"
+     }
+    ],
+    [
+     "Bacon",
+     {
+      "type": "bool",
+      "text": "True"
+     }
+    ],
+    [
+     "Onion",
+     {
+      "type": "bool",
+      "text": "True"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-httpbin-instructions",
+  "url": "https://httpbin.org/forms/post",
+  "goal": "Fill in the pizza order form for Grace Hopper with email grace@example.com, a large pizza, and the delivery instructions 'Leave at the front desk'. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "httpbin"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "httpbin\\.org/forms/post$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Customer name",
+     {
+      "type": "string",
+      "text": "Grace Hopper"
+     }
+    ],
+    [
+     "E-mail address",
+     {
+      "type": "string",
+      "text": "grace@example.com"
+     }
+    ],
+    [
+     "Large",
+     {
+      "type": "bool",
+      "text": "True"
+     }
+    ],
+    [
+     "Delivery instructions",
+     {
+      "type": "string",
+      "text": "Leave at the front desk"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-httpbin-mushroom",
+  "url": "https://httpbin.org/forms/post",
+  "goal": "Fill in the pizza order form for Alan Turing with telephone 555-0199 and a mushroom topping. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "httpbin"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "httpbin\\.org/forms/post$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Customer name",
+     {
+      "type": "string",
+      "text": "Alan Turing"
+     }
+    ],
+    [
+     "Telephone",
+     {
+      "type": "string",
+      "text": "555-0199"
+     }
+    ],
+    [
+     "Mushroom",
+     {
+      "type": "bool",
+      "text": "True"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-selenium-select-two",
+  "url": "https://www.selenium.dev/selenium/web/web-form.html",
+  "goal": "Fill the web form with the text input 'Jev test' and choose Two in the dropdown select. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "selenium"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "selenium\\.dev/selenium/web/web-form\\.html$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Text input",
+     {
+      "type": "string",
+      "text": "Jev test"
+     }
+    ],
+    [
+     "Dropdown (select)",
+     {
+      "type": "string",
+      "text": "Two"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-selenium-textarea-three",
+  "url": "https://www.selenium.dev/selenium/web/web-form.html",
+  "goal": "In the web form, enter 'Hello from Jev' in the textarea and choose Three in the dropdown select. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "selenium"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "selenium\\.dev/selenium/web/web-form\\.html$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Textarea",
+     {
+      "type": "string",
+      "text": "Hello from Jev"
+     }
+    ],
+    [
+     "Dropdown (select)",
+     {
+      "type": "string",
+      "text": "Three"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "youtube-lofi",
+  "url": "https://www.youtube.com/",
+  "goal": "Search YouTube for lofi hip hop. Stop when the search results are visible. Do not play any video and do not sign in.",
+  "tags": [
+   "youtube",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "youtube\\.com/results\\?search_query=lofi hip hop(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "youtube-python-tutorial",
+  "url": "https://www.youtube.com/",
+  "goal": "Search YouTube for python tutorial for beginners. Stop when the search results are visible. Do not play any video and do not sign in.",
+  "tags": [
+   "youtube",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "youtube\\.com/results\\?search_query=python tutorial for beginners(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "youtube-sourdough",
+  "url": "https://www.youtube.com/",
+  "goal": "Search YouTube for how to make sourdough bread. Stop when the search results are visible. Do not play any video and do not sign in.",
+  "tags": [
+   "youtube",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "youtube\\.com/results\\?search_query=[^&]*sourdough"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "youtube-artemis",
+  "url": "https://www.youtube.com/",
+  "goal": "Search YouTube for NASA Artemis launch. Stop when the search results are visible. Do not play any video and do not sign in.",
+  "tags": [
+   "youtube",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "youtube\\.com/results\\?search_query=nasa artemis launch(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "ebay-keyboard-used",
+  "url": "https://www.ebay.com/",
+  "goal": "Search eBay for a mechanical keyboard and filter the results to used condition. Stop when the filtered results are visible. Do not purchase, bid, or sign in.",
+  "tags": [
+   "ebay",
+   "search_filter"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "ebay\\.com/sch/i\\.html\\?.*_nkw=[^&]*mechanical keyboard",
+    "[?&]LH_ItemCondition=3000(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "ebay-camera-under-100",
+  "url": "https://www.ebay.com/",
+  "goal": "Search eBay for a vintage film camera and filter the results to a maximum price of 100 US dollars. Stop when the filtered results are visible. Do not purchase, bid, or sign in.",
+  "tags": [
+   "ebay",
+   "search_filter"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "ebay\\.com/sch/i\\.html\\?.*_nkw=[^&]*film camera",
+    "[?&]_udhi=100(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "ebay-lego-new",
+  "url": "https://www.ebay.com/",
+  "goal": "Search eBay for the Lego Millennium Falcon and filter the results to new condition. Stop when the filtered results are visible. Do not purchase, bid, or sign in.",
+  "tags": [
+   "ebay",
+   "search_filter"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "ebay\\.com/sch/i\\.html\\?.*_nkw=[^&]*lego millennium falcon",
+    "[?&]LH_ItemCondition=1000(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "ebay-road-bike-under-500",
+  "url": "https://www.ebay.com/",
+  "goal": "Search eBay for a road bike and filter the results to a maximum price of 500 US dollars. Stop when the filtered results are visible. Do not purchase, bid, or sign in.",
+  "tags": [
+   "ebay",
+   "search_filter"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "ebay\\.com/sch/i\\.html\\?.*_nkw=[^&]*road bike",
+    "[?&]_udhi=500(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "ebay-headphones-new",
+  "url": "https://www.ebay.com/",
+  "goal": "Search eBay for noise cancelling headphones and filter the results to new condition. Stop when the filtered results are visible. Do not purchase, bid, or sign in.",
+  "tags": [
+   "ebay",
+   "search_filter"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "ebay\\.com/sch/i\\.html\\?.*_nkw=[^&]*noise cancel",
+    "[?&]LH_ItemCondition=1000(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-demoqa-practice-basic",
+  "url": "https://demoqa.com/automation-practice-form",
+  "goal": "Fill the student registration form with first name Test, last name User, email test@example.com, gender Male, and mobile number 5550100100. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "demoqa"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "demoqa\\.com/automation-practice-form$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "First Name",
+     {
+      "type": "string",
+      "text": "Test"
+     }
+    ],
+    [
+     "Last Name",
+     {
+      "type": "string",
+      "text": "User"
+     }
+    ],
+    [
+     "name@example.com",
+     {
+      "type": "string",
+      "text": "test@example.com"
+     }
+    ],
+    [
+     "Male",
+     {
+      "type": "bool",
+      "text": "True"
+     }
+    ],
+    [
+     "Mobile Number",
+     {
+      "type": "string",
+      "text": "5550100100"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-demoqa-practice-hobbies",
+  "url": "https://demoqa.com/automation-practice-form",
+  "goal": "Fill the student registration form with first name Test, last name User, email test@example.com, the hobbies Sports and Music, and current address 1 Test Street. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "demoqa"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "demoqa\\.com/automation-practice-form$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "First Name",
+     {
+      "type": "string",
+      "text": "Test"
+     }
+    ],
+    [
+     "Last Name",
+     {
+      "type": "string",
+      "text": "User"
+     }
+    ],
+    [
+     "name@example.com",
+     {
+      "type": "string",
+      "text": "test@example.com"
+     }
+    ],
+    [
+     "Sports",
+     {
+      "type": "bool",
+      "text": "True"
+     }
+    ],
+    [
+     "Music",
+     {
+      "type": "bool",
+      "text": "True"
+     }
+    ],
+    [
+     "Current Address",
+     {
+      "type": "string",
+      "text": "1 Test Street"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-demoqa-text-box",
+  "url": "https://demoqa.com/text-box",
+  "goal": "Fill the text box form with full name Test User, email test@example.com, and current address 1 Test Street. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "demoqa"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "demoqa\\.com/text-box$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Full Name",
+     {
+      "type": "string",
+      "text": "Test User"
+     }
+    ],
+    [
+     "name@example.com",
+     {
+      "type": "string",
+      "text": "test@example.com"
+     }
+    ],
+    [
+     "Current Address",
+     {
+      "type": "string",
+      "text": "1 Test Street"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-demoqa-old-select",
+  "url": "https://demoqa.com/select-menu",
+  "goal": "In the old style select menu, choose Blue. Stop when Blue is visibly selected. Do not submit anything.",
+  "tags": [
+   "forms",
+   "demoqa"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "demoqa\\.com/select-menu$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [
+    {
+     "type": "string",
+     "text": "Blue"
+    }
+   ],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-demoqa-date-picker",
+  "url": "https://demoqa.com/date-picker",
+  "goal": "Set the Select Date field to 10/15/2026. Stop when 10/15/2026 is visible in that field. Do not submit anything.",
+  "tags": [
+   "forms",
+   "demoqa"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "demoqa\\.com/date-picker$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [
+    {
+     "type": "string",
+     "text": "10/15/2026"
+    }
+   ],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-internet-dropdown",
+  "url": "https://the-internet.herokuapp.com/dropdown",
+  "goal": "Choose Option 2 in the dropdown list. Stop when Option 2 is visibly selected.",
+  "tags": [
+   "forms",
+   "the_internet"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "the-internet\\.herokuapp\\.com/dropdown$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [
+    {
+     "type": "string",
+     "text": "Option 2"
+    }
+   ],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-internet-checkboxes",
+  "url": "https://the-internet.herokuapp.com/checkboxes",
+  "goal": "Make sure both checkboxes are checked. Stop when both checkboxes are visibly checked.",
+  "tags": [
+   "forms",
+   "the_internet"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "the-internet\\.herokuapp\\.com/checkboxes$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": [
+    [
+     "checkbox",
+     2
+    ]
+   ]
+  }
+ },
+ {
+  "id": "forms-internet-dynamic-controls",
+  "url": "https://the-internet.herokuapp.com/dynamic_controls",
+  "goal": "Enable the disabled text field, then type Test User into it. Stop when Test User is visible in the enabled field.",
+  "tags": [
+   "forms",
+   "the_internet"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "the-internet\\.herokuapp\\.com/dynamic_controls$"
+   ],
+   "text": [
+    "It's enabled!"
+   ],
+   "fields": [],
+   "values": [
+    {
+     "type": "string",
+     "text": "Test User"
+    }
+   ],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-expandtesting-login-username",
+  "url": "https://practice.expandtesting.com/login",
+  "goal": "Enter the username testuser in the login form. Stop when testuser is visible in the username field. Do not submit the form.",
+  "tags": [
+   "forms",
+   "expandtesting"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "practice\\.expandtesting\\.com/login$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Username",
+     {
+      "type": "string",
+      "text": "testuser"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-expandtesting-register-username",
+  "url": "https://practice.expandtesting.com/register",
+  "goal": "Enter the username testuser in the registration form. Stop when testuser is visible in the username field. Do not submit the form.",
+  "tags": [
+   "forms",
+   "expandtesting"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "practice\\.expandtesting\\.com/register$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "Username",
+     {
+      "type": "string",
+      "text": "testuser"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-formy-basic",
+  "url": "https://formy-project.herokuapp.com/form",
+  "goal": "Fill the form with first name Test, last name User, and job title QA Engineer. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "formy"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "formy-project\\.herokuapp\\.com/form$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "First name",
+     {
+      "type": "string",
+      "text": "Test"
+     }
+    ],
+    [
+     "Last name",
+     {
+      "type": "string",
+      "text": "User"
+     }
+    ],
+    [
+     "Job title",
+     {
+      "type": "string",
+      "text": "QA Engineer"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-formy-experience",
+  "url": "https://formy-project.herokuapp.com/form",
+  "goal": "Fill the form with first name Test and last name User, and choose 2-4 years of experience. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "formy"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "formy-project\\.herokuapp\\.com/form$"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "First name",
+     {
+      "type": "string",
+      "text": "Test"
+     }
+    ],
+    [
+     "Last name",
+     {
+      "type": "string",
+      "text": "User"
+     }
+    ]
+   ],
+   "values": [
+    {
+     "type": "string",
+     "text": "2-4"
+    }
+   ],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-opencart-register",
+  "url": "https://demo.opencart.com/index.php?route=account/register&language=en-gb",
+  "goal": "Fill the account registration form with first name Test, last name User, and email test@example.com. Stop when those values are visible in the form. Do not submit the form.",
+  "tags": [
+   "forms",
+   "opencart"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "demo\\.opencart\\.com/.*route=account/register"
+   ],
+   "text": [],
+   "fields": [
+    [
+     "First Name",
+     {
+      "type": "string",
+      "text": "Test"
+     }
+    ],
+    [
+     "Last Name",
+     {
+      "type": "string",
+      "text": "User"
+     }
+    ],
+    [
+     "E-Mail",
+     {
+      "type": "string",
+      "text": "test@example.com"
+     }
+    ]
+   ],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "forms-httpbin-echo-contact",
+  "url": "https://httpbin.org/forms/post",
+  "goal": "Fill in the pizza order form with customer name Test User and email test@example.com, then submit the order. Stop when the submitted values are shown.",
+  "tags": [
+   "forms",
+   "httpbin",
+   "echo"
+  ],
+  "verify": "echo",
+  "repeat": null,
+  "args": {
+   "url": [
+    "httpbin\\.org/post$"
+   ],
+   "values": [
+    "\"custname\": \"Test User\"",
+    "\"custemail\": \"test@example.com\""
+   ]
+  }
+ },
+ {
+  "id": "forms-httpbin-echo-toppings",
+  "url": "https://httpbin.org/forms/post",
+  "goal": "Fill in the pizza order form with customer name Test User, a medium pizza, and bacon topping, then submit the order. Stop when the submitted values are shown.",
+  "tags": [
+   "forms",
+   "httpbin",
+   "echo"
+  ],
+  "verify": "echo",
+  "repeat": null,
+  "args": {
+   "url": [
+    "httpbin\\.org/post$"
+   ],
+   "values": [
+    "\"custname\": \"Test User\"",
+    "\"size\": \"medium\"",
+    "\"topping\": \"bacon\""
+   ]
+  }
+ },
+ {
+  "id": "stackoverflow-tag-rust",
+  "url": "https://stackoverflow.com/questions",
+  "goal": "Open the list of Stack Overflow questions tagged rust. Stop when the rust tag's question list is visible. Do not sign in.",
+  "tags": [
+   "stackoverflow",
+   "open_tag"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "stackoverflow\\.com/questions/tagged/rust(\\?|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "stackoverflow-tag-javascript",
+  "url": "https://stackoverflow.com/questions",
+  "goal": "Open the list of Stack Overflow questions tagged javascript. Stop when the javascript tag's question list is visible. Do not sign in.",
+  "tags": [
+   "stackoverflow",
+   "open_tag"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "stackoverflow\\.com/questions/tagged/javascript(\\?|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "arxiv-search-attention",
+  "url": "https://arxiv.org/",
+  "goal": "Search arXiv for attention is all you need. Stop when the search results are visible.",
+  "tags": [
+   "arxiv",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "arxiv\\.org/search/.*[?&]query=attention is all you need(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "arxiv-open-1706-03762",
+  "url": "https://arxiv.org/",
+  "goal": "Open the arXiv abstract page for paper 1706.03762. Stop when that paper's abstract page is visible.",
+  "tags": [
+   "arxiv",
+   "open_paper"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "arxiv\\.org/abs/1706\\.03762(v\\d+)?$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "amazon-search-usb-hub",
+  "url": "https://www.amazon.com/",
+  "goal": "Search Amazon for a USB C hub. Stop when the search results are visible. Do not add anything to the cart, purchase, or sign in.",
+  "tags": [
+   "amazon",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "amazon\\.com/s\\?.*k=[^&]*usb[- ]?c hub"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "amazon-sort-usb-hub-price",
+  "url": "https://www.amazon.com/",
+  "goal": "Search Amazon for a USB C hub and sort the results by price from low to high. Stop when the sorted results are visible. Do not add anything to the cart, purchase, or sign in.",
+  "tags": [
+   "amazon",
+   "search_filter"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "amazon\\.com/s\\?.*k=[^&]*usb[- ]?c hub",
+    "[?&]s=price-asc-rank(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "booking-search-paris",
+  "url": "https://www.booking.com/",
+  "goal": "Search Booking.com for hotels in Paris. Stop when the Paris search results are visible. Do not book or sign in.",
+  "tags": [
+   "booking",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "booking\\.com/searchresults.*[?&]ss=paris"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "booking-search-rome",
+  "url": "https://www.booking.com/",
+  "goal": "Search Booking.com for hotels in Rome. Stop when the Rome search results are visible. Do not book or sign in.",
+  "tags": [
+   "booking",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "booking\\.com/searchresults.*[?&]ss=rome"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "imdb-search-inception",
+  "url": "https://www.imdb.com/",
+  "goal": "Search IMDb for Inception. Stop when the search results are visible. Do not sign in.",
+  "tags": [
+   "imdb",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "imdb\\.com/find/?\\?.*q=inception"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "imdb-open-the-matrix",
+  "url": "https://www.imdb.com/",
+  "goal": "Open the IMDb page for the 1999 film The Matrix. Stop when that film's page is visible. Do not sign in.",
+  "tags": [
+   "imdb",
+   "open_title"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "imdb\\.com/title/tt0133093"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "npm-search-express",
+  "url": "https://www.npmjs.com/",
+  "goal": "Search npm for the express package. Stop when the search results are visible. Do not sign in.",
+  "tags": [
+   "npm",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "npmjs\\.com/search\\?q=express(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "npm-search-react",
+  "url": "https://www.npmjs.com/",
+  "goal": "Search npm for the react package. Stop when the search results are visible. Do not sign in.",
+  "tags": [
+   "npm",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "npmjs\\.com/search\\?q=react(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "pypi-search-requests",
+  "url": "https://pypi.org/",
+  "goal": "Search PyPI for the requests package. Stop when the search results are visible. Do not sign in.",
+  "tags": [
+   "pypi",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "pypi\\.org/search/\\?q=requests(&|$)"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "pypi-open-numpy",
+  "url": "https://pypi.org/",
+  "goal": "Open the PyPI project page for numpy. Stop when the numpy project page is visible. Do not sign in.",
+  "tags": [
+   "pypi",
+   "open_project"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "pypi\\.org/project/numpy/?$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "reuters-search-inflation",
+  "url": "https://www.reuters.com/",
+  "goal": "Search Reuters for inflation. Stop when the search results are visible. Do not sign in.",
+  "tags": [
+   "reuters",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "reuters\\.com/site-search/\\?.*query=inflation"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "reuters-open-technology",
+  "url": "https://www.reuters.com/",
+  "goal": "Open the Technology section of Reuters. Stop when the Technology section page is visible. Do not sign in.",
+  "tags": [
+   "reuters",
+   "open_section"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "reuters\\.com/technology/?$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "weather-ten-day",
+  "url": "https://weather.com/",
+  "goal": "Open the 10 day forecast for the current location. Stop when the 10 day forecast is visible. Do not sign in.",
+  "tags": [
+   "weather",
+   "open_forecast"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "weather\\.com/.*tenday"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "weather-hourly",
+  "url": "https://weather.com/",
+  "goal": "Open the hourly forecast for the current location. Stop when the hourly forecast is visible. Do not sign in.",
+  "tags": [
+   "weather",
+   "open_forecast"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "weather\\.com/.*hourbyhour"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "huggingface-search-bert",
+  "url": "https://huggingface.co/models",
+  "goal": "Search Hugging Face models for bert. Stop when the model search results are visible. Do not sign in.",
+  "tags": [
+   "huggingface",
+   "search"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "huggingface\\.co/models\\?.*search=bert"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ },
+ {
+  "id": "huggingface-open-gpt2",
+  "url": "https://huggingface.co/",
+  "goal": "Open the openai-community/gpt2 model page on Hugging Face. Stop when that model page is visible. Do not sign in.",
+  "tags": [
+   "huggingface",
+   "open_model"
+  ],
+  "verify": "page",
+  "repeat": null,
+  "args": {
+   "url": [
+    "huggingface\\.co/openai-community/gpt2/?$"
+   ],
+   "text": [],
+   "fields": [],
+   "values": [],
+   "checked": []
+  }
+ }
+]

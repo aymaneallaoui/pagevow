@@ -1,0 +1,4132 @@
+[
+ {
+  "day": "2026-01-01",
+  "format": "%Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%y",
+  "output": "26"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%m",
+  "output": "01"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%d",
+  "output": "01"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%e",
+  "output": " 1"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%j",
+  "output": "001"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%B",
+  "output": "January"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%b",
+  "output": "Jan"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%h",
+  "output": "Jan"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%A",
+  "output": "Thursday"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%a",
+  "output": "Thu"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%u",
+  "output": "4"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%w",
+  "output": "4"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%U",
+  "output": "00"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%W",
+  "output": "00"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%V",
+  "output": "01"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%G",
+  "output": "2026"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%g",
+  "output": "26"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%F",
+  "output": "2026-01-01"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%D",
+  "output": "01/01/26"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-d",
+  "output": "1"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-m",
+  "output": "1"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-e",
+  "output": "1"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-j",
+  "output": "1"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-y",
+  "output": "26"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-U",
+  "output": "0"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-W",
+  "output": "0"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-V",
+  "output": "1"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-g",
+  "output": "26"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-u",
+  "output": "4"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-w",
+  "output": "4"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%A, %B %-d, %Y",
+  "output": "Thursday, January 1, 2026"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%d/%m/%Y",
+  "output": "01/01/2026"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%Y%m%d",
+  "output": "20260101"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%b %d",
+  "output": "Jan 01"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "week %V of %G",
+  "output": "week 01 of 2026"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-m/%-d/%y",
+  "output": "1/1/26"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2026-01-01 00:00"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-B",
+  "output": "January"
+ },
+ {
+  "day": "2026-01-01",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%y",
+  "output": "26"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%m",
+  "output": "09"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%d",
+  "output": "28"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%e",
+  "output": "28"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%j",
+  "output": "271"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%B",
+  "output": "September"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%b",
+  "output": "Sep"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%h",
+  "output": "Sep"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%A",
+  "output": "Monday"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%a",
+  "output": "Mon"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%u",
+  "output": "1"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%w",
+  "output": "1"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%U",
+  "output": "39"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%W",
+  "output": "39"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%V",
+  "output": "40"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%G",
+  "output": "2026"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%g",
+  "output": "26"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%F",
+  "output": "2026-09-28"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%D",
+  "output": "09/28/26"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-d",
+  "output": "28"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-m",
+  "output": "9"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-e",
+  "output": "28"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-j",
+  "output": "271"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-y",
+  "output": "26"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-U",
+  "output": "39"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-W",
+  "output": "39"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-V",
+  "output": "40"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-g",
+  "output": "26"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-u",
+  "output": "1"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-w",
+  "output": "1"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%A, %B %-d, %Y",
+  "output": "Monday, September 28, 2026"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%d/%m/%Y",
+  "output": "28/09/2026"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%Y%m%d",
+  "output": "20260928"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%b %d",
+  "output": "Sep 28"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "week %V of %G",
+  "output": "week 40 of 2026"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-m/%-d/%y",
+  "output": "9/28/26"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2026-09-28 00:00"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-B",
+  "output": "September"
+ },
+ {
+  "day": "2026-09-28",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%y",
+  "output": "26"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%m",
+  "output": "10"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%d",
+  "output": "12"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%e",
+  "output": "12"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%j",
+  "output": "285"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%B",
+  "output": "October"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%b",
+  "output": "Oct"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%h",
+  "output": "Oct"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%A",
+  "output": "Monday"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%a",
+  "output": "Mon"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%u",
+  "output": "1"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%w",
+  "output": "1"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%U",
+  "output": "41"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%W",
+  "output": "41"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%V",
+  "output": "42"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%G",
+  "output": "2026"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%g",
+  "output": "26"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%F",
+  "output": "2026-10-12"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%D",
+  "output": "10/12/26"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-d",
+  "output": "12"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-m",
+  "output": "10"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-e",
+  "output": "12"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-j",
+  "output": "285"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-y",
+  "output": "26"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-U",
+  "output": "41"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-W",
+  "output": "41"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-V",
+  "output": "42"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-g",
+  "output": "26"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-u",
+  "output": "1"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-w",
+  "output": "1"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%A, %B %-d, %Y",
+  "output": "Monday, October 12, 2026"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%d/%m/%Y",
+  "output": "12/10/2026"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%Y%m%d",
+  "output": "20261012"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%b %d",
+  "output": "Oct 12"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "week %V of %G",
+  "output": "week 42 of 2026"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-m/%-d/%y",
+  "output": "10/12/26"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2026-10-12 00:00"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-B",
+  "output": "October"
+ },
+ {
+  "day": "2026-10-12",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%Y",
+  "output": "2024"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%y",
+  "output": "24"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%m",
+  "output": "02"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%d",
+  "output": "29"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%e",
+  "output": "29"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%j",
+  "output": "060"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%B",
+  "output": "February"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%b",
+  "output": "Feb"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%h",
+  "output": "Feb"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%A",
+  "output": "Thursday"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%a",
+  "output": "Thu"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%u",
+  "output": "4"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%w",
+  "output": "4"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%U",
+  "output": "08"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%W",
+  "output": "09"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%V",
+  "output": "09"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%G",
+  "output": "2024"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%g",
+  "output": "24"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%F",
+  "output": "2024-02-29"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%D",
+  "output": "02/29/24"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-d",
+  "output": "29"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-m",
+  "output": "2"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-e",
+  "output": "29"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-j",
+  "output": "60"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-y",
+  "output": "24"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-U",
+  "output": "8"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-W",
+  "output": "9"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-V",
+  "output": "9"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-g",
+  "output": "24"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-u",
+  "output": "4"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-w",
+  "output": "4"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%A, %B %-d, %Y",
+  "output": "Thursday, February 29, 2024"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%d/%m/%Y",
+  "output": "29/02/2024"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%Y%m%d",
+  "output": "20240229"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%b %d",
+  "output": "Feb 29"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "week %V of %G",
+  "output": "week 09 of 2024"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-m/%-d/%y",
+  "output": "2/29/24"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2024-02-29 00:00"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-Y",
+  "output": "2024"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-B",
+  "output": "February"
+ },
+ {
+  "day": "2024-02-29",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%y",
+  "output": "26"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%m",
+  "output": "12"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%d",
+  "output": "31"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%e",
+  "output": "31"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%j",
+  "output": "365"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%B",
+  "output": "December"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%b",
+  "output": "Dec"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%h",
+  "output": "Dec"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%A",
+  "output": "Thursday"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%a",
+  "output": "Thu"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%u",
+  "output": "4"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%w",
+  "output": "4"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%U",
+  "output": "52"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%W",
+  "output": "52"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%V",
+  "output": "53"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%G",
+  "output": "2026"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%g",
+  "output": "26"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%F",
+  "output": "2026-12-31"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%D",
+  "output": "12/31/26"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-d",
+  "output": "31"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-m",
+  "output": "12"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-e",
+  "output": "31"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-j",
+  "output": "365"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-y",
+  "output": "26"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-U",
+  "output": "52"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-W",
+  "output": "52"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-V",
+  "output": "53"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-g",
+  "output": "26"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-u",
+  "output": "4"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-w",
+  "output": "4"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%A, %B %-d, %Y",
+  "output": "Thursday, December 31, 2026"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%d/%m/%Y",
+  "output": "31/12/2026"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%Y%m%d",
+  "output": "20261231"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%b %d",
+  "output": "Dec 31"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "week %V of %G",
+  "output": "week 53 of 2026"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-m/%-d/%y",
+  "output": "12/31/26"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2026-12-31 00:00"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-B",
+  "output": "December"
+ },
+ {
+  "day": "2026-12-31",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%Y",
+  "output": "2027"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%y",
+  "output": "27"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%m",
+  "output": "01"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%d",
+  "output": "03"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%e",
+  "output": " 3"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%j",
+  "output": "003"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%B",
+  "output": "January"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%b",
+  "output": "Jan"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%h",
+  "output": "Jan"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%A",
+  "output": "Sunday"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%a",
+  "output": "Sun"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%u",
+  "output": "7"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%w",
+  "output": "0"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%U",
+  "output": "01"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%W",
+  "output": "00"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%V",
+  "output": "53"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%G",
+  "output": "2026"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%g",
+  "output": "26"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%F",
+  "output": "2027-01-03"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%D",
+  "output": "01/03/27"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-d",
+  "output": "3"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-m",
+  "output": "1"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-e",
+  "output": "3"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-j",
+  "output": "3"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-y",
+  "output": "27"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-U",
+  "output": "1"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-W",
+  "output": "0"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-V",
+  "output": "53"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-g",
+  "output": "26"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-u",
+  "output": "7"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-w",
+  "output": "0"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%A, %B %-d, %Y",
+  "output": "Sunday, January 3, 2027"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%d/%m/%Y",
+  "output": "03/01/2027"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%Y%m%d",
+  "output": "20270103"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%b %d",
+  "output": "Jan 03"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "week %V of %G",
+  "output": "week 53 of 2026"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-m/%-d/%y",
+  "output": "1/3/27"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2027-01-03 00:00"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-Y",
+  "output": "2027"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-B",
+  "output": "January"
+ },
+ {
+  "day": "2027-01-03",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%Y",
+  "output": "2021"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%y",
+  "output": "21"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%m",
+  "output": "01"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%d",
+  "output": "03"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%e",
+  "output": " 3"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%j",
+  "output": "003"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%B",
+  "output": "January"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%b",
+  "output": "Jan"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%h",
+  "output": "Jan"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%A",
+  "output": "Sunday"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%a",
+  "output": "Sun"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%u",
+  "output": "7"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%w",
+  "output": "0"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%U",
+  "output": "01"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%W",
+  "output": "00"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%V",
+  "output": "53"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%G",
+  "output": "2020"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%g",
+  "output": "20"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%F",
+  "output": "2021-01-03"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%D",
+  "output": "01/03/21"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-d",
+  "output": "3"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-m",
+  "output": "1"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-e",
+  "output": "3"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-j",
+  "output": "3"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-y",
+  "output": "21"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-U",
+  "output": "1"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-W",
+  "output": "0"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-V",
+  "output": "53"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-g",
+  "output": "20"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-u",
+  "output": "7"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-w",
+  "output": "0"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%A, %B %-d, %Y",
+  "output": "Sunday, January 3, 2021"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%d/%m/%Y",
+  "output": "03/01/2021"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%Y%m%d",
+  "output": "20210103"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%b %d",
+  "output": "Jan 03"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "week %V of %G",
+  "output": "week 53 of 2020"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-m/%-d/%y",
+  "output": "1/3/21"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2021-01-03 00:00"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-Y",
+  "output": "2021"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-B",
+  "output": "January"
+ },
+ {
+  "day": "2021-01-03",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%Y",
+  "output": "2020"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%y",
+  "output": "20"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%m",
+  "output": "12"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%d",
+  "output": "31"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%e",
+  "output": "31"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%j",
+  "output": "366"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%B",
+  "output": "December"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%b",
+  "output": "Dec"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%h",
+  "output": "Dec"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%A",
+  "output": "Thursday"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%a",
+  "output": "Thu"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%u",
+  "output": "4"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%w",
+  "output": "4"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%U",
+  "output": "52"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%W",
+  "output": "52"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%V",
+  "output": "53"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%G",
+  "output": "2020"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%g",
+  "output": "20"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%F",
+  "output": "2020-12-31"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%D",
+  "output": "12/31/20"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-d",
+  "output": "31"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-m",
+  "output": "12"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-e",
+  "output": "31"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-j",
+  "output": "366"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-y",
+  "output": "20"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-U",
+  "output": "52"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-W",
+  "output": "52"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-V",
+  "output": "53"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-g",
+  "output": "20"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-u",
+  "output": "4"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-w",
+  "output": "4"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%A, %B %-d, %Y",
+  "output": "Thursday, December 31, 2020"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%d/%m/%Y",
+  "output": "31/12/2020"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%Y%m%d",
+  "output": "20201231"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%b %d",
+  "output": "Dec 31"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "week %V of %G",
+  "output": "week 53 of 2020"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-m/%-d/%y",
+  "output": "12/31/20"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2020-12-31 00:00"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-Y",
+  "output": "2020"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-B",
+  "output": "December"
+ },
+ {
+  "day": "2020-12-31",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%y",
+  "output": "26"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%m",
+  "output": "03"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%d",
+  "output": "09"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%e",
+  "output": " 9"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%j",
+  "output": "068"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%B",
+  "output": "March"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%b",
+  "output": "Mar"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%h",
+  "output": "Mar"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%A",
+  "output": "Monday"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%a",
+  "output": "Mon"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%u",
+  "output": "1"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%w",
+  "output": "1"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%U",
+  "output": "10"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%W",
+  "output": "10"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%V",
+  "output": "11"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%G",
+  "output": "2026"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%g",
+  "output": "26"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%F",
+  "output": "2026-03-09"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%D",
+  "output": "03/09/26"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-d",
+  "output": "9"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-m",
+  "output": "3"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-e",
+  "output": "9"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-j",
+  "output": "68"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-y",
+  "output": "26"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-U",
+  "output": "10"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-W",
+  "output": "10"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-V",
+  "output": "11"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-g",
+  "output": "26"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-u",
+  "output": "1"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-w",
+  "output": "1"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%A, %B %-d, %Y",
+  "output": "Monday, March 9, 2026"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%d/%m/%Y",
+  "output": "09/03/2026"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%Y%m%d",
+  "output": "20260309"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%b %d",
+  "output": "Mar 09"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "week %V of %G",
+  "output": "week 11 of 2026"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-m/%-d/%y",
+  "output": "3/9/26"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2026-03-09 00:00"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-B",
+  "output": "March"
+ },
+ {
+  "day": "2026-03-09",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%Y",
+  "output": "1999"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%y",
+  "output": "99"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%C",
+  "output": "19"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%m",
+  "output": "07"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%d",
+  "output": "04"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%e",
+  "output": " 4"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%j",
+  "output": "185"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%B",
+  "output": "July"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%b",
+  "output": "Jul"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%h",
+  "output": "Jul"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%A",
+  "output": "Sunday"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%a",
+  "output": "Sun"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%u",
+  "output": "7"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%w",
+  "output": "0"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%U",
+  "output": "27"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%W",
+  "output": "26"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%V",
+  "output": "26"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%G",
+  "output": "1999"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%g",
+  "output": "99"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%F",
+  "output": "1999-07-04"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%D",
+  "output": "07/04/99"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-d",
+  "output": "4"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-m",
+  "output": "7"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-e",
+  "output": "4"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-j",
+  "output": "185"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-y",
+  "output": "99"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-C",
+  "output": "19"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-U",
+  "output": "27"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-W",
+  "output": "26"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-V",
+  "output": "26"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-g",
+  "output": "99"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-u",
+  "output": "7"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-w",
+  "output": "0"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%A, %B %-d, %Y",
+  "output": "Sunday, July 4, 1999"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%d/%m/%Y",
+  "output": "04/07/1999"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%Y%m%d",
+  "output": "19990704"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%b %d",
+  "output": "Jul 04"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "week %V of %G",
+  "output": "week 26 of 1999"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-m/%-d/%y",
+  "output": "7/4/99"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "1999-07-04 00:00"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-Y",
+  "output": "1999"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-B",
+  "output": "July"
+ },
+ {
+  "day": "1999-07-04",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%Y",
+  "output": "2100"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%y",
+  "output": "00"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%C",
+  "output": "21"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%m",
+  "output": "02"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%d",
+  "output": "28"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%e",
+  "output": "28"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%j",
+  "output": "059"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%B",
+  "output": "February"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%b",
+  "output": "Feb"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%h",
+  "output": "Feb"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%A",
+  "output": "Sunday"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%a",
+  "output": "Sun"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%u",
+  "output": "7"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%w",
+  "output": "0"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%U",
+  "output": "09"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%W",
+  "output": "08"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%V",
+  "output": "08"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%G",
+  "output": "2100"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%g",
+  "output": "00"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%F",
+  "output": "2100-02-28"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%D",
+  "output": "02/28/00"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-d",
+  "output": "28"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-m",
+  "output": "2"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-e",
+  "output": "28"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-j",
+  "output": "59"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-y",
+  "output": "0"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-C",
+  "output": "21"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-U",
+  "output": "9"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-W",
+  "output": "8"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-V",
+  "output": "8"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-g",
+  "output": "0"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-u",
+  "output": "7"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-w",
+  "output": "0"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%A, %B %-d, %Y",
+  "output": "Sunday, February 28, 2100"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%d/%m/%Y",
+  "output": "28/02/2100"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%Y%m%d",
+  "output": "21000228"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%b %d",
+  "output": "Feb 28"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "week %V of %G",
+  "output": "week 08 of 2100"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-m/%-d/%y",
+  "output": "2/28/00"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2100-02-28 00:00"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-Y",
+  "output": "2100"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-B",
+  "output": "February"
+ },
+ {
+  "day": "2100-02-28",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%y",
+  "output": "26"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%m",
+  "output": "11"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%d",
+  "output": "07"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%e",
+  "output": " 7"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%j",
+  "output": "311"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%B",
+  "output": "November"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%b",
+  "output": "Nov"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%h",
+  "output": "Nov"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%A",
+  "output": "Saturday"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%a",
+  "output": "Sat"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%u",
+  "output": "6"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%w",
+  "output": "6"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%U",
+  "output": "44"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%W",
+  "output": "44"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%V",
+  "output": "45"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%G",
+  "output": "2026"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%g",
+  "output": "26"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%F",
+  "output": "2026-11-07"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%D",
+  "output": "11/07/26"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-d",
+  "output": "7"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-m",
+  "output": "11"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-e",
+  "output": "7"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-j",
+  "output": "311"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-y",
+  "output": "26"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-U",
+  "output": "44"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-W",
+  "output": "44"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-V",
+  "output": "45"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-g",
+  "output": "26"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-u",
+  "output": "6"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-w",
+  "output": "6"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%A, %B %-d, %Y",
+  "output": "Saturday, November 7, 2026"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%d/%m/%Y",
+  "output": "07/11/2026"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%Y%m%d",
+  "output": "20261107"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%b %d",
+  "output": "Nov 07"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "week %V of %G",
+  "output": "week 45 of 2026"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-m/%-d/%y",
+  "output": "11/7/26"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2026-11-07 00:00"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-Y",
+  "output": "2026"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-B",
+  "output": "November"
+ },
+ {
+  "day": "2026-11-07",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%Y",
+  "output": "2020"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%y",
+  "output": "20"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%m",
+  "output": "01"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%d",
+  "output": "01"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%e",
+  "output": " 1"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%j",
+  "output": "001"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%B",
+  "output": "January"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%b",
+  "output": "Jan"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%h",
+  "output": "Jan"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%A",
+  "output": "Wednesday"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%a",
+  "output": "Wed"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%u",
+  "output": "3"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%w",
+  "output": "3"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%U",
+  "output": "00"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%W",
+  "output": "00"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%V",
+  "output": "01"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%G",
+  "output": "2020"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%g",
+  "output": "20"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%F",
+  "output": "2020-01-01"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%D",
+  "output": "01/01/20"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-d",
+  "output": "1"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-m",
+  "output": "1"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-e",
+  "output": "1"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-j",
+  "output": "1"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-y",
+  "output": "20"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-U",
+  "output": "0"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-W",
+  "output": "0"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-V",
+  "output": "1"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-g",
+  "output": "20"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-u",
+  "output": "3"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-w",
+  "output": "3"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%A, %B %-d, %Y",
+  "output": "Wednesday, January 1, 2020"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%d/%m/%Y",
+  "output": "01/01/2020"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%Y%m%d",
+  "output": "20200101"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%b %d",
+  "output": "Jan 01"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "week %V of %G",
+  "output": "week 01 of 2020"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-m/%-d/%y",
+  "output": "1/1/20"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2020-01-01 00:00"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-Y",
+  "output": "2020"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-B",
+  "output": "January"
+ },
+ {
+  "day": "2020-01-01",
+  "format": "%-p",
+  "output": "AM"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%Y",
+  "output": "2018"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%y",
+  "output": "18"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%C",
+  "output": "20"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%m",
+  "output": "12"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%d",
+  "output": "31"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%e",
+  "output": "31"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%j",
+  "output": "365"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%B",
+  "output": "December"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%b",
+  "output": "Dec"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%h",
+  "output": "Dec"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%A",
+  "output": "Monday"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%a",
+  "output": "Mon"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%u",
+  "output": "1"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%w",
+  "output": "1"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%U",
+  "output": "52"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%W",
+  "output": "53"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%V",
+  "output": "01"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%G",
+  "output": "2019"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%g",
+  "output": "19"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%F",
+  "output": "2018-12-31"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%D",
+  "output": "12/31/18"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%H",
+  "output": "00"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%M",
+  "output": "00"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%S",
+  "output": "00"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%I",
+  "output": "12"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%p",
+  "output": "AM"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%T",
+  "output": "00:00:00"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%R",
+  "output": "00:00"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%n",
+  "output": "\n"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%t",
+  "output": "\t"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%%",
+  "output": "%"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-d",
+  "output": "31"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-m",
+  "output": "12"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-e",
+  "output": "31"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-j",
+  "output": "365"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-y",
+  "output": "18"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-C",
+  "output": "20"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-U",
+  "output": "52"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-W",
+  "output": "53"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-V",
+  "output": "1"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-g",
+  "output": "19"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-H",
+  "output": "0"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-M",
+  "output": "0"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-S",
+  "output": "0"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-I",
+  "output": "12"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-u",
+  "output": "1"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-w",
+  "output": "1"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%A, %B %-d, %Y",
+  "output": "Monday, December 31, 2018"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%d/%m/%Y",
+  "output": "31/12/2018"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%Y%m%d",
+  "output": "20181231"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%b %d",
+  "output": "Dec 31"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "week %V of %G",
+  "output": "week 01 of 2019"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-m/%-d/%y",
+  "output": "12/31/18"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "100%%",
+  "output": "100%"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "no directives",
+  "output": "no directives"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%Y-%m-%d %H:%M",
+  "output": "2018-12-31 00:00"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-Y",
+  "output": "2018"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-B",
+  "output": "December"
+ },
+ {
+  "day": "2018-12-31",
+  "format": "%-p",
+  "output": "AM"
+ }
+]

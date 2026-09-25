@@ -1,0 +1,107 @@
+[
+ {
+  "day": "2026-01-01",
+  "goal": "January 1, 2026",
+  "iso": "2026-01-01",
+  "departure": "Thu, Jan 1",
+  "flight": "Thursday, January 1"
+ },
+ {
+  "day": "2026-09-28",
+  "goal": "September 28, 2026",
+  "iso": "2026-09-28",
+  "departure": "Mon, Sep 28",
+  "flight": "Monday, September 28"
+ },
+ {
+  "day": "2026-10-12",
+  "goal": "October 12, 2026",
+  "iso": "2026-10-12",
+  "departure": "Mon, Oct 12",
+  "flight": "Monday, October 12"
+ },
+ {
+  "day": "2024-02-29",
+  "goal": "February 29, 2024",
+  "iso": "2024-02-29",
+  "departure": "Thu, Feb 29",
+  "flight": "Thursday, February 29"
+ },
+ {
+  "day": "2026-12-31",
+  "goal": "December 31, 2026",
+  "iso": "2026-12-31",
+  "departure": "Thu, Dec 31",
+  "flight": "Thursday, December 31"
+ },
+ {
+  "day": "2027-01-03",
+  "goal": "January 3, 2027",
+  "iso": "2027-01-03",
+  "departure": "Sun, Jan 3",
+  "flight": "Sunday, January 3"
+ },
+ {
+  "day": "2021-01-03",
+  "goal": "January 3, 2021",
+  "iso": "2021-01-03",
+  "departure": "Sun, Jan 3",
+  "flight": "Sunday, January 3"
+ },
+ {
+  "day": "2020-12-31",
+  "goal": "December 31, 2020",
+  "iso": "2020-12-31",
+  "departure": "Thu, Dec 31",
+  "flight": "Thursday, December 31"
+ },
+ {
+  "day": "2026-03-09",
+  "goal": "March 9, 2026",
+  "iso": "2026-03-09",
+  "departure": "Mon, Mar 9",
+  "flight": "Monday, March 9"
+ },
+ {
+  "day": "1999-07-04",
+  "goal": "July 4, 1999",
+  "iso": "1999-07-04",
+  "departure": "Sun, Jul 4",
+  "flight": "Sunday, July 4"
+ },
+ {
+  "day": "2100-02-28",
+  "goal": "February 28, 2100",
+  "iso": "2100-02-28",
+  "departure": "Sun, Feb 28",
+  "flight": "Sunday, February 28"
+ },
+ {
+  "day": "0999-05-05",
+  "goal": "May 5, 999",
+  "iso": "0999-05-05",
+  "departure": "Sun, May 5",
+  "flight": "Sunday, May 5"
+ },
+ {
+  "day": "2026-11-07",
+  "goal": "November 7, 2026",
+  "iso": "2026-11-07",
+  "departure": "Sat, Nov 7",
+  "flight": "Saturday, November 7"
+ },
+ {
+  "day": "2020-01-01",
+  "goal": "January 1, 2020",
+  "iso": "2020-01-01",
+  "departure": "Wed, Jan 1",
+  "flight": "Wednesday, January 1"
+ },
+ {
+  "day": "2018-12-31",
+  "goal": "December 31, 2018",
+  "iso": "2018-12-31",
+  "departure": "Mon, Dec 31",
+  "flight": "Monday, December 31"
+ }
+]

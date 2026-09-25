@@ -1,0 +1,70 @@
+[
+ {
+  "query": "tfs=abc",
+  "value": "abc"
+ },
+ {
+  "query": "tfs=",
+  "value": ""
+ },
+ {
+  "query": "tfs",
+  "value": ""
+ },
+ {
+  "query": "a=1&tfs=x&tfs=y",
+  "value": "x"
+ },
+ {
+  "query": "tfs=a+b",
+  "value": "a b"
+ },
+ {
+  "query": "tfs=%E2%82%AC",
+  "value": "€"
+ },
+ {
+  "query": "TFS=x",
+  "value": ""
+ },
+ {
+  "query": "t%66s=z",
+  "value": "z"
+ },
+ {
+  "query": "a=1;tfs=x",
+  "value": ""
+ },
+ {
+  "query": "&&tfs=q&&",
+  "value": "q"
+ },
+ {
+  "query": "tfs=1=2",
+  "value": "1=2"
+ },
+ {
+  "query": "x=1",
+  "value": ""
+ },
+ {
+  "query": "",
+  "value": ""
+ },
+ {
+  "query": "tfs=%zz",
+  "value": "%zz"
+ },
+ {
+  "query": "tfs=%20",
+  "value": " "
+ },
+ {
+  "query": "tfs=&tfs=second",
+  "value": "second"
+ },
+ {
+  "query": "a%26b=1&tfs=w",
+  "value": "w"
+ }
+]

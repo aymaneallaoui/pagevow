@@ -1,0 +1,166 @@
+[
+ {
+  "input": "",
+  "output": ""
+ },
+ {
+  "input": "plain",
+  "output": "plain"
+ },
+ {
+  "input": "a+b",
+  "output": "a b"
+ },
+ {
+  "input": "a%20b+c",
+  "output": "a b c"
+ },
+ {
+  "input": "%E2%82%AC",
+  "output": "€"
+ },
+ {
+  "input": "%e2%82%ac",
+  "output": "€"
+ },
+ {
+  "input": "%E2%82",
+  "output": "�"
+ },
+ {
+  "input": "%E2%28",
+  "output": "�("
+ },
+ {
+  "input": "%FF",
+  "output": "�"
+ },
+ {
+  "input": "%C3%A9t%C3%A9",
+  "output": "été"
+ },
+ {
+  "input": "%zz",
+  "output": "%zz"
+ },
+ {
+  "input": "%4",
+  "output": "%4"
+ },
+ {
+  "input": "100%",
+  "output": "100%"
+ },
+ {
+  "input": "%%41",
+  "output": "%A"
+ },
+ {
+  "input": "é%C3%A9",
+  "output": "éé"
+ },
+ {
+  "input": "%C3é%A9",
+  "output": "�é�"
+ },
+ {
+  "input": "a%2Bb",
+  "output": "a+b"
+ },
+ {
+  "input": "%41%42%43",
+  "output": "ABC"
+ },
+ {
+  "input": "%F0%9F%98%80",
+  "output": "😀"
+ },
+ {
+  "input": "%F0%9F%98",
+  "output": "�"
+ },
+ {
+  "input": "%ED%A0%80",
+  "output": "���"
+ },
+ {
+  "input": "%C0%80",
+  "output": "��"
+ },
+ {
+  "input": "%F4%90%80%80",
+  "output": "����"
+ },
+ {
+  "input": "%E0%80%80",
+  "output": "���"
+ },
+ {
+  "input": "%C3%28",
+  "output": "�("
+ },
+ {
+  "input": "%E2%82%AC%E2%82",
+  "output": "€�"
+ },
+ {
+  "input": "%80",
+  "output": "�"
+ },
+ {
+  "input": "%C2",
+  "output": "�"
+ },
+ {
+  "input": "%C2%80",
+  "output": ""
+ },
+ {
+  "input": "x%00y",
+  "output": "x\u0000y"
+ },
+ {
+  "input": "%25",
+  "output": "%"
+ },
+ {
+  "input": "%2525",
+  "output": "%25"
+ },
+ {
+  "input": "https://x.test/a%2Fb?q=%C3%BC+ber#f%C3%A9",
+  "output": "https://x.test/a/b?q=ü ber#fé"
+ },
+ {
+  "input": "日本%E6%97%A5",
+  "output": "日本日"
+ },
+ {
+  "input": "%F1%80%80",
+  "output": "�"
+ },
+ {
+  "input": "%F1%80%80%41",
+  "output": "�A"
+ },
+ {
+  "input": "%E1%80",
+  "output": "�"
+ },
+ {
+  "input": "%E1%80%41",
+  "output": "�A"
+ },
+ {
+  "input": "%F0%80",
+  "output": "��"
+ },
+ {
+  "input": "%F0%90%80%41",
+  "output": "�A"
+ },
+ {
+  "input": "+%2B+",
+  "output": " + "
+ }
+]

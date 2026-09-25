@@ -283,6 +283,14 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Listing stored keys | `keys set` and `keys unset` maintain an index of names (names only) in the config directory; `keys list` shows indexed names and referenced names with their state |
 | Starter tests file | three real example tests with comments |
 | `--config FILE` global flag | accepted |
+| Cascade `target_conf` | 0 means the default 0.5; a negative value disables escalation on target confidence |
+| Error causes | transport errors stay wrapped for `errors.Is`; message text never contains a key |
+| History type | the agent owns its history type and converts it for the text helper |
+| `run_id` | local time, as in the Python traces; run directories are UTC |
+| Unicode text matching | `golang.org/x/text` (NFKD, case folding), verified against Python 3.13 on 18,945 code points |
+| Regular expressions | Go RE2: no lookaround, no backreferences; an invalid pattern fails when the tests file loads |
+| Tests file strictness | `verify_args` without `verify` is an error; unknown top-level keys produce a warning, not an error |
+| Text helper reasoning switch | `text_helper.reasoning: none` in the config, wired in phase 2 |
 
 ## 17. Open questions
 

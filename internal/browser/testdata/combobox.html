@@ -1,0 +1,14 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Combobox page</title>
+<input id="city" role="combobox" aria-label="City" aria-controls="cities" aria-expanded="false">
+<ul id="cities" role="listbox"></ul>
+<script>
+  const city = document.getElementById('city');
+  const list = document.getElementById('cities');
+  city.addEventListener('input', () => {
+    setTimeout(() => {
+      list.innerHTML = '<li role="option">Alpha City</li><li role="option">Alpine Town</li>';
+    }, 90);
+  });
+</script>

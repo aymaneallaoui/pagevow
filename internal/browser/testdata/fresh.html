@@ -1,0 +1,13 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Fresh page</title>
+<label for="box">Box</label>
+<input id="box" value="one">
+<button id="act">Act on me</button>
+<div id="count">0</div>
+<script>
+  document.getElementById('act').addEventListener('click', () => {
+    const count = document.getElementById('count');
+    count.textContent = String(Number(count.textContent) + 1);
+  });
+</script>

@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Shadow page</title>
+<div id="host"></div>
+<script>
+  const root = document.getElementById('host').attachShadow({mode: 'open'});
+  root.innerHTML = '<button id="inner">Shadow button</button><span id="out"></span>';
+  root.getElementById('inner').addEventListener('click', () => {
+    root.getElementById('out').textContent = 'shadow clicked';
+  });
+</script>

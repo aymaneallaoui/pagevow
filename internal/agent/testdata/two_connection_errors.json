@@ -1,0 +1,116 @@
+{
+ "name": "two_connection_errors",
+ "goal": "Find a book",
+ "url": "https://example.test/",
+ "config": {
+  "loop_guard": false,
+  "done_min_conf": 0.0,
+  "blocked_min_conf": 0.0,
+  "max_steps": 60,
+  "verifier": false,
+  "veto_cache": true,
+  "target_conf": 0.0,
+  "mask_errors": true,
+  "text_helper": true
+ },
+ "observations": [
+  {
+   "url": "https://example.test/",
+   "title": "Search",
+   "text": "Search",
+   "scroll": {
+    "y": 0
+   },
+   "actions": [
+    {
+     "id": "e1",
+     "kind": "fill",
+     "label": "Search",
+     "node": 10,
+     "role": "textbox",
+     "value": ""
+    },
+    {
+     "id": "e2",
+     "kind": "click",
+     "label": "Go",
+     "node": 20,
+     "role": "button",
+     "value": ""
+    },
+    {
+     "id": "e3",
+     "kind": "click",
+     "label": "More",
+     "node": 30,
+     "role": "button",
+     "value": ""
+    },
+    {
+     "id": "wait",
+     "kind": "wait",
+     "label": "Wait"
+    }
+   ],
+   "fingerprint": "ab1ba44e792be1e544913d0a734d23f75109dc6dc3ca08cd88ed26713d319ce8"
+  }
+ ],
+ "fresh": [],
+ "acts": [],
+ "model": {
+  "primary": [
+   {
+    "kind": "connection_error"
+   },
+   {
+    "kind": "connection_error"
+   }
+  ],
+  "verifier": []
+ },
+ "text": [],
+ "expected": {
+  "status": "error",
+  "error": "Model connection failed; no action executed.",
+  "blocked_reason": null,
+  "steps": 0,
+  "history": [],
+  "browser_calls": [
+   [
+    "observe"
+   ],
+   [
+    "fresh"
+   ],
+   [
+    "fresh"
+   ]
+  ],
+  "trace": [
+   {
+    "event": "step_start",
+    "step": 1,
+    "url": "https://example.test/"
+   },
+   {
+    "event": "step_failed",
+    "step": 1,
+    "failed_phase": "model",
+    "error": "Model connection failed; no action executed."
+   }
+  ],
+  "meta": {
+   "goal": "Find a book",
+   "url": "https://example.test/",
+   "status": "error",
+   "steps": 0,
+   "verified": null,
+   "error": "Model connection failed; no action executed."
+  },
+  "model_calls": {
+   "primary": 2,
+   "verifier": 0,
+   "text": 0
+  }
+ }
+}

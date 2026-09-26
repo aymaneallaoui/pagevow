@@ -235,7 +235,8 @@ verifier to make a test pass; report remaining failures plainly.
 - `pagevow install --browser` downloads a pinned Chrome for Testing build for the current OS and architecture into the
   data directory, verifies its checksum, and records the version.
 - `start` launches it headless with its own profile directory and a fixed debugging port bound to 127.0.0.1.
-- Each test gets a new target (tab) and closes it at the end.
+- Each test gets a new target in its own window and closes it at the end. A tab inside an existing window gets no
+  compositor frames while hidden, so screenshots and wheel scrolling stall for up to 5 seconds, in headless mode too.
 - Headless is the default because a hidden window under Wayland receives no frames and screenshots hang. With
   `browser.headless: false` on Linux, pagevow adds `--ozone-platform=x11`.
 - Screenshot capture uses a 5 second timeout. After the first failure in a test no further step capture is tried;
@@ -291,10 +292,15 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Regular expressions | Go RE2: no lookaround, no backreferences; an invalid pattern fails when the tests file loads |
 | Tests file strictness | `verify_args` without `verify` is an error; unknown top-level keys produce a warning, not an error |
 | Text helper reasoning switch | `text_helper.reasoning: none` in the config, wired in phase 2 |
+| Screenshot timeouts | cause found: hidden tabs receive no compositor frames. Fixed by one window per session; the 5 second timeout and the step fallback stay as a safety net |
+| Browser errors | `ErrTargetRefused` and `ErrStalePage` are separate values; the agent tests for each |
+| Navigation failure | opening the start URL fails the test with `ErrNavigation` instead of observing the browser error page |
+| Browser port | `Launch` reads the port from `DevToolsActivePort` in its own profile, so it never attaches to another browser |
+| Runner and browser lifetime | `run` starts its own headless browser and stops it at the end, unless a browser managed by `pagevow start` is running |
+| Agent timeout | the runner always gives the agent a deadline; a page that stays stale spends no budget and would loop otherwise |
 
 ## 17. Open questions
 
 1. TypeSafe terms on training models from API output decide whether the local checkpoints may be distributed.
    Until checked, pagevow ships no model and `install --model` takes a path or a private Hugging Face repository.
 2. Windows local model serving is not planned; Windows uses `jev` or `custom`.
-3. Root cause of `Page.captureScreenshot` timing out on idle pages is unknown; the fallback covers it.

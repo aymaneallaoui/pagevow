@@ -144,7 +144,7 @@ def normalize(value):
 
 def write(name, payload):
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / f"{name}.json").write_text(json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+    (OUT / f"{name}.json").write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
 
 
 LONG_LABEL = "Subscribe to the quarterly newsletter about industrial design, typography and print " * 7
@@ -383,6 +383,23 @@ def choose_cases():
         )
     )
 
+    many = [action(f"e{i}", "click", f"Item {i}", i, "link", "") for i in range(1, 12)]
+    many.append(action("e12", "fill", "Filter", 12, "textbox", ""))
+    many += [
+        action(f"e{13 + i}", "select", f"Size → S{i}", 13, "combobox", f"s{i}", current_value="S1") for i in range(1, 12)
+    ]
+    many.append(action("wait", "wait", "Wait for the page to update"))
+    cases.append(
+        dict(
+            name="many_elements_index_order",
+            goal="Pick size S11 and open Item 10",
+            state=state("https://example.test/list", "List", "Items", many),
+            history=history(2),
+            operation="SELECT",
+            target="13:10",
+        )
+    )
+
     cases.append(
         dict(
             name="only_controls_wait",
@@ -490,6 +507,7 @@ def run_scenario(name, steps, verifier=True, veto=False, target_conf=None):
             "state": page,
             "mutate_click_choice": spec.get("mutate_click_choice", ""),
             "trace_step": spec["trace_steps"] + 1 if "trace_steps" in spec else 0,
+            "request": copy.deepcopy(decision["request"]),
             "responses": copy.deepcopy(stub.responses),
             "expected": {
                 "calls": stub.calls,

@@ -250,6 +250,39 @@ func TestSecretsNeverReachTheFiles(t *testing.T) {
 	}
 }
 
+func TestShortSecretsAreNotRedacted(t *testing.T) {
+	for _, short := range []string{"", "local", "abc", "elevenchars"} {
+		require.Less(t, len(short), trace.MinSecretLength)
+		rec := newRecorder(t, t.TempDir(), short)
+		rec.StartStep(0, "http://localhost:3001/cart.html")
+		rec.Step(trace.StepInput{Goal: "open http://localhost:3001/cart.html elevenchars"})
+		rec.Finish("done", 1)
+
+		content := string(mustRead(t, rec.TracePath()))
+		assert.NotContains(t, content, "***", short)
+		assert.Contains(t, content, "http://localhost:3001/cart.html", short)
+		assert.NotContains(t, string(mustRead(t, rec.MetaPath())), "***", short)
+	}
+}
+
+func TestLongSecretsAreRedactedInsideOrdinaryText(t *testing.T) {
+	const secret = "twelve-chars"
+	require.Len(t, secret, trace.MinSecretLength)
+	rec := newRecorder(t, t.TempDir(), secret)
+	rec.Step(trace.StepInput{Goal: "see http://localhost/" + secret + "/x"})
+	content := string(mustRead(t, rec.TracePath()))
+	assert.NotContains(t, content, secret)
+	assert.Contains(t, content, "http://localhost/***/x")
+}
+
+func TestRequestBytesKeepTheirKeyOrder(t *testing.T) {
+	rec := newRecorder(t, t.TempDir())
+	request := json.RawMessage(`{"model":"m","state":{"page":{"url":"u"},"elements":[]},"questions":{"operation":{},"click_target":{}}}`)
+	rec.Step(trace.StepInput{Goal: "g", Request: request})
+	content := string(mustRead(t, rec.TracePath()))
+	assert.Contains(t, content, `"request":`+string(request))
+}
+
 func TestHTMLIsNotEscaped(t *testing.T) {
 	rec := newRecorder(t, t.TempDir())
 	rec.Step(trace.StepInput{Goal: "<a href=\"x\">&</a>"})

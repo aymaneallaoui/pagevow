@@ -6,8 +6,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"image/jpeg"
 	"image/png"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -608,42 +610,100 @@ func TestAttachToAnAbsentBrowserFails(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func libraryGoroutines() int {
+const goroutineExitLimit = 30 * time.Second
+
+// libraryGoroutines counts the goroutines of chromedp and its websocket dependency by the function that started them.
+func libraryGoroutines() map[string]int {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, 2)
-	count := 0
+	counts := map[string]int{}
 	for _, stack := range strings.Split(buf.String(), "\n\n") {
-		if strings.Contains(stack, "chromedp") || strings.Contains(stack, "gobwas") {
-			count++
+		if !strings.Contains(stack, "chromedp") && !strings.Contains(stack, "gobwas") {
+			continue
 		}
+		creator := "main goroutine"
+		for _, line := range strings.Split(stack, "\n") {
+			if rest, ok := strings.CutPrefix(line, "created by "); ok {
+				creator, _, _ = strings.Cut(rest, " in goroutine ")
+				break
+			}
+		}
+		counts[creator]++
 	}
-	return count
+	return counts
 }
 
+func goroutinesAbove(baseline map[string]int) []string {
+	var excess []string
+	for creator, count := range libraryGoroutines() {
+		if count > baseline[creator] {
+			excess = append(excess, fmt.Sprintf("%s: %d, allowed %d", creator, count, baseline[creator]))
+		}
+	}
+	return excess
+}
+
+func waitForGoroutinesAtMost(t *testing.T, baseline map[string]int, when string) {
+	t.Helper()
+	deadline := time.Now().Add(goroutineExitLimit)
+	for {
+		excess := goroutinesAbove(baseline)
+		if len(excess) == 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("browser goroutines still running %s: %s", when, strings.Join(excess, "; "))
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func settledGoroutines(t *testing.T) map[string]int {
+	t.Helper()
+	deadline := time.Now().Add(goroutineExitLimit)
+	previous := libraryGoroutines()
+	for {
+		time.Sleep(250 * time.Millisecond)
+		current := libraryGoroutines()
+		if maps.Equal(previous, current) {
+			return current
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("browser goroutines never settled: %v then %v", previous, current)
+		}
+		previous = current
+	}
+}
+
+func runSessionLifecycle(t *testing.T, tb *testBrowser) {
+	t.Helper()
+	session, err := tb.browser.NewSession(testContext(t), SessionOptions{URL: tb.fixture.URL + "/fill.html"})
+	require.NoError(t, err)
+	state, err := session.Observe(testContext(t))
+	require.NoError(t, err)
+	require.NoError(t, session.Act(testContext(t), find(t, state, "Search"), state, "x"))
+	_, err = session.Observe(testContext(t))
+	require.NoError(t, err)
+	_, err = session.Capture(testContext(t), "png", false)
+	require.NoError(t, err)
+	closeCtx, cancel := cleanupContext()
+	defer cancel()
+	require.NoError(t, session.Close(closeCtx))
+}
+
+// The first session starts the workers that live as long as the handle, so the baseline is taken after it settled.
 func TestNoGoroutinesLeakAfterAFullLifecycle(t *testing.T) {
 	tb := startTestBrowser(t)
-	baseline := libraryGoroutines()
+	runSessionLifecycle(t, tb)
+	baseline := settledGoroutines(t)
 
 	for range 2 {
-		session, err := tb.browser.NewSession(testContext(t), SessionOptions{URL: tb.fixture.URL + "/fill.html"})
-		require.NoError(t, err)
-		state, err := session.Observe(testContext(t))
-		require.NoError(t, err)
-		require.NoError(t, session.Act(testContext(t), find(t, state, "Search"), state, "x"))
-		_, err = session.Observe(testContext(t))
-		require.NoError(t, err)
-		_, err = session.Capture(testContext(t), "png", false)
-		require.NoError(t, err)
-		closeCtx, cancel := cleanupContext()
-		require.NoError(t, session.Close(closeCtx))
-		cancel()
+		runSessionLifecycle(t, tb)
 	}
-	assert.Eventually(t, func() bool { return libraryGoroutines() <= baseline }, 5*time.Second, 50*time.Millisecond,
-		"browser goroutines after the sessions closed: %d, before they opened: %d", libraryGoroutines(), baseline)
+	waitForGoroutinesAtMost(t, baseline, "after the sessions closed")
 
 	closeCtx, cancel := cleanupContext()
 	defer cancel()
 	require.NoError(t, tb.browser.Close(closeCtx))
-	assert.Eventually(t, func() bool { return libraryGoroutines() == 0 }, 5*time.Second, 50*time.Millisecond,
-		"browser goroutines after the handle closed: %d", libraryGoroutines())
+	waitForGoroutinesAtMost(t, nil, "after the handle closed")
 }

@@ -28,6 +28,10 @@ const (
 
 const runIDLayout = "20060102T150405"
 
+// MinSecretLength is the shortest value the recorder redacts; shorter ones such as the placeholder key "local" are
+// substrings of ordinary text and would damage the trace.
+const MinSecretLength = 12
+
 func basePhases() []string { return []string{PhaseSnapshot, PhaseModel, PhaseExecute, PhaseWait} }
 
 // Options configure a Recorder. An empty Dir turns writing off; every other behaviour is unchanged.
@@ -39,7 +43,7 @@ type Options struct {
 	Clock func() time.Time
 	// Rand supplies the four hex digits of the run id; it defaults to crypto/rand.
 	Rand io.Reader
-	// Secrets are values replaced by *** in everything written, as a last defence against a leaked key.
+	// Secrets are values replaced by *** in everything written; values shorter than MinSecretLength are ignored.
 	Secrets []string
 }
 
@@ -110,7 +114,7 @@ func New(opts Options) (*Recorder, error) {
 		url:     opts.URL,
 		goal:    opts.Goal,
 		clock:   clock,
-		secrets: slices.DeleteFunc(slices.Clone(opts.Secrets), func(s string) bool { return s == "" }),
+		secrets: slices.DeleteFunc(slices.Clone(opts.Secrets), func(s string) bool { return len(s) < MinSecretLength }),
 	}, nil
 }
 

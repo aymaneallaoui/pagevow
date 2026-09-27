@@ -15,7 +15,8 @@ type response struct {
 	raw string
 }
 
-type answer struct {
+// Answer is one validated head of the model reply: the chosen index, its confidence and the probability of every index.
+type Answer struct {
 	Choice        *string             `json:"choice"`
 	Confidence    *float64            `json:"confidence"`
 	Probabilities map[string]*float64 `json:"probabilities"`
@@ -51,21 +52,21 @@ func (r *response) usage() json.RawMessage {
 	return r.Usage
 }
 
-func validateChoice(raw json.RawMessage, ids map[string]bool) (answer, bool) {
-	var a answer
+func validateChoice(raw json.RawMessage, ids map[string]bool) (Answer, bool) {
+	var a Answer
 	if len(raw) == 0 || json.Unmarshal(raw, &a) != nil {
-		return answer{}, false
+		return Answer{}, false
 	}
 	if a.Choice == nil || !ids[*a.Choice] || a.Confidence == nil || a.Probabilities == nil {
-		return answer{}, false
+		return Answer{}, false
 	}
 	if len(a.Probabilities) != len(ids) || !inUnit(*a.Confidence) {
-		return answer{}, false
+		return Answer{}, false
 	}
 	keys := make([]string, 0, len(a.Probabilities))
 	for key, p := range a.Probabilities {
 		if !ids[key] || p == nil || !inUnit(*p) {
-			return answer{}, false
+			return Answer{}, false
 		}
 		keys = append(keys, key)
 	}
@@ -77,7 +78,7 @@ func validateChoice(raw json.RawMessage, ids map[string]bool) (answer, bool) {
 		highest = math.Max(highest, p)
 	}
 	if math.Abs(sum-1) >= 0.02 || *a.Probabilities[*a.Choice] < highest-1e-6 {
-		return answer{}, false
+		return Answer{}, false
 	}
 	return a, true
 }

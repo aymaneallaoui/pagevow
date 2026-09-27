@@ -57,9 +57,9 @@ type targetCriterion struct {
 }
 
 type requestBody struct {
-	Model     string              `json:"model"`
-	State     requestState        `json:"state"`
-	Questions map[string]question `json:"questions"`
+	Model     string       `json:"model"`
+	State     requestState `json:"state"`
+	Questions object       `json:"questions"`
 }
 
 // VetoKey identifies a page for the veto cache: its URL and a hash of its element labels.
@@ -69,27 +69,26 @@ type VetoKey struct {
 }
 
 func buildRequest(model string, in Input, sp *space) requestBody {
-	questions := map[string]question{
-		"operation": {
-			Type:         "choice",
-			Criteria:     sp.operationCriteria(),
-			Instructions: operationInstructions{Goal: in.Goal, Rules: nextActionRules},
-		},
-	}
-	for operation, group := range sp.targets {
-		criteria := make(map[string]targetCriterion, len(group.indices))
+	questions := object{{key: "operation", value: question{
+		Type:         "choice",
+		Criteria:     sp.operationCriteria(),
+		Instructions: operationInstructions{Goal: in.Goal, Rules: nextActionRules},
+	}}}
+	for _, operation := range sp.targetOrder {
+		group := sp.targets[operation]
+		criteria := make(object, 0, len(group.indices))
 		for _, index := range group.indices {
 			action := group.actions[index]
-			criteria[index] = targetCriterion{
+			criteria = append(criteria, member{key: index, value: targetCriterion{
 				Element:      "[" + index + "] " + action.Label,
 				CurrentValue: action.HeldValue(),
 				Role:         action.Role,
 				Checked:      action.Checked,
 				Selected:     action.Selected,
 				Expanded:     action.Expanded,
-			}
+			}})
 		}
-		questions[strings.ToLower(operation)+"_target"] = question{
+		questions = append(questions, member{key: strings.ToLower(operation) + "_target", value: question{
 			Type:     "choice",
 			Criteria: criteria,
 			Instructions: targetInstructions{
@@ -97,7 +96,7 @@ func buildRequest(model string, in Input, sp *space) requestBody {
 				Operation: operation,
 				Rules:     []string{nextActionRules, targetRules},
 			},
-		}
+		}})
 	}
 	recent := in.History
 	if len(recent) > recentActionLimit {

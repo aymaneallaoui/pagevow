@@ -1,9 +1,15 @@
 package texthelper
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -67,11 +73,48 @@ func TestRequestBodyMatchesPythonReference(t *testing.T) {
 				BaseURL: fixture.Config.BaseURL, Model: fixture.Config.Model,
 				Reasoning: fixture.Config.Reasoning, Key: "fixture-key",
 			})
-			body, err := json.Marshal(client.buildBody(fixture.input()))
+			body, err := client.payload(fixture.input())
 			require.NoError(t, err)
-			assert.JSONEq(t, string(fixture.Expected.Body), string(body))
+			assert.Equal(t, jsonTokens(t, fixture.Expected.Body), jsonTokens(t, body), "content or key order differs")
 			assert.Equal(t, fixture.Expected.URL, client.baseURL+"/chat/completions")
 			assert.Equal(t, fixture.Expected.UserContent, fixture.input().Prompt())
+		})
+	}
+}
+
+func jsonTokens(t *testing.T, data []byte) []any {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	var tokens []any
+	for {
+		token, err := decoder.Token()
+		if errors.Is(err, io.EOF) {
+			return tokens
+		}
+		require.NoError(t, err)
+		tokens = append(tokens, token)
+	}
+}
+
+func TestPostedBodyKeepsThePythonKeyOrder(t *testing.T) {
+	for _, fixture := range loadRequestFixtures(t) {
+		t.Run(fixture.Name, func(t *testing.T) {
+			var posted []byte
+			transport := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				posted, _ = io.ReadAll(r.Body)
+				reply := `{"choices":[{"message":{"content":"{\"text\": \"x\"}"}}]}`
+				return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(reply))}, nil
+			})
+			client := New(Config{
+				BaseURL: fixture.Config.BaseURL, Model: fixture.Config.Model,
+				Reasoning: fixture.Config.Reasoning, Key: "fixture-key",
+			}, WithHTTPClient(&http.Client{Transport: transport}))
+
+			_, err := client.FieldText(context.Background(), fixture.input())
+
+			require.NoError(t, err)
+			assert.Equal(t, jsonTokens(t, fixture.Expected.Body), jsonTokens(t, posted))
 		})
 	}
 }

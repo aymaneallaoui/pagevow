@@ -52,9 +52,9 @@ func TestBuildSpaceWithoutElements(t *testing.T) {
 	data, err := json.Marshal(sp.elements)
 	require.NoError(t, err)
 	assert.JSONEq(t, `[]`, string(data))
-	assert.Equal(t, map[string]string{
-		opDone:    operationLabels[opDone],
-		opBlocked: operationLabels[opBlocked],
+	assert.Equal(t, object{
+		{key: opDone, value: operationLabels[opDone]},
+		{key: opBlocked, value: operationLabels[opBlocked]},
 	}, sp.operationCriteria())
 }
 

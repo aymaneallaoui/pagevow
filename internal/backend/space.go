@@ -40,14 +40,14 @@ type option struct {
 }
 
 type element struct {
-	Index      string   `json:"index"`
-	Label      string   `json:"label"`
-	Operations []string `json:"operations"`
 	Role       string   `json:"role,omitempty"`
 	Value      *string  `json:"value,omitempty"`
 	Checked    *string  `json:"checked,omitempty"`
 	Selected   *string  `json:"selected,omitempty"`
 	Expanded   *string  `json:"expanded,omitempty"`
+	Index      string   `json:"index"`
+	Label      string   `json:"label"`
+	Operations []string `json:"operations"`
 	Options    []option `json:"options,omitempty"`
 }
 
@@ -57,9 +57,11 @@ type targetGroup struct {
 }
 
 type space struct {
-	elements []element
-	targets  map[string]*targetGroup
-	controls map[string]page.Action
+	elements     []element
+	targets      map[string]*targetGroup
+	targetOrder  []string
+	controls     map[string]page.Action
+	controlOrder []string
 }
 
 func (g *targetGroup) idSet() map[string]bool {
@@ -81,16 +83,16 @@ func (s *space) operationIDs() map[string]bool {
 	return ids
 }
 
-func (s *space) operationCriteria() map[string]string {
-	criteria := make(map[string]string, len(s.targets)+len(s.controls)+2)
-	for operation := range s.targets {
-		criteria[operation] = operationLabels[operation]
+func (s *space) operationCriteria() object {
+	criteria := make(object, 0, len(s.targets)+len(s.controls)+2)
+	for _, operation := range s.targetOrder {
+		criteria.set(operation, operationLabels[operation])
 	}
-	for key, control := range s.controls {
-		criteria[key] = control.Label
+	for _, key := range s.controlOrder {
+		criteria.set(key, s.controls[key].Label)
 	}
-	criteria[opDone] = operationLabels[opDone]
-	criteria[opBlocked] = operationLabels[opBlocked]
+	criteria.set(opDone, operationLabels[opDone])
+	criteria.set(opBlocked, operationLabels[opBlocked])
 	return criteria
 }
 
@@ -135,7 +137,11 @@ func buildSpace(actions []page.Action) *space {
 	for _, action := range actions {
 		operation, isElement := operationOfKind[action.Kind]
 		if !isElement {
-			sp.controls[strings.ToUpper(action.ID)] = action
+			key := strings.ToUpper(action.ID)
+			if _, known := sp.controls[key]; !known {
+				sp.controlOrder = append(sp.controlOrder, key)
+			}
+			sp.controls[key] = action
 			continue
 		}
 		position, seen := positions[action.Node]
@@ -149,6 +155,7 @@ func buildSpace(actions []page.Action) *space {
 		if group == nil {
 			group = &targetGroup{actions: map[string]page.Action{}}
 			sp.targets[operation] = group
+			sp.targetOrder = append(sp.targetOrder, operation)
 		}
 		if !slices.Contains(el.Operations, operation) {
 			el.Operations = append(el.Operations, operation)

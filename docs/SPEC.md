@@ -297,6 +297,8 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Navigation failure | opening the start URL fails the test with `ErrNavigation` instead of observing the browser error page |
 | Browser port | `Launch` reads the port from `DevToolsActivePort` in its own profile, so it never attaches to another browser |
 | Runner and browser lifetime | `run` starts its own headless browser and stops it at the end, unless a browser managed by `pagevow start` is running |
+| Request key order | the model prompt is built from the request in JSON order, so every object of the `/v1/systemone` body and of the text helper request keeps the key order of the Python reference; parity tests compare token streams, never sorted maps |
+| Trace redaction | secrets are replaced by `***` in trace files only, never in the request sent to a model; values shorter than 12 characters (the placeholder key `local`) are never redacted |
 | Agent timeout | the runner always gives the agent a deadline; a page that stays stale spends no budget and would loop otherwise |
 
 ## 17. Open questions

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -64,6 +66,26 @@ func readBody(t *testing.T, r *http.Request) []byte {
 	data, err := io.ReadAll(r.Body)
 	require.NoError(t, err)
 	return data
+}
+
+func jsonTokens(t *testing.T, data []byte) []any {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	var tokens []any
+	for {
+		token, err := decoder.Token()
+		if errors.Is(err, io.EOF) {
+			return tokens
+		}
+		require.NoError(t, err)
+		tokens = append(tokens, token)
+	}
+}
+
+func assertSameOrder(t *testing.T, want, got []byte) {
+	t.Helper()
+	assert.Equal(t, jsonTokens(t, want), jsonTokens(t, got), "the request differs from the Python request in content or key order")
 }
 
 func normalize(value any) any {

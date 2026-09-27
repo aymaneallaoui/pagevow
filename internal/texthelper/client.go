@@ -146,12 +146,23 @@ func (c *Client) buildBody(in Input) requestBody {
 	return body
 }
 
+// payload encodes the request body with the key order of the Python reference and no HTML escaping.
+func (c *Client) payload(in Input) ([]byte, error) {
+	var out bytes.Buffer
+	encoder := json.NewEncoder(&out)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(c.buildBody(in)); err != nil {
+		return nil, err
+	}
+	return bytes.TrimRight(out.Bytes(), "\n"), nil
+}
+
 // FieldText makes one budgeted call for the value of the field described by in and never returns a late reply.
 func (c *Client) FieldText(ctx context.Context, in Input) (Result, error) {
 	if c.key == "" {
 		return Result{}, ErrNoKey
 	}
-	payload, err := json.Marshal(c.buildBody(in))
+	payload, err := c.payload(in)
 	if err != nil {
 		return Result{}, fmt.Errorf("encode text helper request: %w", err)
 	}

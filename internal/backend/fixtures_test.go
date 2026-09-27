@@ -54,8 +54,8 @@ func TestDecideMatchesPythonFixtures(t *testing.T) {
 			decision, err := client.Decide(context.Background(), Input{State: fx.State, Goal: fx.Goal, History: fx.History})
 			require.NoError(t, err)
 
-			assert.JSONEq(t, string(fx.Expected.Request), string(sent))
-			assert.JSONEq(t, string(fx.Expected.Request), string(decision.Request))
+			assertSameOrder(t, fx.Expected.Request, sent)
+			assertSameOrder(t, fx.Expected.Request, decision.Request)
 			assert.Nil(t, decision.Cascade)
 			got := toGeneric(t, decision).(map[string]any)
 			delete(got, "latency_ms")
@@ -71,6 +71,7 @@ type scenarioFixture struct {
 	TargetConfidence float64 `json:"target_confidence"`
 	Steps            []struct {
 		State             page.State                 `json:"state"`
+		Request           json.RawMessage            `json:"request"`
 		MutateClickChoice string                     `json:"mutate_click_choice"`
 		TraceStep         int                        `json:"trace_step"`
 		ForgetAfter       bool                       `json:"forget_after"`
@@ -140,6 +141,10 @@ func TestCascadeAndVetoCacheMatchPythonFixtures(t *testing.T) {
 				if len(bodies) == 2 {
 					assert.Equal(t, bodies[0], bodies[1], "the verifier is asked the identical body")
 				}
+				if len(bodies) > 0 {
+					assertSameOrder(t, step.Request, bodies[0])
+				}
+				assertSameOrder(t, step.Request, decision.Request)
 				got := toGeneric(t, decision).(map[string]any)
 				delete(got, "latency_ms")
 				delete(got, "request")

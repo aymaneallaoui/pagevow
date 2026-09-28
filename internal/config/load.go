@@ -40,6 +40,7 @@ var legacyVars = []legacyVar{
 	{env: "TEXT_MODEL_BASE_URL", keys: []string{"text_helper.url"}},
 	{env: "TEXT_MODEL", keys: []string{"text_helper.model"}},
 	{env: "TEXT_MODEL_API_KEY", keys: []string{"text_helper.key"}, asRef: true},
+	{env: "TEXT_MODEL_REASONING", keys: []string{"text_helper.reasoning"}},
 	{env: "TEXT_TIMEOUT_S", keys: []string{"text_helper.timeout_seconds"}, seconds: true},
 }
 

@@ -72,6 +72,8 @@ type TextHelper struct {
 	Model          string `mapstructure:"model"`
 	Key            string `mapstructure:"key"`
 	TimeoutSeconds int    `mapstructure:"timeout_seconds"`
+	// Reasoning is "none" to switch the helper's reasoning off; empty keeps the provider default.
+	Reasoning string `mapstructure:"reasoning"`
 }
 
 // Browser describes how the test browser is launched.

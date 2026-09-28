@@ -36,20 +36,6 @@ func (a *app) newDoctorCmd() *cobra.Command {
 	return stub("doctor", "Check the setup and say how to fix each problem", 3, nil)
 }
 
-func (a *app) newRunCmd() *cobra.Command {
-	return stub("run", "Run the browser tests", 2, func(cmd *cobra.Command) {
-		flags := cmd.Flags()
-		flags.String("tests", "", "tests file (default: pagevow.yaml in the current directory)")
-		flags.StringSlice("ids", nil, "run only these test ids, comma separated")
-		flags.String("out", "", "output directory (default: .pagevow)")
-		flags.String("screenshots", "", "screenshot policy: final, failed or all (default: run.screenshots)")
-		flags.Int("retries", 0, "retries per test (default: run.retries)")
-		flags.Int("timeout", 0, "seconds per test (default: run.timeout_seconds)")
-		flags.Bool("full-page", false, "capture full-page screenshots")
-		flags.Bool("json", false, "print the report as JSON")
-	})
-}
-
 func (a *app) newUpdateCmd() *cobra.Command {
 	return stub("update", "Replace the binary with the latest release", 5, nil)
 }

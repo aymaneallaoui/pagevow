@@ -41,6 +41,9 @@ func Validate(c Config) error {
 	if c.TextHelper.TimeoutSeconds < 1 {
 		errs = append(errs, errors.New("text_helper.timeout_seconds: must be 1 or more"))
 	}
+	if c.TextHelper.Reasoning != "" && c.TextHelper.Reasoning != "none" {
+		errs = append(errs, fmt.Errorf("text_helper.reasoning: %q is not empty or none", c.TextHelper.Reasoning))
+	}
 	if c.Backends.Cascade.TargetConf < 0 || c.Backends.Cascade.TargetConf > 1 {
 		errs = append(errs, errors.New("backends.cascade.target_conf: must be between 0 and 1"))
 	}

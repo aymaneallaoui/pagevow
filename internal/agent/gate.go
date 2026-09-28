@@ -2,10 +2,8 @@ package agent
 
 import (
 	"encoding/json"
-	"math"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/aymaneallaoui/pagevow/internal/backend"
@@ -164,81 +162,17 @@ type space struct {
 	controls map[string]page.Action
 }
 
-var operationOfKind = map[string]string{
-	page.KindClick:  "CLICK",
-	page.KindFill:   operationTypeText,
-	page.KindSelect: "SELECT",
-	page.KindEnter:  "PRESS_ENTER",
-}
-
-// newSpace mirrors how the backend numbers targets: one index per node, one sub-index per dropdown option.
 func newSpace(actions []page.Action) space {
-	sp := space{targets: map[string]*targetGroup{}, controls: map[string]page.Action{}}
-	positions := map[int]int{}
-	options := map[int]int{}
-	for _, action := range actions {
-		operation, isElement := operationOfKind[action.Kind]
-		if !isElement {
-			sp.controls[strings.ToUpper(action.ID)] = action
-			continue
-		}
-		position, seen := positions[action.Node]
-		if !seen {
-			position = len(positions) + 1
-			positions[action.Node] = position
-		}
-		target := strconv.Itoa(position)
-		if action.Kind == page.KindSelect {
-			options[action.Node]++
-			target += ":" + strconv.Itoa(options[action.Node])
-		}
-		group := sp.targets[operation]
-		if group == nil {
-			group = &targetGroup{actions: map[string]page.Action{}}
-			sp.targets[operation] = group
-		}
-		if _, known := group.actions[target]; !known {
-			group.indices = append(group.indices, target)
-		}
-		group.actions[target] = action
+	numbered := backend.NumberTargets(actions)
+	sp := space{targets: make(map[string]*targetGroup, len(numbered.Groups)), controls: numbered.Controls}
+	for operation, group := range numbered.Groups {
+		sp.targets[operation] = &targetGroup{indices: group.Indices, actions: group.Actions}
 	}
 	return sp
 }
 
-type choiceAnswer struct {
-	Choice        *string             `json:"choice"`
-	Confidence    *float64            `json:"confidence"`
-	Probabilities map[string]*float64 `json:"probabilities"`
-}
-
-func validChance(n float64) bool { return !math.IsNaN(n) && !math.IsInf(n, 0) && n >= 0 && n <= 1 }
+type choiceAnswer = backend.Answer
 
 func validateChoice(raw json.RawMessage, ids map[string]bool) (choiceAnswer, bool) {
-	var answer choiceAnswer
-	if len(raw) == 0 || json.Unmarshal(raw, &answer) != nil {
-		return choiceAnswer{}, false
-	}
-	if answer.Choice == nil || !ids[*answer.Choice] || answer.Confidence == nil || answer.Probabilities == nil {
-		return choiceAnswer{}, false
-	}
-	if len(answer.Probabilities) != len(ids) || !validChance(*answer.Confidence) {
-		return choiceAnswer{}, false
-	}
-	keys := make([]string, 0, len(answer.Probabilities))
-	for key, p := range answer.Probabilities {
-		if !ids[key] || p == nil || !validChance(*p) {
-			return choiceAnswer{}, false
-		}
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	sum, highest := 0.0, math.Inf(-1)
-	for _, key := range keys {
-		sum += *answer.Probabilities[key]
-		highest = math.Max(highest, *answer.Probabilities[key])
-	}
-	if math.Abs(sum-1) >= 0.02 || *answer.Probabilities[*answer.Choice] < highest-1e-6 {
-		return choiceAnswer{}, false
-	}
-	return answer, true
+	return backend.ValidateChoice(raw, ids)
 }

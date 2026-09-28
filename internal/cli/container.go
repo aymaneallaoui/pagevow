@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/samber/do/v2"
 
@@ -19,6 +20,12 @@ type LookupEnv func(string) (string, bool)
 // StdinInteractive reports whether a reader is an interactive terminal.
 type StdinInteractive func(io.Reader) bool
 
+// Clock returns the current time.
+type Clock func() time.Time
+
+// Exit ends the process with a code; only the second interrupt of a run calls it.
+type Exit func(code int)
+
 // ConfigPath is the default config file location.
 type ConfigPath string
 
@@ -29,6 +36,10 @@ type Options struct {
 	Store            keys.Store
 	Prompter         Prompter
 	StdinInteractive StdinInteractive
+	Browser          BrowserLauncher
+	Interrupts       Interrupts
+	Exit             Exit
+	Now              Clock
 }
 
 // SystemOptions returns the options of a real run: process environment, OS keychain, terminal prompts.
@@ -38,6 +49,10 @@ func SystemOptions() Options {
 		Store:            keys.NewKeychain(),
 		Prompter:         huhPrompter{},
 		StdinInteractive: func(r io.Reader) bool { return ui.IsTerminal(r) },
+		Browser:          SystemBrowserLauncher(),
+		Interrupts:       SystemInterrupts,
+		Exit:             os.Exit,
+		Now:              time.Now,
 	}
 }
 
@@ -50,6 +65,10 @@ func NewContainer(opts Options) do.Injector {
 	do.ProvideValue(injector, opts.StdinInteractive)
 	do.ProvideValue(injector, opts.Prompter)
 	do.ProvideValue(injector, opts.Store)
+	do.ProvideValue(injector, opts.Browser)
+	do.ProvideValue(injector, opts.Interrupts)
+	do.ProvideValue(injector, opts.Exit)
+	do.ProvideValue(injector, opts.Now)
 	do.ProvideValue(injector, version.Get())
 
 	do.Provide(injector, func(i do.Injector) (*keys.Resolver, error) {
@@ -86,6 +105,18 @@ func withDefaults(opts Options) Options {
 	}
 	if opts.StdinInteractive == nil {
 		opts.StdinInteractive = system.StdinInteractive
+	}
+	if opts.Browser == nil {
+		opts.Browser = system.Browser
+	}
+	if opts.Interrupts == nil {
+		opts.Interrupts = system.Interrupts
+	}
+	if opts.Exit == nil {
+		opts.Exit = system.Exit
+	}
+	if opts.Now == nil {
+		opts.Now = system.Now
 	}
 	return opts
 }

@@ -90,7 +90,7 @@ func compareGolden(t *testing.T, source, fixture string, wantCount int) {
 	var want []golden
 	require.NoError(t, json.Unmarshal(raw, &want))
 	require.Len(t, want, wantCount)
-	got, err := Load(filepath.Join("testdata", source), today)
+	got, _, err := Load(filepath.Join("testdata", source), today)
 	require.NoError(t, err)
 	require.Len(t, got, len(want))
 	for i, w := range want {
@@ -124,7 +124,7 @@ func TestFixtureDateMatchesTheTestClock(t *testing.T) {
 }
 
 func TestDemoTestChecksAFinalPage(t *testing.T) {
-	tests, err := Load(filepath.Join("testdata", "demo-browser-tests.yaml"), today)
+	tests, _, err := Load(filepath.Join("testdata", "demo-browser-tests.yaml"), today)
 	require.NoError(t, err)
 	byID := map[string]Test{}
 	for _, test := range tests {
@@ -157,7 +157,7 @@ func TestCheckWithoutVerifierFails(t *testing.T) {
 }
 
 func TestParseAcceptsUnverifiedTestsAndOptionalFields(t *testing.T) {
-	tests, err := Parse([]byte("- {id: a, url: http://x.test, goal: 'Go on {date+1}. Stop when done.'}\n- id: 7\n  url: u\n  goal: g\n  tags: [x, y]\n  repeat: 3\n"), today)
+	tests, _, err := Parse([]byte("- {id: a, url: http://x.test, goal: 'Go on {date+1}. Stop when done.'}\n- id: 7\n  url: u\n  goal: g\n  tags: [x, y]\n  repeat: 3\n"), today)
 	require.NoError(t, err)
 	require.Len(t, tests, 2)
 	assert.False(t, tests[0].Verified())
@@ -182,7 +182,7 @@ func TestParseResolvesTemplatesAndVerifierArguments(t *testing.T) {
   verify: flights
   verify_args: {origin: A, destination: B, date: "{date+14:%Y-%m-%d}", one_way: true}
 `
-	tests, err := Parse([]byte(text), today)
+	tests, _, err := Parse([]byte(text), today)
 	require.NoError(t, err)
 	assert.Equal(t, "Pick October 5, 2026 on Monday. Stop.", tests[0].Goal)
 	assert.Equal(t, "October 5, 2026", tests[0].Args.(verify.PageArgs).Values[0].String())
@@ -192,7 +192,7 @@ func TestParseResolvesTemplatesAndVerifierArguments(t *testing.T) {
 
 func TestParseEmptyFileHasNoTests(t *testing.T) {
 	for _, text := range []string{"", "# only a comment\n", "[]\n"} {
-		tests, err := Parse([]byte(text), today)
+		tests, _, err := Parse([]byte(text), today)
 		require.NoError(t, err, text)
 		assert.Empty(t, tests)
 	}
@@ -211,7 +211,6 @@ func TestParseReportsEveryValidationError(t *testing.T) {
 		{"null goal", "- {id: a, url: u, goal: }\n", "a", "goal", "is required"},
 		{"goal placeholder", "- {id: a, url: u, goal: 'x {month+1}'}\n", "a", "goal", "unknown placeholder '{month+1}'"},
 		{"goal directive", "- {id: a, url: u, goal: 'x {date+1:%c}'}\n", "a", "goal", "unsupported strftime directive %c"},
-		{"unknown field", "- {id: a, url: u, goal: g, verfy: page}\n", "a", "verfy", "unknown field"},
 		{"tags scalar", "- {id: a, url: u, goal: g, tags: shelf}\n", "a", "tags", "list"},
 		{"tags nested", "- {id: a, url: u, goal: g, tags: [[x]]}\n", "a", "tags", "list"},
 		{"repeat zero", "- {id: a, url: u, goal: g, repeat: 0}\n", "a", "repeat", "positive integer"},
@@ -231,7 +230,7 @@ func TestParseReportsEveryValidationError(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := Parse([]byte(tc.yaml), today)
+			_, _, err := Parse([]byte(tc.yaml), today)
 			require.Error(t, err)
 			var vErr *ValidationError
 			require.True(t, errors.As(err, &vErr), err.Error())
@@ -253,7 +252,7 @@ func TestParseReportsEveryValidationError(t *testing.T) {
 
 func TestParseReportsDuplicateIDsAndAllProblemsAtOnce(t *testing.T) {
 	text := "- {id: a, url: u, goal: g}\n- {id: b, goal: g}\n- {id: a, url: u, goal: g}\n"
-	_, err := Parse([]byte(text), today)
+	_, _, err := Parse([]byte(text), today)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `test "a", field "id": duplicate id, first used by test #1`)
 	assert.Contains(t, err.Error(), `test "b", field "url": is required`)
@@ -264,18 +263,18 @@ func TestParseReportsDuplicateIDsAndAllProblemsAtOnce(t *testing.T) {
 }
 
 func TestParseRejectsFilesThatAreNotLists(t *testing.T) {
-	_, err := Parse([]byte("id: a\nurl: u\ngoal: g\n"), today)
+	_, _, err := Parse([]byte("id: a\nurl: u\ngoal: g\n"), today)
 	assert.ErrorContains(t, err, "must be a YAML list")
-	_, err = Parse([]byte("- id: [unclosed\n"), today)
+	_, _, err = Parse([]byte("- id: [unclosed\n"), today)
 	assert.ErrorContains(t, err, "parse yaml")
 }
 
 func TestLoadNamesTheFile(t *testing.T) {
-	_, err := Load(filepath.Join(t.TempDir(), "missing.yaml"), today)
+	_, _, err := Load(filepath.Join(t.TempDir(), "missing.yaml"), today)
 	assert.ErrorContains(t, err, "read tests file")
 	path := filepath.Join(t.TempDir(), "pagevow.yaml")
 	require.NoError(t, os.WriteFile(path, []byte("- {id: a, goal: g}\n"), 0o600))
-	_, err = Load(path, today)
+	_, _, err = Load(path, today)
 	assert.ErrorContains(t, err, path)
 	assert.ErrorContains(t, err, `field "url"`)
 }
@@ -344,4 +343,22 @@ func TestFilterByIDs(t *testing.T) {
 func TestParseIDs(t *testing.T) {
 	assert.Equal(t, []string{"a", "b", "c"}, ParseIDs(" a, b,,c ,"))
 	assert.Empty(t, ParseIDs(" , "))
+}
+
+func TestParseWarnsAboutUnknownFieldsAndKeepsTheTest(t *testing.T) {
+	tests, warnings, err := Parse([]byte("- {id: a, url: u, goal: g, verfy: page, owner: me}\n- {id: b, url: u, goal: g}\n"), today)
+	require.NoError(t, err)
+	require.Len(t, tests, 2)
+	require.Len(t, warnings, 2)
+	assert.Contains(t, warnings[0], `test "a", field "verfy": unknown field ignored`)
+	assert.Contains(t, warnings[1], `field "owner"`)
+}
+
+func TestLoadReturnsWarnings(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pagevow.yaml")
+	require.NoError(t, os.WriteFile(path, []byte("- {id: a, url: u, goal: g, extra: 1}\n"), 0o600))
+	tests, warnings, err := Load(path, today)
+	require.NoError(t, err)
+	assert.Len(t, tests, 1)
+	assert.Len(t, warnings, 1)
 }

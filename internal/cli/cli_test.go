@@ -160,7 +160,6 @@ func TestStubCommandsExitWithCode2(t *testing.T) {
 		{[]string{"start"}, "phase 3"},
 		{[]string{"stop"}, "phase 3"},
 		{[]string{"doctor"}, "phase 3"},
-		{[]string{"run", "--retries", "2", "--json"}, "phase 2"},
 		{[]string{"hook", "stop"}, "phase 4"},
 		{[]string{"plugin", "install"}, "phase 4"},
 		{[]string{"plugin", "uninstall"}, "phase 4"},

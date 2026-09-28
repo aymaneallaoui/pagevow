@@ -102,6 +102,7 @@ func TestLegacyEnvironmentFallback(t *testing.T) {
 		"TEXT_MODEL":            "text-small",
 		"TEXT_MODEL_API_KEY":    "sk-text-secret",
 		"TEXT_TIMEOUT_S":        "12.5",
+		"TEXT_MODEL_REASONING":  "none",
 	}
 	lookup := func(name string) (string, bool) { v, ok := legacy[name]; return v, ok }
 
@@ -116,6 +117,7 @@ func TestLegacyEnvironmentFallback(t *testing.T) {
 	assert.Equal(t, "text-small", cfg.TextHelper.Model)
 	assert.Equal(t, "env:TEXT_MODEL_API_KEY", cfg.TextHelper.Key)
 	assert.Equal(t, 13, cfg.TextHelper.TimeoutSeconds)
+	assert.Equal(t, "none", cfg.TextHelper.Reasoning)
 	assert.NotContains(t, cfg.Backends.Jev.Key, "sk-legacy-secret")
 }
 
@@ -243,4 +245,16 @@ func TestEnvNameAndKeys(t *testing.T) {
 	for _, key := range keys {
 		assert.False(t, strings.ContainsAny(key, " -"), key)
 	}
+}
+
+func TestTextHelperReasoningAcceptsOnlyEmptyOrNone(t *testing.T) {
+	isolateEnv(t)
+	cfg := config.Defaults()
+	assert.Empty(t, cfg.TextHelper.Reasoning)
+	assert.NoError(t, config.Validate(cfg))
+	cfg.TextHelper.Reasoning = "none"
+	assert.NoError(t, config.Validate(cfg))
+	cfg.TextHelper.Reasoning = "high"
+	assert.ErrorContains(t, config.Validate(cfg), "text_helper.reasoning")
+	assert.Contains(t, config.Keys(), "text_helper.reasoning")
 }

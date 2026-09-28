@@ -99,38 +99,42 @@ func Find(dir string) (string, error) {
 }
 
 // Load reads and validates the tests file at path, resolving date placeholders against today.
-func Load(path string, today time.Time) ([]Test, error) {
+// Warnings name the unknown fields that were ignored.
+func Load(path string, today time.Time) ([]Test, []string, error) {
 	data, err := os.ReadFile(path) //nolint:gosec // the path is the project's tests file chosen by the user
 	if err != nil {
-		return nil, fmt.Errorf("read tests file: %w", err)
+		return nil, nil, fmt.Errorf("read tests file: %w", err)
 	}
-	tests, err := Parse(data, today)
+	tests, warnings, err := Parse(data, today)
 	if err != nil {
-		return nil, fmt.Errorf("tests file %s: %w", path, err)
+		return nil, nil, fmt.Errorf("tests file %s: %w", path, err)
 	}
-	return tests, nil
+	return tests, warnings, nil
 }
 
 // Parse validates tests file content; every problem found is reported, not just the first.
-func Parse(data []byte, today time.Time) ([]Test, error) {
+// An unknown field is a warning, not an error.
+func Parse(data []byte, today time.Time) ([]Test, []string, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return nil, fmt.Errorf("parse yaml: %w", err)
+		return nil, nil, fmt.Errorf("parse yaml: %w", err)
 	}
 	if len(doc.Content) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	root := doc.Content[0]
 	if root.Kind != yaml.SequenceNode {
-		return nil, errors.New("must be a YAML list of tests, each starting with '- id: ...'")
+		return nil, nil, errors.New("must be a YAML list of tests, each starting with '- id: ...'")
 	}
 	var (
-		tests []Test
-		errs  []error
-		seen  = map[string]int{}
+		tests    []Test
+		errs     []error
+		warnings []string
+		seen     = map[string]int{}
 	)
 	for i, node := range root.Content {
-		test, problems := parseTest(i+1, node, today)
+		test, problems, unknown := parseTest(i+1, node, today)
+		warnings = append(warnings, unknown...)
 		if test.ID != "" {
 			if first, dup := seen[test.ID]; dup {
 				problems = append(problems, &ValidationError{Index: i + 1, ID: test.ID, Field: "id", Err: fmt.Errorf("duplicate id, first used by test #%d", first)})
@@ -142,18 +146,18 @@ func Parse(data []byte, today time.Time) ([]Test, error) {
 		tests = append(tests, test)
 	}
 	if len(errs) > 0 {
-		return nil, errors.Join(errs...)
+		return nil, nil, errors.Join(errs...)
 	}
-	return tests, nil
+	return tests, warnings, nil
 }
 
-func parseTest(index int, node *yaml.Node, today time.Time) (Test, []error) {
+func parseTest(index int, node *yaml.Node, today time.Time) (Test, []error, []string) {
 	var test Test
 	fail := func(field, format string, args ...any) *ValidationError {
 		return &ValidationError{Index: index, ID: test.ID, Field: field, Err: fmt.Errorf(format, args...)}
 	}
 	if node.Kind != yaml.MappingNode {
-		return test, []error{fail("", "must be a mapping with id, url and goal")}
+		return test, []error{fail("", "must be a mapping with id, url and goal")}, nil
 	}
 	fields := map[string]*yaml.Node{}
 	var unknown []string
@@ -169,8 +173,9 @@ func parseTest(index int, node *yaml.Node, today time.Time) (Test, []error) {
 		test.ID = strings.TrimSpace(id.Value)
 	}
 	var errs []error
+	warnings := make([]string, 0, len(unknown))
 	for _, key := range unknown {
-		errs = append(errs, fail(key, "unknown field (known: %s)", strings.Join(knownFields(), ", ")))
+		warnings = append(warnings, fail(key, "unknown field ignored (known: %s)", strings.Join(knownFields(), ", ")).Error())
 	}
 	for _, key := range []string{"id", "url", "goal"} {
 		if text, problem := requiredText(fields[key]); problem != "" {
@@ -203,7 +208,7 @@ func parseTest(index int, node *yaml.Node, today time.Time) (Test, []error) {
 		test.Repeat = repeat
 	}
 	errs = append(errs, parseVerifier(&test, fields, today, fail)...)
-	return test, errs
+	return test, errs, warnings
 }
 
 func parseVerifier(test *Test, fields map[string]*yaml.Node, today time.Time, fail func(field, format string, args ...any) *ValidationError) []error {

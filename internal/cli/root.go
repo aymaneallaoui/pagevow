@@ -7,6 +7,7 @@ import (
 
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
@@ -69,6 +70,10 @@ func (a *app) configPath() (string, error) {
 }
 
 func (a *app) loadConfig() (config.Config, string, error) {
+	return a.loadConfigWithFlags(nil)
+}
+
+func (a *app) loadConfigWithFlags(flags map[string]*pflag.Flag) (config.Config, string, error) {
 	path, err := a.configPath()
 	if err != nil {
 		return config.Config{}, "", err
@@ -77,7 +82,7 @@ func (a *app) loadConfig() (config.Config, string, error) {
 	if err != nil {
 		return config.Config{}, "", err
 	}
-	cfg, err := config.Load(config.Options{File: path, LookupEnv: lookup})
+	cfg, err := config.Load(config.Options{File: path, Flags: flags, LookupEnv: lookup})
 	if err != nil {
 		return config.Config{}, "", fmt.Errorf("load config %s: %w", path, err)
 	}

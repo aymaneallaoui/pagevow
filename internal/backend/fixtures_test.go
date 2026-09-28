@@ -29,8 +29,9 @@ type chooseFixture struct {
 	History     []HistoryEntry `json:"history"`
 	Response    json.RawMessage
 	Expected    struct {
-		Request  json.RawMessage `json:"request"`
-		Decision map[string]any  `json:"decision"`
+		Request    json.RawMessage `json:"request"`
+		Decision   map[string]any  `json:"decision"`
+		TraceUsage json.RawMessage `json:"trace_usage"`
 	} `json:"expected"`
 }
 
@@ -60,7 +61,57 @@ func TestDecideMatchesPythonFixtures(t *testing.T) {
 			got := toGeneric(t, decision).(map[string]any)
 			delete(got, "latency_ms")
 			delete(got, "request")
-			assert.Equal(t, fx.Expected.Decision, got)
+			assert.Equal(t, modelAsJSONText(t, fx.Expected.Decision), got)
+			traceUsage, err := json.Marshal(decision.ServerUsage)
+			require.NoError(t, err)
+			assert.JSONEq(t, string(fx.Expected.TraceUsage), string(traceUsage), "the usage the trace records")
+		})
+	}
+}
+
+// modelAsJSONText mirrors Decision.Model, which holds the JSON text of a model value that is not a string.
+func modelAsJSONText(t *testing.T, decision map[string]any) map[string]any {
+	t.Helper()
+	out := make(map[string]any, len(decision))
+	for key, value := range decision {
+		if _, isString := value.(string); key == "model" && !isString {
+			text, err := json.Marshal(value)
+			require.NoError(t, err)
+			value = string(text)
+		}
+		out[key] = value
+	}
+	return out
+}
+
+type invalidFixture struct {
+	Name     string          `json:"name"`
+	Goal     string          `json:"goal"`
+	State    page.State      `json:"state"`
+	Response json.RawMessage `json:"response"`
+	Expected struct {
+		Error   string `json:"error"`
+		Message string `json:"message"`
+	} `json:"expected"`
+}
+
+func TestRepliesPythonRejectsAreRejected(t *testing.T) {
+	for _, path := range fixturePaths(t, "invalid_*.json") {
+		t.Run(strings.TrimSuffix(filepath.Base(path), ".json"), func(t *testing.T) {
+			var fx invalidFixture
+			loadFixture(t, path, &fx)
+			client := newTestClient(t, Options{
+				Endpoint:   Endpoint{BaseURL: "http://primary", Key: primaryKey},
+				HTTPClient: clientOf(func(*http.Request) (*http.Response, error) { return httpResponse(200, string(fx.Response)), nil }),
+			})
+
+			_, err := client.Decide(context.Background(), Input{State: fx.State, Goal: fx.Goal})
+
+			require.Equal(t, "InvalidModelResponse", fx.Expected.Error)
+			var invalid *InvalidResponseError
+			require.ErrorAs(t, err, &invalid)
+			assert.ErrorIs(t, err, ErrTransient)
+			assert.Equal(t, fx.Expected.Message, err.Error())
 		})
 	}
 }
@@ -108,7 +159,14 @@ func TestCascadeAndVetoCacheMatchPythonFixtures(t *testing.T) {
 				bodies = append(bodies, readBody(t, r))
 				response, ok := responses[kind]
 				require.Truef(t, ok, "unexpected call to %s", kind)
-				if strings.Contains(string(response), `"__error__"`) {
+				var failure struct {
+					Kind   string `json:"__error__"`
+					Status int    `json:"status"`
+				}
+				if json.Unmarshal(response, &failure) == nil && failure.Kind == "http" {
+					return httpResponse(failure.Status, "{}"), nil
+				}
+				if failure.Kind != "" {
 					return nil, errors.New("connection refused")
 				}
 				return httpResponse(200, string(response)), nil
@@ -149,15 +207,16 @@ func TestCascadeAndVetoCacheMatchPythonFixtures(t *testing.T) {
 				delete(got, "latency_ms")
 				delete(got, "request")
 				delete(got, "cascade")
-				assert.Equalf(t, step.Expected.Decision, got, "step %d decision", i)
+				assert.Equalf(t, modelAsJSONText(t, step.Expected.Decision), got, "step %d decision", i)
 
 				if string(step.Expected.Cascade) == "null" {
 					assert.Nilf(t, decision.Cascade, "step %d", i)
 				} else {
-					var want any
-					require.NoError(t, json.Unmarshal(step.Expected.Cascade, &want))
 					require.NotNilf(t, decision.Cascade, "step %d", i)
-					assert.Equalf(t, want, normalize(toGeneric(t, decision.Cascade)), "step %d cascade", i)
+					cascade, err := json.Marshal(decision.Cascade)
+					require.NoError(t, err)
+					assert.Equalf(t, jsonTokens(t, step.Expected.Cascade), tokensMasked(t, cascade, "latency_ms"),
+						"step %d cascade differs in content or key order at any depth", i)
 				}
 				if cache != nil {
 					assert.Equalf(t, step.Expected.CacheLen, cache.Len(), "step %d cache size", i)

@@ -174,6 +174,13 @@ SCENARIOS = {
         finish("BLOCKED", 2000, reason="Target refused 2 times: Send: not editable"),
         {"op": "set_verified", "value": False},
     ],
+    "usage_omitted_null_or_empty": [
+        step("CLICK", 100, result=result("CLICK", usage=False)),
+        step("CLICK", 110, result={**result("CLICK"), "usage": None}),
+        step("CLICK", 120, result={**result("CLICK"), "usage": {}}),
+        step("DONE", 130, result=result("DONE", 7)),
+        finish("DONE", 10),
+    ],
     "closed_without_running": [
         finish("closed", 0),
         {"op": "set_verified", "value": False},

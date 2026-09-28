@@ -323,10 +323,12 @@
                 }
               }
             },
-            "model": "test"
+            "model": "test",
+            "latency_ms": 0
           },
           "verifier": {
-            "error": "<error>"
+            "error": "Invalid TypeSafe response; no action executed.",
+            "latency_ms": 0
           }
         },
         "cache_len": 0

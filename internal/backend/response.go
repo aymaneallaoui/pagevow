@@ -5,12 +5,18 @@ import (
 	"math"
 	"sort"
 	"strings"
+
+	"github.com/aymaneallaoui/pagevow/internal/secret"
 )
 
 type response struct {
-	Model   string          `json:"model"`
-	Answers json.RawMessage `json:"answers"`
-	Usage   json.RawMessage `json:"usage"`
+	// Model is the model name; a value that is not a JSON string is kept as its JSON text, and modelRaw holds it.
+	Model string
+	// Answers holds the answers object.
+	Answers json.RawMessage
+	// Usage is the usage value as received: nil when the reply had none, "null" when it was null.
+	Usage    json.RawMessage
+	modelRaw json.RawMessage
 
 	raw string
 }
@@ -34,15 +40,31 @@ type fields struct {
 	targetConfidence       *float64
 }
 
-func parseResponse(data []byte) (*response, error) {
-	res := &response{raw: truncateRunes(string(data), rawLimit)}
-	if err := json.Unmarshal(data, res); err != nil {
+// parseResponse reads a reply by exact key names, as Python does. Secrets are removed from the whole reply before it is
+// cut to the raw limit, so a key that straddles the cut cannot survive.
+func parseResponse(data []byte, redactor *secret.Redactor) (*response, error) {
+	res := &response{raw: truncateRunes(redactor.Text(string(data)), rawLimit)}
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal(data, &members); err != nil {
 		return nil, &InvalidResponseError{Reason: "not a JSON object", Raw: res.raw}
 	}
+	res.Answers, res.Usage = members["answers"], members["usage"]
+	res.setModel(members["model"])
 	if len(res.Answers) == 0 || string(res.Answers) == "null" {
 		return nil, &InvalidResponseError{Reason: "missing answers", Raw: res.raw}
 	}
 	return res, nil
+}
+
+func (r *response) setModel(raw json.RawMessage) {
+	var name string
+	switch {
+	case len(raw) == 0:
+	case raw[0] == '"' && json.Unmarshal(raw, &name) == nil:
+		r.Model = name
+	default:
+		r.Model, r.modelRaw = string(raw), raw
+	}
 }
 
 func (r *response) usage() json.RawMessage {
@@ -53,8 +75,13 @@ func (r *response) usage() json.RawMessage {
 }
 
 func validateChoice(raw json.RawMessage, ids map[string]bool) (Answer, bool) {
+	var members map[string]json.RawMessage
+	if len(raw) == 0 || json.Unmarshal(raw, &members) != nil {
+		return Answer{}, false
+	}
 	var a Answer
-	if len(raw) == 0 || json.Unmarshal(raw, &a) != nil {
+	if !memberOf(members, "choice", &a.Choice) || !memberOf(members, "confidence", &a.Confidence) ||
+		!memberOf(members, "probabilities", &a.Probabilities) {
 		return Answer{}, false
 	}
 	if a.Choice == nil || !ids[*a.Choice] || a.Confidence == nil || a.Probabilities == nil {
@@ -81,6 +108,11 @@ func validateChoice(raw json.RawMessage, ids map[string]bool) (Answer, bool) {
 		return Answer{}, false
 	}
 	return a, true
+}
+
+func memberOf[T any](members map[string]json.RawMessage, key string, into *T) bool {
+	raw, ok := members[key]
+	return ok && json.Unmarshal(raw, into) == nil
 }
 
 func inUnit(n float64) bool {

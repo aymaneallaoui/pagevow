@@ -82,8 +82,11 @@ class Stub:
         assert key == (PRIMARY_KEY if kind == "primary" else VERIFIER_KEY), key
         self.calls.append(kind)
         reply_ = self.replies[kind]
-        if isinstance(reply_, Exception):
+        if isinstance(reply_, model.ModelConnectionError):
             self.responses[kind] = {"__error__": "connection"}
+            raise reply_
+        if isinstance(reply_, RuntimeError):
+            self.responses[kind] = {"__error__": "http", "status": int(str(reply_).split("HTTP ")[1].split(";")[0])}
             raise reply_
         result = reply_(body) if callable(reply_) else reply_
         self.responses[kind] = result
@@ -131,12 +134,9 @@ def decision_fields(decision):
 
 
 def normalize(value):
+    """Timings are not reproducible: latency_ms keeps its place in the key order with the value 0."""
     if isinstance(value, dict):
-        return {
-            key: ("<error>" if key == "error" else normalize(item))
-            for key, item in value.items()
-            if key != "latency_ms"
-        }
+        return {key: (0 if key == "latency_ms" else normalize(item)) for key, item in value.items()}
     if isinstance(value, list):
         return [normalize(item) for item in value]
     return value
@@ -431,29 +431,86 @@ def choose_cases():
     return cases
 
 
+def tie_done_and_wait(result):
+    operation = result["answers"]["operation"]
+    operation["probabilities"] = {key: 0.0 for key in operation["probabilities"]}
+    operation["probabilities"].update(DONE=0.5, WAIT=0.5)
+    operation["confidence"] = 0.5
+    operation["Choice"] = "WAIT"
+
+
+def uppercase_choice_key(result):
+    head = result["answers"]["operation"]
+    head["CHOICE"] = head.pop("choice")
+
+
+def numeric_model(result):
+    result["model"] = 5
+
+
+def without_usage(result):
+    del result["usage"]
+
+
+def exact_key_cases():
+    """Replies whose field names differ from the expected ones only in case; Python matches names exactly."""
+    clicks = state(
+        "https://example.test/",
+        "Home",
+        "Welcome\nPricing",
+        [
+            action("e1", "click", "Pricing", 10, "link", ""),
+            action("wait", "wait", "Wait for the page to update"),
+        ],
+    )
+    common = dict(goal="Open the pricing page", state=clicks, history=[])
+    return [
+        dict(name="duplicate_key_in_another_case", operation="DONE", target=None, mutate=tie_done_and_wait, **common),
+        dict(name="uppercase_choice_key", operation="DONE", target=None, mutate=uppercase_choice_key, invalid=True, **common),
+        dict(name="numeric_model", operation="CLICK", target="1", mutate=numeric_model, **common),
+        dict(name="usage_absent", operation="CLICK", target="1", mutate=without_usage, **common),
+    ]
+
+
 def run_choose(case):
     set_env(model_name=case.get("model_name"))
-    stub = Stub(
-        lambda body: reply(
+    mutate = case.get("mutate", lambda result: None)
+
+    def build(body):
+        result = reply(
             body, case["operation"], case["target"], model_name="jev-test", break_unused=case.get("break_unused", False)
         )
-    )
+        mutate(result)
+        return result
+
+    stub = Stub(build)
     model.post_json = stub
+    payload = {
+        "name": case["name"],
+        "goal": case["goal"],
+        "model_option": case.get("model_name", ""),
+        "state": case["state"],
+        "history": case["history"],
+    }
+    if case.get("invalid"):
+        try:
+            model.choose(copy.deepcopy(case["state"]), case["goal"], copy.deepcopy(case["history"]))
+        except model.InvalidModelResponse as error:
+            payload["response"] = copy.deepcopy(stub.responses["primary"])
+            payload["expected"] = {"error": type(error).__name__, "message": str(error)}
+            write(f"invalid_{case['name']}", payload)
+            return
+        raise AssertionError(f"{case['name']} was accepted")
     decision = model.choose(copy.deepcopy(case["state"]), case["goal"], copy.deepcopy(case["history"]))
     assert stub.calls == ["primary"]
     assert "cascade" not in decision
-    write(
-        f"choose_{case['name']}",
-        {
-            "name": case["name"],
-            "goal": case["goal"],
-            "model_option": case.get("model_name", ""),
-            "state": case["state"],
-            "history": case["history"],
-            "response": copy.deepcopy(stub.responses["primary"]),
-            "expected": {"request": decision["request"], "decision": decision_fields(decision)},
-        },
-    )
+    payload["response"] = copy.deepcopy(stub.responses["primary"])
+    payload["expected"] = {
+        "request": decision["request"],
+        "decision": decision_fields(decision),
+        "trace_usage": stub.responses["primary"].get("usage"),
+    }
+    write(f"choose_{case['name']}", payload)
 
 
 def cascade_state():
@@ -545,6 +602,14 @@ def scenarios():
         [{"primary": cascade_reply("DONE"), "verifier": model.ModelConnectionError("Model connection failed; no action executed.")}],
     )
     run_scenario("verifier_invalid_response", [{"primary": cascade_reply("DONE"), "verifier": bad_verifier}])
+    run_scenario(
+        "verifier_http_error",
+        [{"primary": cascade_reply("DONE"), "verifier": RuntimeError("Model provider returned HTTP 500; no action executed.")}],
+    )
+    run_scenario(
+        "numeric_models",
+        [{"primary": cascade_reply("DONE", model_name=5), "verifier": cascade_reply("CLICK", model_name=7)}],
+    )
 
     run_scenario(
         "store_and_reuse",
@@ -607,7 +672,7 @@ def scenarios():
 
 
 def main():
-    for case in choose_cases():
+    for case in choose_cases() + exact_key_cases():
         run_choose(case)
     scenarios()
 

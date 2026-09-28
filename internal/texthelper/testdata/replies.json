@@ -204,6 +204,40 @@
     }
   },
   {
+    "name": "uppercase_text_key",
+    "result": {
+      "choices": [
+        {
+          "message": {
+            "content": "{\"TEXT\": \"x\"}"
+          }
+        }
+      ]
+    },
+    "content_is_string": true,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '{\"TEXT\": \"x\"}'"
+    }
+  },
+  {
+    "name": "text_and_capitalised_text",
+    "result": {
+      "choices": [
+        {
+          "message": {
+            "content": "{\"text\": \"a\", \"Text\": \"b\"}"
+          }
+        }
+      ]
+    },
+    "content_is_string": true,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '{\"text\": \"a\", \"Text\": \"b\"}'"
+    }
+  },
+  {
     "name": "text_2000_chars",
     "result": {
       "choices": [
@@ -625,6 +659,170 @@
     "outcome": {
       "value": "ok",
       "usage": null
+    }
+  },
+  {
+    "name": "content_object_with_unicode",
+    "result": {
+      "choices": [
+        {
+          "message": {
+            "content": {
+              "text": "Zoë ☃ 😀"
+            }
+          }
+        }
+      ],
+      "id": "é"
+    },
+    "content_is_string": false,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '{\"choices\": [{\"message\": {\"content\": {\"text\": \"Zo\\\\u00eb \\\\u2603 \\\\ud83d\\\\ude00\"}}}], \"id\": \"\\\\u00e9\"}'"
+    }
+  },
+  {
+    "name": "long_body_is_cut_at_300",
+    "result": {
+      "choices": [
+        {
+          "message": {
+            "content": null
+          }
+        }
+      ],
+      "pad": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    "content_is_string": false,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '{\"choices\": [{\"message\": {\"content\": null}}], \"pad\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'"
+    }
+  },
+  {
+    "name": "long_body_cut_inside_an_escape",
+    "result": {
+      "choices": [
+        {
+          "message": {
+            "content": null
+          }
+        }
+      ],
+      "pad": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+    },
+    "content_is_string": false,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '{\"choices\": [{\"message\": {\"content\": null}}], \"pad\": \"\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d\\\\ude00\\\\ud83d'"
+    }
+  },
+  {
+    "name": "uppercase_choices_key",
+    "result": {
+      "CHOICES": [
+        {
+          "message": {
+            "content": "{\"text\": \"ok\"}"
+          }
+        }
+      ]
+    },
+    "content_is_string": false,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '{\"CHOICES\": [{\"message\": {\"content\": \"{\\\\\"text\\\\\": \\\\\"ok\\\\\"}\"}}]}'"
+    }
+  },
+  {
+    "name": "capitalised_content_key",
+    "result": {
+      "choices": [
+        {
+          "message": {
+            "Content": "{\"text\": \"ok\"}"
+          }
+        }
+      ]
+    },
+    "content_is_string": false,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '{\"choices\": [{\"message\": {\"Content\": \"{\\\\\"text\\\\\": \\\\\"ok\\\\\"}\"}}]}'"
+    }
+  },
+  {
+    "name": "uppercase_usage_key_is_no_usage",
+    "result": {
+      "choices": [
+        {
+          "message": {
+            "content": "{\"text\": \"ok\"}"
+          }
+        }
+      ],
+      "USAGE": {
+        "input_tokens": 3
+      }
+    },
+    "content_is_string": true,
+    "outcome": {
+      "value": "ok",
+      "usage": {}
+    }
+  },
+  {
+    "name": "raw_numbers_are_reencoded",
+    "body": "{\"choices\":[{\"message\":{\"content\":null}}],\"a\":1E5,\"b\":1.0e+2,\"c\":-0,\"d\":0.10,\"e\":12345678901234567890123,\"f\":1e400,\"g\":-0.0,\"h\":1e-5,\"i\":123456789.123456789,\"j\":1e16,\"k\":1e15,\"l\":0.0001,\"m\":2.5e-7,\"n\":-1e-7,\"o\":5e-324,\"p\":1.7976931348623157e308}",
+    "content_is_string": false,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '{\"choices\": [{\"message\": {\"content\": null}}], \"a\": 100000.0, \"b\": 100.0, \"c\": 0, \"d\": 0.1, \"e\": 12345678901234567890123, \"f\": Infinity, \"g\": -0.0, \"h\": 1e-05, \"i\": 123456789.12345679, \"j\": 1e+16, \"k\": 1000000000000000.0, \"l\": 0.0001, \"m\": 2.5e-07, \"n\": -1e-07, \"o\": 5e-324, \"p\": 1.7976931348623157e+3'"
+    }
+  },
+  {
+    "name": "raw_duplicate_keys_keep_first_position_and_last_value",
+    "body": "{\"choices\":[{\"message\":{\"content\":null}}],\"x\":1,\"y\":2,\"x\":3}",
+    "content_is_string": false,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '{\"choices\": [{\"message\": {\"content\": null}}], \"x\": 3, \"y\": 2}'"
+    }
+  },
+  {
+    "name": "raw_escapes_are_reencoded",
+    "body": "{\"choices\":[{\"message\":{\"content\":null}}],\"s\":\"\\u00e9\\ud83d\\ude00\\u007f\\/\\b\\f\\u0001<>&\",\"é\":true,\"n\":null,\"arr\":[1,[2,{\"z\":[]}],{}]}",
+    "content_is_string": false,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '{\"choices\": [{\"message\": {\"content\": null}}], \"s\": \"\\\\u00e9\\\\ud83d\\\\ude00\\\\u007f/\\\\b\\\\f\\\\u0001<>&\", \"\\\\u00e9\": true, \"n\": null, \"arr\": [1, [2, {\"z\": []}], {}]}'"
+    }
+  },
+  {
+    "name": "raw_duplicate_choices_last_wins",
+    "body": "{\"choices\":[],\"choices\":[{\"message\":{\"content\":\"{\\\"text\\\": \\\"ok\\\"}\"}}]}",
+    "content_is_string": true,
+    "outcome": {
+      "value": "ok",
+      "usage": {}
+    }
+  },
+  {
+    "name": "raw_top_level_null",
+    "body": "null",
+    "content_is_string": false,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: 'null'"
+    }
+  },
+  {
+    "name": "raw_top_level_string",
+    "body": "\"just a string\"",
+    "content_is_string": false,
+    "outcome": {
+      "error": "InvalidModelResponse",
+      "message": "Text helper returned no valid field value; nothing typed. Model returned: '\"just a string\"'"
     }
   }
 ]

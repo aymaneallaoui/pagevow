@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/aymaneallaoui/pagevow/internal/secret"
 )
 
 // Defaults applied when a Config leaves a value empty.
@@ -66,6 +68,7 @@ type Client struct {
 	baseURL    string
 	model      string
 	key        string
+	redactor   *secret.Redactor
 	reasoning  string
 	budget     time.Duration
 	retryPause time.Duration
@@ -78,6 +81,7 @@ func New(cfg Config, opts ...Option) *Client {
 		baseURL:    strings.TrimRight(cfg.BaseURL, "/"),
 		model:      cfg.Model,
 		key:        cfg.Key,
+		redactor:   secret.New(cfg.Key),
 		reasoning:  cfg.Reasoning,
 		budget:     cfg.Budget,
 		retryPause: baseRetryWait,
@@ -176,9 +180,9 @@ func (c *Client) FieldText(ctx context.Context, in Input) (Result, error) {
 	if err := callCtx.Err(); err != nil {
 		return Result{}, c.classify(ctx, callCtx, err)
 	}
-	text, usage, err := parseReply(body)
+	text, usage, err := parseReply(body, c.redactor)
 	if err != nil {
-		return Result{}, c.redact(err)
+		return Result{}, err
 	}
 	return Result{
 		Text:      text,
@@ -275,22 +279,11 @@ func (c *Client) classify(parent, call context.Context, err error) error {
 	switch {
 	case errors.As(err, &status):
 		return err
-	case errors.Is(err, context.DeadlineExceeded) || errors.Is(call.Err(), context.DeadlineExceeded):
-		return &BudgetError{Budget: c.budget}
 	case parent.Err() != nil:
 		return fmt.Errorf("text helper: %w", parent.Err())
+	case errors.Is(err, context.DeadlineExceeded) || errors.Is(call.Err(), context.DeadlineExceeded):
+		return &BudgetError{Budget: c.budget}
 	default:
 		return &ConnectionError{cause: err}
 	}
-}
-
-func (c *Client) redact(err error) error {
-	if c.key == "" {
-		return err
-	}
-	var invalid *InvalidReplyError
-	if errors.As(err, &invalid) {
-		invalid.Raw = strings.ReplaceAll(invalid.Raw, c.key, "***")
-	}
-	return err
 }

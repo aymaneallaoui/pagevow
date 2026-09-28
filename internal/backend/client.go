@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aymaneallaoui/pagevow/internal/page"
+	"github.com/aymaneallaoui/pagevow/internal/secret"
 )
 
 const (
@@ -51,7 +52,7 @@ type Client struct {
 	timeout          time.Duration
 	sleep            func(ctx context.Context, d time.Duration) error
 	now              func() time.Time
-	keys             []string
+	redactor         *secret.Redactor
 }
 
 // Input is everything one decision needs.
@@ -79,8 +80,8 @@ func New(opts Options) (*Client, error) {
 		timeout:          opts.Timeout,
 		sleep:            opts.Sleep,
 		now:              opts.Now,
-		keys:             []string{opts.Key},
 	}
+	keys := []string{opts.Key}
 	if opts.Verifier != nil {
 		verifier := *opts.Verifier
 		if verifier.Key == "" {
@@ -91,8 +92,9 @@ func New(opts Options) (*Client, error) {
 			return nil, err
 		}
 		c.verifier = &checked
-		c.keys = append(c.keys, verifier.Key)
+		keys = append(keys, verifier.Key)
 	}
+	c.redactor = secret.New(keys...)
 	if c.model == "" {
 		c.model = DefaultModel
 	}

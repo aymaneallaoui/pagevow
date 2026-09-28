@@ -68,7 +68,7 @@ func (c *Client) roundTrip(ctx context.Context, e endpoint, method, path string,
 	}
 	req, err := http.NewRequestWithContext(attemptCtx, method, e.url(path), reader)
 	if err != nil {
-		return 0, nil, fmt.Errorf("building the model request: %s", c.scrub(err.Error()))
+		return 0, nil, fmt.Errorf("building the model request: %s", c.redactor.Text(err.Error()))
 	}
 	req.Header.Set("Authorization", "Bearer "+e.key)
 	if body != nil {
@@ -90,17 +90,5 @@ func (c *Client) transportError(ctx context.Context, cause error) error {
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return fmt.Errorf("model request: %w", ctxErr)
 	}
-	return &ConnectionError{
-		msg:   "model connection failed; no action executed: " + c.scrub(cause.Error()),
-		cause: cause,
-	}
-}
-
-func (c *Client) scrub(s string) string {
-	for _, key := range c.keys {
-		if key != "" {
-			s = strings.ReplaceAll(s, key, "[redacted]")
-		}
-	}
-	return s
+	return &ConnectionError{cause: cause}
 }

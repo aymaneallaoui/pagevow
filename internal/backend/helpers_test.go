@@ -88,29 +88,44 @@ func assertSameOrder(t *testing.T, want, got []byte) {
 	assert.Equal(t, jsonTokens(t, want), jsonTokens(t, got), "the request differs from the Python request in content or key order")
 }
 
-func normalize(value any) any {
-	switch v := value.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(v))
-		for key, item := range v {
-			switch key {
-			case "latency_ms":
+// tokensMasked is jsonTokens with the value of every member called mask replaced by 0 at any depth, so its place in the
+// key order still counts.
+func tokensMasked(t *testing.T, data []byte, mask string) []any {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	var out []any
+	appendTokens(t, decoder, mask, &out)
+	return out
+}
+
+func appendTokens(t *testing.T, decoder *json.Decoder, mask string, out *[]any) {
+	t.Helper()
+	token, err := decoder.Token()
+	require.NoError(t, err)
+	*out = append(*out, token)
+	delim, isDelim := token.(json.Delim)
+	if !isDelim {
+		return
+	}
+	for decoder.More() {
+		if delim == '{' {
+			keyToken, err := decoder.Token()
+			require.NoError(t, err)
+			key, _ := keyToken.(string)
+			*out = append(*out, key)
+			if key == mask {
+				var skipped json.RawMessage
+				require.NoError(t, decoder.Decode(&skipped))
+				*out = append(*out, json.Number("0"))
 				continue
-			case "error":
-				out[key] = "<error>"
-			default:
-				out[key] = normalize(item)
 			}
 		}
-		return out
-	case []any:
-		out := make([]any, len(v))
-		for i, item := range v {
-			out[i] = normalize(item)
-		}
-		return out
+		appendTokens(t, decoder, mask, out)
 	}
-	return value
+	closing, err := decoder.Token()
+	require.NoError(t, err)
+	*out = append(*out, closing)
 }
 
 func toGeneric(t *testing.T, value any) any {
@@ -120,4 +135,11 @@ func toGeneric(t *testing.T, value any) any {
 	var out any
 	require.NoError(t, json.Unmarshal(data, &out))
 	return out
+}
+
+func toJSON(t *testing.T, value any) []byte {
+	t.Helper()
+	data, err := json.Marshal(value)
+	require.NoError(t, err)
+	return data
 }

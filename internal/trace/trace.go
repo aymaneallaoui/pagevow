@@ -2,7 +2,6 @@
 package trace
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -15,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aymaneallaoui/pagevow/internal/secret"
 )
 
 // Phases timed inside a step. Snapshot, model, execute and wait are always reported; text only when it ran.
@@ -28,9 +29,8 @@ const (
 
 const runIDLayout = "20060102T150405"
 
-// MinSecretLength is the shortest value the recorder redacts; shorter ones such as the placeholder key "local" are
-// substrings of ordinary text and would damage the trace.
-const MinSecretLength = 12
+// MinSecretLength is the shortest value the recorder redacts; it is the rule of the secret package.
+const MinSecretLength = secret.MinLength
 
 func basePhases() []string { return []string{PhaseSnapshot, PhaseModel, PhaseExecute, PhaseWait} }
 
@@ -43,7 +43,8 @@ type Options struct {
 	Clock func() time.Time
 	// Rand supplies the four hex digits of the run id; it defaults to crypto/rand.
 	Rand io.Reader
-	// Secrets are values replaced by *** in everything written; values shorter than MinSecretLength are ignored.
+	// Secrets are values replaced by *** in everything written, also in their JSON-escaped form; values shorter than
+	// MinSecretLength are ignored.
 	Secrets []string
 }
 
@@ -54,7 +55,8 @@ type Retry struct {
 	Raw     *string `json:"raw,omitempty"`
 }
 
-// StepInput is one model decision. Request, Answers, Usage and Cascade are written as given.
+// StepInput is one model decision. Request, Answers, Usage and Cascade are written as given; a nil Usage is written
+// as null.
 type StepInput struct {
 	Goal         string
 	Request      any
@@ -78,7 +80,7 @@ type Recorder struct {
 	url     string
 	goal    string
 	clock   func() time.Time
-	secrets []string
+	redact  *secret.Redactor
 	steps   int
 	pending *record
 
@@ -109,12 +111,12 @@ func New(opts Options) (*Recorder, error) {
 		return nil, fmt.Errorf("trace run id: %w", err)
 	}
 	return &Recorder{
-		dir:     opts.Dir,
-		runID:   clock().Format(runIDLayout) + "-" + hex.EncodeToString(suffix[:]),
-		url:     opts.URL,
-		goal:    opts.Goal,
-		clock:   clock,
-		secrets: slices.DeleteFunc(slices.Clone(opts.Secrets), func(s string) bool { return len(s) < MinSecretLength }),
+		dir:    opts.Dir,
+		runID:  clock().Format(runIDLayout) + "-" + hex.EncodeToString(suffix[:]),
+		url:    opts.URL,
+		goal:   opts.Goal,
+		clock:  clock,
+		redact: secret.New(opts.Secrets...),
 	}, nil
 }
 
@@ -379,7 +381,7 @@ func (r *Recorder) write(rec *record) {
 		r.fail(fmt.Errorf("encode trace line: %w", err))
 		return
 	}
-	line = r.redact(line)
+	line = r.redact.Bytes(line)
 	if err := os.MkdirAll(r.dir, 0o750); err != nil {
 		r.fail(fmt.Errorf("create trace directory: %w", err))
 		return
@@ -407,7 +409,7 @@ func (r *Recorder) writeMeta() {
 		r.fail(fmt.Errorf("encode trace meta: %w", err))
 		return
 	}
-	data = r.redact(data)
+	data = r.redact.Bytes(data)
 	if err := os.MkdirAll(r.dir, 0o750); err != nil {
 		r.fail(fmt.Errorf("create trace directory: %w", err))
 		return
@@ -415,13 +417,6 @@ func (r *Recorder) writeMeta() {
 	if err := os.WriteFile(r.MetaPath(), data, 0o600); err != nil {
 		r.fail(fmt.Errorf("write trace meta: %w", err))
 	}
-}
-
-func (r *Recorder) redact(data []byte) []byte {
-	for _, secret := range r.secrets {
-		data = bytes.ReplaceAll(data, []byte(secret), []byte("***"))
-	}
-	return data
 }
 
 func (r *Recorder) fail(err error) {

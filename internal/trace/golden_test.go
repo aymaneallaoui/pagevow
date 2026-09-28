@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -91,7 +92,7 @@ func replay(t *testing.T, s script, dir string, timed bool) *trace.Recorder {
 		case "step":
 			rec.Step(trace.StepInput{
 				Goal: op.Goal, Request: present(op.Request), Answers: present(op.Result.Answers),
-				Usage: present(op.Result.Usage), LatencyMS: op.LatencyMS, AwaitingText: op.AwaitingText,
+				Usage: op.Result.Usage, LatencyMS: op.LatencyMS, AwaitingText: op.AwaitingText,
 				Retries: op.Retries, Cascade: present(op.Cascade),
 			})
 		case "type_text":
@@ -161,6 +162,23 @@ func topLevelKeys(t *testing.T, raw string) []string {
 	return keys
 }
 
+// tokens lists every JSON token of raw in order, so two documents compare equal only when their keys have the same
+// order at every depth.
+func tokens(t *testing.T, raw string) []any {
+	t.Helper()
+	decoder := json.NewDecoder(strings.NewReader(raw))
+	decoder.UseNumber()
+	var out []any
+	for {
+		token, err := decoder.Token()
+		if errors.Is(err, io.EOF) {
+			return out
+		}
+		require.NoError(t, err)
+		out = append(out, token)
+	}
+}
+
 func readOptional(t *testing.T, path string) (string, bool) {
 	t.Helper()
 	data, err := os.ReadFile(path)
@@ -205,7 +223,7 @@ func TestReplayMatchesPythonFiles(t *testing.T) {
 				require.Len(t, got, len(want))
 				for i := range want {
 					assert.JSONEq(t, want[i], got[i], "line %d", i+1)
-					assert.Equal(t, topLevelKeys(t, want[i]), topLevelKeys(t, got[i]), "key order of line %d", i+1)
+					assert.Equal(t, tokens(t, want[i]), tokens(t, got[i]), "key order or content of line %d", i+1)
 				}
 
 				wantMeta, wantMetaExists := readOptional(t, filepath.Join("testdata", s.Name+".expected.meta.json"))

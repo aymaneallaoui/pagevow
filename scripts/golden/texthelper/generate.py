@@ -96,6 +96,8 @@ REPLIES = [
     ("null_text", '{"text": null}'),
     ("number_text", '{"text": 123}'),
     ("bool_text", '{"text": true}'),
+    ("uppercase_text_key", '{"TEXT": "x"}'),
+    ("text_and_capitalised_text", '{"text": "a", "Text": "b"}'),
     ("text_2000_chars", json.dumps({"text": "a" * 2000})),
     ("text_2001_chars", json.dumps({"text": "a" * 2001})),
     ("text_2000_astral_chars", json.dumps({"text": "😀" * 2000})),
@@ -124,6 +126,32 @@ RESULT_SHAPES = [
     ("usage_absent", {"choices": [{"message": {"content": '{"text": "ok"}'}}]}),
     ("usage_present", {"choices": [{"message": {"content": '{"text": "ok"}'}}], "usage": {"input_tokens": 3}}),
     ("usage_null", {"choices": [{"message": {"content": '{"text": "ok"}'}}], "usage": None}),
+    ("content_object_with_unicode", {"choices": [{"message": {"content": {"text": "Zoë ☃ 😀"}}}], "id": "é"}),
+    ("long_body_is_cut_at_300", {"choices": [{"message": {"content": None}}], "pad": "x" * 400}),
+    ("long_body_cut_inside_an_escape", {"choices": [{"message": {"content": None}}], "pad": "😀" * 200}),
+    ("uppercase_choices_key", {"CHOICES": [{"message": {"content": '{"text": "ok"}'}}]}),
+    ("capitalised_content_key", {"choices": [{"message": {"Content": '{"text": "ok"}'}}]}),
+    ("uppercase_usage_key_is_no_usage", {"choices": [{"message": {"content": '{"text": "ok"}'}}], "USAGE": {"input_tokens": 3}}),
+]
+
+NULL_CONTENT = '"choices":[{"message":{"content":null}}]'
+RAW_SHAPES = [
+    (
+        "raw_numbers_are_reencoded",
+        "{" + NULL_CONTENT + ',"a":1E5,"b":1.0e+2,"c":-0,"d":0.10,"e":12345678901234567890123,"f":1e400,"g":-0.0,'
+        '"h":1e-5,"i":123456789.123456789,"j":1e16,"k":1e15,"l":0.0001,"m":2.5e-7,"n":-1e-7,"o":5e-324,"p":1.7976931348623157e308}',
+    ),
+    ("raw_duplicate_keys_keep_first_position_and_last_value", "{" + NULL_CONTENT + ',"x":1,"y":2,"x":3}'),
+    (
+        "raw_escapes_are_reencoded",
+        "{" + NULL_CONTENT + ',"s":"\\u00e9\\ud83d\\ude00\\u007f\\/\\b\\f\\u0001<>&","é":true,"n":null,"arr":[1,[2,{"z":[]}],{}]}',
+    ),
+    (
+        "raw_duplicate_choices_last_wins",
+        '{"choices":[],"choices":[{"message":{"content":"{\\"text\\": \\"ok\\"}"}}]}',
+    ),
+    ("raw_top_level_null", "null"),
+    ("raw_top_level_string", '"just a string"'),
 ]
 
 
@@ -180,6 +208,13 @@ def outcome(result):
         model.post_json = original
 
 
+def content_is_string(result):
+    try:
+        return isinstance(result["choices"][0]["message"]["content"], str)
+    except (KeyError, IndexError, TypeError):
+        return False
+
+
 def reply_fixtures():
     fixtures = []
     for name, content in REPLIES:
@@ -187,10 +222,15 @@ def reply_fixtures():
         fixtures.append({"name": name, "result": result, "content_is_string": True, "outcome": outcome(result)})
     for name, result in RESULT_SHAPES:
         fixtures.append(
+            {"name": name, "result": result, "content_is_string": content_is_string(result), "outcome": outcome(result)}
+        )
+    for name, body in RAW_SHAPES:
+        result = json.loads(body)
+        fixtures.append(
             {
                 "name": name,
-                "result": result,
-                "content_is_string": name.startswith("usage_"),
+                "body": body,
+                "content_is_string": content_is_string(result),
                 "outcome": outcome(result),
             }
         )

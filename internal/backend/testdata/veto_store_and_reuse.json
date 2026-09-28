@@ -333,7 +333,8 @@
                 }
               }
             },
-            "model": "test"
+            "model": "test",
+            "latency_ms": 0
           },
           "verifier": {
             "answers": {
@@ -365,7 +366,8 @@
                 }
               }
             },
-            "model": "large"
+            "model": "large",
+            "latency_ms": 0
           }
         },
         "cache_len": 1
@@ -663,7 +665,8 @@
                 }
               }
             },
-            "model": "test"
+            "model": "test",
+            "latency_ms": 0
           },
           "cache": {
             "answers": {

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/aymaneallaoui/pagevow/internal/secret"
 )
 
 const valueLimit = 2000
@@ -25,37 +27,55 @@ func firstJSONObject(content string) (map[string]json.RawMessage, error) {
 	return object, nil
 }
 
-type completion struct {
-	Choices []struct {
-		Message struct {
-			Content json.RawMessage `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
-	Usage json.RawMessage `json:"usage"`
-}
-
-// parseReply extracts the field value and the usage block from a chat completions body.
-func parseReply(body []byte) (string, json.RawMessage, error) {
+// parseReply extracts the field value and the usage value from a chat completions body. Field names match exactly, as
+// in Python, and secrets are removed from the whole reply before the raw text is cut to its limit.
+func parseReply(body []byte, redactor *secret.Redactor) (string, json.RawMessage, error) {
 	if !json.Valid(body) {
 		return "", nil, &BadBodyError{}
 	}
-	var reply completion
+	var members map[string]json.RawMessage
+	_ = json.Unmarshal(body, &members)
 	usage := json.RawMessage(`{}`)
-	if err := json.Unmarshal(body, &reply); err == nil && len(reply.Usage) > 0 {
-		usage = reply.Usage
+	if raw, ok := members["usage"]; ok {
+		usage = raw
 	}
-	value, ok := fieldValue(reply)
-	if !ok {
-		return "", nil, &InvalidReplyError{Raw: rawOf(reply, body)}
+	content, isString := contentOf(members)
+	if isString {
+		if value, ok := fieldValue(content); ok {
+			return value, usage, nil
+		}
 	}
-	return value, usage, nil
+	return "", nil, &InvalidReplyError{Raw: truncateRunes(redactor.Text(rawText(content, isString, body)), rawLimit)}
 }
 
-func fieldValue(reply completion) (string, bool) {
-	content, ok := stringContent(reply)
-	if !ok {
+func rawText(content string, isString bool, body []byte) string {
+	if isString {
+		return content
+	}
+	if dumped, err := pyDumps(body); err == nil {
+		return dumped
+	}
+	return string(body)
+}
+
+func contentOf(members map[string]json.RawMessage) (string, bool) {
+	var choices []json.RawMessage
+	if json.Unmarshal(members["choices"], &choices) != nil || len(choices) == 0 {
 		return "", false
 	}
+	var choice, message map[string]json.RawMessage
+	if json.Unmarshal(choices[0], &choice) != nil || json.Unmarshal(choice["message"], &message) != nil {
+		return "", false
+	}
+	raw := message["content"]
+	var content string
+	if len(raw) == 0 || raw[0] != '"' || json.Unmarshal(raw, &content) != nil {
+		return "", false
+	}
+	return content, true
+}
+
+func fieldValue(content string) (string, bool) {
 	object, err := firstJSONObject(content)
 	if err != nil || len(object) != 1 {
 		return "", false
@@ -72,25 +92,6 @@ func fieldValue(reply completion) (string, bool) {
 		return "", false
 	}
 	return value, true
-}
-
-func rawOf(reply completion, body []byte) string {
-	if content, ok := stringContent(reply); ok {
-		return truncateRunes(content, rawLimit)
-	}
-	return truncateRunes(string(body), rawLimit)
-}
-
-func stringContent(reply completion) (string, bool) {
-	if len(reply.Choices) == 0 {
-		return "", false
-	}
-	raw := reply.Choices[0].Message.Content
-	var content string
-	if len(raw) == 0 || raw[0] != '"' || json.Unmarshal(raw, &content) != nil {
-		return "", false
-	}
-	return content, true
 }
 
 // isBlank matches Python's str.strip() emptiness, which also treats the four ASCII separators as whitespace.

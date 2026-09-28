@@ -323,7 +323,8 @@
                 }
               }
             },
-            "model": "test"
+            "model": "test",
+            "latency_ms": 0
           },
           "verifier": {
             "answers": {
@@ -355,7 +356,8 @@
                 }
               }
             },
-            "model": "test"
+            "model": "test",
+            "latency_ms": 0
           }
         },
         "cache_len": 0
@@ -680,7 +682,8 @@
                 }
               }
             },
-            "model": "test"
+            "model": "test",
+            "latency_ms": 0
           },
           "verifier": {
             "answers": {
@@ -712,7 +715,8 @@
                 }
               }
             },
-            "model": "test"
+            "model": "test",
+            "latency_ms": 0
           }
         },
         "cache_len": 0

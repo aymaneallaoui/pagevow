@@ -28,6 +28,11 @@ func TestValidateChoice(t *testing.T) {
 		{"tie for maximum", `{"choice":"b","confidence":1,"probabilities":{"a":0.5,"b":0.5}}`, true},
 		{"empty", ``, false},
 		{"null", `null`, false},
+		{"uppercase choice key", `{"CHOICE":"a","confidence":0.9,"probabilities":{"a":0.6,"b":0.4}}`, false},
+		{"capitalised confidence key", `{"choice":"a","Confidence":0.9,"probabilities":{"a":0.6,"b":0.4}}`, false},
+		{"capitalised probabilities key", `{"choice":"a","confidence":0.9,"Probabilities":{"a":0.6,"b":0.4}}`, false},
+		{"exact key wins over a case variant", `{"choice":"a","Choice":"zzz","confidence":0.9,"probabilities":{"a":0.6,"b":0.4}}`, true},
+		{"last duplicate wins", `{"choice":"zzz","choice":"a","confidence":0.9,"probabilities":{"a":0.6,"b":0.4}}`, true},
 		{"not an object", `"a"`, false},
 		{"unknown choice", `{"choice":"c","confidence":1,"probabilities":{"a":0.5,"b":0.5}}`, false},
 		{"missing choice", `{"confidence":1,"probabilities":{"a":0.5,"b":0.5}}`, false},
@@ -75,7 +80,7 @@ func answersJSON(operation string, extra string) string {
 func TestInterpretOnlyValidatesTheChosenTargetHead(t *testing.T) {
 	sp := testSpace()
 	broken := `,"type_text_target":{"choice":"zzz"},"click_target":{"choice":"1","confidence":1,"probabilities":{"1":0.3,"2":0.7}}`
-	res, err := parseResponse([]byte(answersJSON("SCROLL_DOWN", broken)))
+	res, err := parseResponse([]byte(answersJSON("SCROLL_DOWN", broken)), nil)
 	require.NoError(t, err)
 	got, err := interpret(res, sp)
 	require.NoError(t, err)
@@ -86,7 +91,7 @@ func TestInterpretOnlyValidatesTheChosenTargetHead(t *testing.T) {
 	assert.Empty(t, got.targetIDs)
 	assert.Empty(t, got.targetProbabilities)
 
-	res, err = parseResponse([]byte(answersJSON("CLICK", broken)))
+	res, err = parseResponse([]byte(answersJSON("CLICK", broken)), nil)
 	require.NoError(t, err)
 	_, err = interpret(res, sp)
 	var invalid *InvalidResponseError
@@ -95,7 +100,7 @@ func TestInterpretOnlyValidatesTheChosenTargetHead(t *testing.T) {
 }
 
 func TestInterpretRejectsMissingTargetHead(t *testing.T) {
-	res, err := parseResponse([]byte(answersJSON("TYPE_TEXT", "")))
+	res, err := parseResponse([]byte(answersJSON("TYPE_TEXT", "")), nil)
 	require.NoError(t, err)
 	_, err = interpret(res, testSpace())
 	assert.ErrorIs(t, err, ErrTransient)
@@ -111,11 +116,10 @@ func TestParseResponseErrors(t *testing.T) {
 		{"array", `[1,2]`},
 		{"missing answers", `{"model":"m"}`},
 		{"null answers", `{"model":"m","answers":null}`},
-		{"numeric model", `{"model":7,"answers":{}}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parseResponse([]byte(tt.body))
+			_, err := parseResponse([]byte(tt.body), nil)
 			var invalid *InvalidResponseError
 			require.ErrorAs(t, err, &invalid)
 			assert.ErrorIs(t, err, ErrTransient)
@@ -125,7 +129,7 @@ func TestParseResponseErrors(t *testing.T) {
 }
 
 func TestInterpretRejectsAnswersThatAreNotAnObject(t *testing.T) {
-	res, err := parseResponse([]byte(`{"model":"m","answers":[1]}`))
+	res, err := parseResponse([]byte(`{"model":"m","answers":[1]}`), nil)
 	require.NoError(t, err)
 	_, err = interpret(res, testSpace())
 	assert.ErrorIs(t, err, ErrTransient)
@@ -133,7 +137,7 @@ func TestInterpretRejectsAnswersThatAreNotAnObject(t *testing.T) {
 
 func TestInvalidResponseKeepsTheFirst2000Characters(t *testing.T) {
 	long := `{"model":"` + strings.Repeat("é", 3000) + `","answers":[1]}`
-	res, err := parseResponse([]byte(long))
+	res, err := parseResponse([]byte(long), nil)
 	require.NoError(t, err)
 	_, err = interpret(res, testSpace())
 	var invalid *InvalidResponseError
@@ -144,14 +148,14 @@ func TestInvalidResponseKeepsTheFirst2000Characters(t *testing.T) {
 }
 
 func TestUsageDefaultsToAnEmptyObject(t *testing.T) {
-	res, err := parseResponse([]byte(answersJSON("DONE", "")))
+	res, err := parseResponse([]byte(answersJSON("DONE", "")), nil)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{}`, string(res.usage()))
 }
 
 func TestErrorTypes(t *testing.T) {
 	var target *ConnectionError
-	err := error(&ConnectionError{msg: "x", cause: errors.New("boom")})
+	err := error(&ConnectionError{cause: errors.New("boom")})
 	assert.ErrorIs(t, err, ErrTransient)
 	assert.ErrorAs(t, err, &target)
 	assert.NotErrorIs(t, &HTTPStatusError{Status: 500}, ErrTransient)

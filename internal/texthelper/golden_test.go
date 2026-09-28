@@ -127,6 +127,7 @@ func TestSystemPromptMatchesPythonReference(t *testing.T) {
 
 type replyFixture struct {
 	Name            string          `json:"name"`
+	Body            string          `json:"body"`
 	Result          json.RawMessage `json:"result"`
 	ContentIsString bool            `json:"content_is_string"`
 	Outcome         struct {
@@ -140,10 +141,14 @@ type replyFixture struct {
 func TestReplyParsingMatchesPythonReference(t *testing.T) {
 	var fixtures []replyFixture
 	readFixture(t, "replies.json", &fixtures)
-	require.GreaterOrEqual(t, len(fixtures), 10)
+	require.GreaterOrEqual(t, len(fixtures), 40)
 	for _, fixture := range fixtures {
 		t.Run(fixture.Name, func(t *testing.T) {
-			value, usage, err := parseReply(fixture.Result)
+			body := []byte(fixture.Body)
+			if fixture.Body == "" {
+				body = fixture.Result
+			}
+			value, usage, err := parseReply(body, nil)
 			if fixture.Outcome.Value != nil {
 				require.NoError(t, err)
 				assert.Equal(t, *fixture.Outcome.Value, value)
@@ -154,11 +159,7 @@ func TestReplyParsingMatchesPythonReference(t *testing.T) {
 			var invalid *InvalidReplyError
 			require.ErrorAs(t, err, &invalid)
 			assert.True(t, IsTransient(err))
-			if fixture.ContentIsString {
-				assert.Equal(t, fixture.Outcome.Message, err.Error())
-			} else {
-				assert.Contains(t, err.Error(), "Text helper returned no valid field value; nothing typed. Model returned: ")
-			}
+			assert.Equal(t, fixture.Outcome.Message, err.Error())
 		})
 	}
 }

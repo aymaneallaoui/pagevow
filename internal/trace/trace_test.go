@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	secretrule "github.com/aymaneallaoui/pagevow/internal/secret"
 	"github.com/aymaneallaoui/pagevow/internal/trace"
 )
 
@@ -319,4 +320,66 @@ func TestPhaseOutsideAStepIsIgnored(t *testing.T) {
 	stop()
 	rec.EndStep(errors.New("nothing open"))
 	assert.NoFileExists(t, rec.TracePath())
+}
+
+func TestJSONEscapedSecretsAreRedacted(t *testing.T) {
+	const key = `pa"ss\word-0123456789`
+	rec := newRecorder(t, t.TempDir(), key)
+	rec.StartStep(0, "http://x/")
+	rec.Step(trace.StepInput{
+		Goal:         "goal " + key,
+		Request:      map[string]string{"h": "Bearer " + key},
+		Answers:      json.RawMessage(`{"echo":"pa\"ss\\word-0123456789"}`),
+		AwaitingText: true,
+	})
+	rec.TypeText(map[string]string{"goal": key}, key)
+	rec.EndStep(errors.New("failed with " + key))
+	rec.Finish("error", 1, trace.WithError(errors.New(key)), trace.WithRawResponse(key), trace.WithReason(key))
+
+	for _, path := range []string{rec.TracePath(), rec.MetaPath()} {
+		content := string(mustRead(t, path))
+		assert.NotContains(t, content, "word-0123456789", path)
+		assert.NotContains(t, content, `pa"ss`, path)
+		assert.NotContains(t, content, `pa\"ss`, path)
+		assert.Contains(t, content, "***", path)
+	}
+}
+
+func TestNestedSecretsAreRedactedLongestFirstInAnyOrder(t *testing.T) {
+	const long, short = "abcdefghijklmnop", "cdefghijklmn"
+	require.Contains(t, long, short)
+	for _, secrets := range [][]string{{long, short}, {short, long}} {
+		rec := newRecorder(t, t.TempDir(), secrets...)
+		rec.Step(trace.StepInput{Goal: "x " + long + " y " + short + " z"})
+
+		content := string(mustRead(t, rec.TracePath()))
+		assert.Contains(t, content, `"goal":"x *** y *** z"`, "secrets %v", secrets)
+		assert.NotContains(t, content, "abcd", "secrets %v", secrets)
+		assert.NotContains(t, content, "mnop", "secrets %v", secrets)
+	}
+}
+
+func TestMinSecretLengthIsTheSharedRule(t *testing.T) {
+	assert.Equal(t, secretrule.MinLength, trace.MinSecretLength)
+}
+
+func TestMissingUsageIsWrittenAsNull(t *testing.T) {
+	tests := []struct {
+		name  string
+		usage any
+		want  string
+	}{
+		{"untyped nil", nil, `"usage":null`},
+		{"nil raw message", json.RawMessage(nil), `"usage":null`},
+		{"null raw message", json.RawMessage(`null`), `"usage":null`},
+		{"empty object", json.RawMessage(`{}`), `"usage":{}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := newRecorder(t, t.TempDir())
+			rec.Step(trace.StepInput{Goal: "g", Usage: tt.usage})
+			assert.Contains(t, string(mustRead(t, rec.TracePath())), tt.want)
+			assert.Nil(t, rec.Stats().InputTokensTotal)
+		})
+	}
 }

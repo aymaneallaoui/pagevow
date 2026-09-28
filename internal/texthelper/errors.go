@@ -40,7 +40,7 @@ func (e *ConnectionError) Unwrap() error { return e.cause }
 // Is reports whether target is ErrTransient.
 func (e *ConnectionError) Is(target error) bool { return target == ErrTransient }
 
-// InvalidReplyError is a model reply that holds no valid field value; Raw is at most 300 characters of it.
+// InvalidReplyError is a model reply that holds no valid field value; Raw is at most 300 characters of it, secrets removed.
 type InvalidReplyError struct {
 	Raw string
 }

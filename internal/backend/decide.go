@@ -25,23 +25,15 @@ func (c *Client) ask(ctx context.Context, e endpoint, body []byte, sp *space) (a
 		return asked{}, err
 	}
 	ms := millis(c.now().Sub(started))
-	res, err := parseResponse(data)
+	res, err := parseResponse(data, c.redactor)
 	if err != nil {
-		return asked{}, c.scrubInvalid(err)
+		return asked{}, err
 	}
 	verdict, err := interpret(res, sp)
 	if err != nil {
-		return asked{}, c.scrubInvalid(err)
+		return asked{}, err
 	}
 	return asked{res: res, verdict: verdict, ms: ms}, nil
-}
-
-func (c *Client) scrubInvalid(err error) error {
-	var invalid *InvalidResponseError
-	if errors.As(err, &invalid) {
-		invalid.Raw = c.scrub(invalid.Raw)
-	}
-	return err
 }
 
 func (c *Client) escalationReason(v fields) string {
@@ -57,6 +49,18 @@ func (c *Client) escalationReason(v fields) string {
 	return ""
 }
 
+// describeFailure keeps the typed model errors as they are, so their text is what the trace records, and adds context
+// to every other error.
+func describeFailure(err error) error {
+	var connection *ConnectionError
+	var invalid *InvalidResponseError
+	var status *HTTPStatusError
+	if errors.As(err, &connection) || errors.As(err, &invalid) || errors.As(err, &status) {
+		return err
+	}
+	return fmt.Errorf("decide: %w", err)
+}
+
 // Decide asks the model for the next operation and target, running the cascade when a verifier is configured.
 func (c *Client) Decide(ctx context.Context, in Input) (Decision, error) {
 	sp := buildSpace(in.State.Actions)
@@ -68,7 +72,7 @@ func (c *Client) Decide(ctx context.Context, in Input) (Decision, error) {
 	started := c.now()
 	primary, err := c.ask(ctx, c.primary, body, sp)
 	if err != nil {
-		return Decision{}, fmt.Errorf("decide: %w", err)
+		return Decision{}, describeFailure(err)
 	}
 	chosen, verdict := primary.res, primary.verdict
 	latency := int64(-1)
@@ -80,7 +84,7 @@ func (c *Client) Decide(ctx context.Context, in Input) (Decision, error) {
 				key: vetoKeyOf(request), cache: in.Cache, step: in.Step,
 			})
 			if err != nil {
-				return Decision{}, fmt.Errorf("decide: %w", err)
+				return Decision{}, describeFailure(err)
 			}
 			cascade = outcome.cascade
 			if outcome.res != nil {
@@ -105,6 +109,7 @@ func (c *Client) Decide(ctx context.Context, in Input) (Decision, error) {
 		RawAnswers:             chosen.Answers,
 		Model:                  chosen.Model,
 		Usage:                  chosen.usage(),
+		ServerUsage:            chosen.Usage,
 		LatencyMS:              latency,
 		Request:                body,
 		Cascade:                cascade,
@@ -131,7 +136,7 @@ type escalated struct {
 }
 
 func (c *Client) escalate(ctx context.Context, esc escalation) (escalated, error) {
-	primaryLeg := CascadeLeg{Answers: esc.primary.res.Answers, Model: esc.primary.res.Model, LatencyMS: esc.primary.ms}
+	primaryLeg := legOf(esc.primary.res, esc.primary.ms)
 	cacheable := esc.cache != nil && (esc.reason == ReasonDone || esc.reason == ReasonBlocked)
 	if cacheable {
 		if entry, verdict, ok := esc.cache.lookup(esc.key, esc.sp); ok {
@@ -140,7 +145,9 @@ func (c *Client) escalate(ctx context.Context, esc escalation) (escalated, error
 					Reason:  esc.reason,
 					Used:    UsedCache,
 					Primary: primaryLeg,
-					Cache:   &CascadeHit{Answers: entry.res.Answers, Model: entry.res.Model, FromStep: entry.step},
+					Cache: &CascadeHit{
+						Answers: entry.res.Answers, Model: entry.res.Model, model: entry.res.modelRaw, FromStep: entry.step,
+					},
 				},
 				res:     entry.res,
 				verdict: verdict,
@@ -167,14 +174,13 @@ func (c *Client) escalate(ctx context.Context, esc escalation) (escalated, error
 	if cacheable && verified.verdict.operation != esc.primary.verdict.operation {
 		esc.cache.store(esc.key, verified.res, esc.step)
 	}
+	verifierLeg := legOf(verified.res, verified.ms)
 	return escalated{
 		cascade: &Cascade{
-			Reason:  esc.reason,
-			Used:    UsedVerifier,
-			Primary: primaryLeg,
-			Verifier: &CascadeLeg{
-				Answers: verified.res.Answers, Model: verified.res.Model, LatencyMS: verified.ms,
-			},
+			Reason:   esc.reason,
+			Used:     UsedVerifier,
+			Primary:  primaryLeg,
+			Verifier: &verifierLeg,
 		},
 		res:     verified.res,
 		verdict: verified.verdict,

@@ -51,7 +51,7 @@ func buildCollaborators(cfg config.Config, resolver *keys.Resolver) *collaborato
 	case config.BackendCustom:
 		c.remote("custom", cfg.Backends.Custom.URL, cfg.Backends.Custom.Key, "pagevow use custom --url URL", resolver)
 	case config.BackendCascade:
-		c.cascade(cfg.Backends.Cascade)
+		c.cascade(cfg.Backends.Cascade, resolver)
 	}
 	c.textHelper(cfg.TextHelper, resolver)
 	return c
@@ -59,8 +59,14 @@ func buildCollaborators(cfg config.Config, resolver *keys.Resolver) *collaborato
 
 func (c *collaborators) local(url string) {
 	c.client(backend.Options{Endpoint: backend.Endpoint{BaseURL: url, Key: placeholderKey}})
-	c.checks = append(c.checks, c.pingPrimary(fmt.Sprintf(
-		"The decision model at %s does not answer.\n  Start your local model server first (`pagevow start` arrives in phase 3), or choose another backend with `pagevow use`.", url)))
+	c.checks = append(c.checks, c.pingPrimary(modelUnreachable("local model server", url)))
+}
+
+func modelUnreachable(name, url string) string {
+	if config.IsLoopbackURL(url) {
+		return fmt.Sprintf("The local model server does not answer at %s; start it with: pagevow start", url)
+	}
+	return fmt.Sprintf("The %s at %s does not answer.\n  Check that it is running and that the URL is right (`pagevow status` shows what is configured).", name, url)
 }
 
 func (c *collaborators) remote(name, url, keyRef, setup string, resolver *keys.Resolver) {
@@ -80,7 +86,7 @@ func (c *collaborators) remote(name, url, keyRef, setup string, resolver *keys.R
 		"The %s decision backend at %s does not answer.\n  Check your network connection and the URL (`pagevow status` shows what is configured).", name, url)))
 }
 
-func (c *collaborators) cascade(cfg config.Cascade) {
+func (c *collaborators) cascade(cfg config.Cascade, resolver *keys.Resolver) {
 	switch {
 	case cfg.Primary == "":
 		c.problem("backends.cascade.primary is not set.\n  Set it with: pagevow use cascade --primary URL")
@@ -89,24 +95,36 @@ func (c *collaborators) cascade(cfg config.Cascade) {
 		c.problem("backends.cascade.verifier is not set.\n  Set it with: pagevow use cascade --verifier URL")
 		return
 	}
+	primaryKey, primaryOK := c.optionalKey("backends.cascade.primary_key", cfg.PrimaryKey, resolver)
+	verifierKey, verifierOK := c.optionalKey("backends.cascade.verifier_key", cfg.VerifierKey, resolver)
+	if !primaryOK || !verifierOK {
+		return
+	}
 	c.client(backend.Options{
-		Endpoint:         backend.Endpoint{BaseURL: cfg.Primary, Key: placeholderKey},
-		Verifier:         &backend.Endpoint{BaseURL: cfg.Verifier, Key: placeholderKey},
+		Endpoint:         backend.Endpoint{BaseURL: cfg.Primary, Key: primaryKey},
+		Verifier:         &backend.Endpoint{BaseURL: cfg.Verifier, Key: verifierKey},
 		TargetConfidence: cfg.TargetConf,
 	})
 	c.vetoCache = cfg.VetoCache
-	c.checks = append(c.checks, c.pingPrimary(fmt.Sprintf(
-		"The primary model at %s does not answer.\n  Start your local model servers first (`pagevow start` arrives in phase 3).", cfg.Primary)))
-	verifier, err := backend.New(backend.Options{Endpoint: backend.Endpoint{BaseURL: cfg.Verifier, Key: placeholderKey}})
+	c.checks = append(c.checks, c.pingPrimary(modelUnreachable("primary model", cfg.Primary)))
+	verifier, err := backend.New(backend.Options{Endpoint: backend.Endpoint{BaseURL: cfg.Verifier, Key: verifierKey}})
 	if err != nil {
 		return
 	}
 	c.checks = append(c.checks, check{
 		run: verifier.Ping,
 		fail: func(err error) string {
-			return c.describe(err, fmt.Sprintf("The cascade verifier at %s does not answer.\n  Start it, or choose another backend with `pagevow use`.", cfg.Verifier))
+			return c.describe(err, modelUnreachable("cascade verifier", cfg.Verifier))
 		},
 	})
+}
+
+func (c *collaborators) optionalKey(field, ref string, resolver *keys.Resolver) (string, bool) {
+	key, ok := c.resolveKey(field, ref, resolver, false)
+	if ok && key == "" {
+		key = placeholderKey
+	}
+	return key, ok
 }
 
 func (c *collaborators) client(opts backend.Options) {

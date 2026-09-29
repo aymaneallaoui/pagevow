@@ -1,0 +1,240 @@
+package cli
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/aymaneallaoui/pagevow/internal/browser"
+	"github.com/aymaneallaoui/pagevow/internal/config"
+	"github.com/aymaneallaoui/pagevow/internal/server"
+	"github.com/aymaneallaoui/pagevow/internal/ui"
+	"github.com/aymaneallaoui/pagevow/internal/version"
+)
+
+type healthTarget struct {
+	name      string
+	label     string
+	url       string
+	probeURL  string
+	startable bool
+}
+
+// healthTargets lists the destinations a run would use: the active backend and the text helper.
+func healthTargets(cfg config.Config) []healthTarget {
+	var targets []healthTarget
+	model := func(name, label, url string, startable bool) {
+		probe, err := server.ModelsURL(url)
+		if err != nil {
+			probe = url
+		}
+		targets = append(targets, healthTarget{name: name, label: label, url: url, probeURL: probe, startable: startable && config.IsLoopbackURL(url)})
+	}
+	switch cfg.Backend {
+	case config.BackendLocal:
+		model("local", "local model server", cfg.Backends.Local.URL, true)
+	case config.BackendJev:
+		model("jev", "jev decision backend", cfg.Backends.Jev.URL, false)
+	case config.BackendCustom:
+		model("custom", "custom decision backend", cfg.Backends.Custom.URL, false)
+	case config.BackendCascade:
+		model("cascade_primary", "cascade primary model", cfg.Backends.Cascade.Primary, true)
+		model("cascade_verifier", "cascade verifier model", cfg.Backends.Cascade.Verifier, true)
+	}
+	if cfg.TextHelper.URL != "" {
+		targets = append(targets, healthTarget{
+			name: "text_helper", label: "text helper", url: cfg.TextHelper.URL,
+			probeURL: strings.TrimRight(cfg.TextHelper.URL, "/") + "/models", startable: cfg.TextHelper.Local.Enabled && config.IsLoopbackURL(cfg.TextHelper.URL),
+		})
+	}
+	return targets
+}
+
+func (a *app) collectRuntime(ctx context.Context, cfg config.Config, report *statusReport) error {
+	procs, err := service[Processes](a)
+	if err != nil {
+		return err
+	}
+	gpu, err := service[GPUReader](a)
+	if err != nil {
+		return err
+	}
+	browsers, err := service[ManagedBrowsers](a)
+	if err != nil {
+		return err
+	}
+	now, err := service[Clock](a)
+	if err != nil {
+		return err
+	}
+	info, err := service[version.Info](a)
+	if err != nil {
+		return err
+	}
+	report.Versions = map[string]string{"pagevow": info.Version}
+	report.Processes, report.StaleRemoved = []processState{}, []string{}
+	report.Health, report.Tripped = []healthState{}, []trippedState{}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		report.Health = probeHealth(ctx, procs, healthTargets(cfg))
+	}()
+	go func() {
+		defer wg.Done()
+		if reading, err := gpu.Read(ctx); err == nil {
+			report.GPU = &gpuState{TotalMiB: reading.TotalMiB, UsedMiB: reading.UsedMiB, FreeMiB: reading.FreeMiB, TemperatureC: reading.TempC}
+		}
+	}()
+	records, _ := procs.List()
+	report.Processes, report.StaleRemoved = processStates(ctx, procs, records, now())
+	for _, p := range report.Processes {
+		if p.Kind != string(server.KindBrowser) || !p.Alive {
+			continue
+		}
+		if v, err := browsers.Version(ctx, browser.DebugURL(p.Port)); err == nil {
+			report.Versions["browser"] = v
+		}
+	}
+	if found, err := procs.Tripped(); err == nil {
+		for _, t := range found {
+			report.Tripped = append(report.Tripped, trippedState{Name: t.Name, Message: t.Message})
+		}
+	}
+	wg.Wait()
+	return nil
+}
+
+func processStates(ctx context.Context, procs Processes, records []server.Record, now time.Time) ([]processState, []string) {
+	states := make([]processState, len(records))
+	var wg sync.WaitGroup
+	for i, rec := range records {
+		state := processState{Name: rec.Name, Kind: string(rec.Kind), PID: rec.PID, Port: rec.Port, Alive: procs.Alive(rec), Log: rec.Log}
+		states[i] = state
+		if !state.Alive {
+			continue
+		}
+		states[i].UptimeSeconds = max(int64(now.Sub(rec.StartedAt).Seconds()), 0)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			status, err := procs.Probe(ctx, readyURLOf(rec))
+			states[i].Ready = err == nil && status < 500
+		}()
+	}
+	wg.Wait()
+	stale := []string{}
+	for _, rec := range records {
+		if procs.Alive(rec) {
+			continue
+		}
+		if _, err := procs.Stop(ctx, rec); err == nil {
+			stale = append(stale, rec.Name)
+		}
+	}
+	if states == nil {
+		states = []processState{}
+	}
+	return states, stale
+}
+
+func readyURLOf(rec server.Record) string {
+	if rec.Kind == server.KindBrowser {
+		return browser.DebugURL(rec.Port) + "/json/version"
+	}
+	return rec.ReadyURL
+}
+
+func probeHealth(ctx context.Context, procs Processes, targets []healthTarget) []healthState {
+	states := make([]healthState, len(targets))
+	var wg sync.WaitGroup
+	for i, target := range targets {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			state := healthState{Name: target.name, URL: target.url}
+			status, err := procs.Probe(ctx, target.probeURL)
+			if err != nil {
+				state.Error = rootCause(err)
+			} else {
+				state.Reachable, state.HTTPStatus = true, status
+			}
+			states[i] = state
+		}()
+	}
+	wg.Wait()
+	return states
+}
+
+func renderRuntime(out *ui.Printer, report statusReport) {
+	out.Blank()
+	out.Heading("Processes")
+	if len(report.Processes) == 0 {
+		out.Line("none recorded")
+	} else {
+		rows := make([][]string, 0, len(report.Processes))
+		for _, p := range report.Processes {
+			rows = append(rows, []string{p.Name, fmt.Sprint(p.PID), fmt.Sprint(p.Port), processWord(p), uptimeText(p), p.Log})
+		}
+		out.Table([]string{"NAME", "PID", "PORT", "STATE", "UPTIME", "LOG"}, rows)
+	}
+	for _, name := range report.StaleRemoved {
+		out.Status(ui.Info, "removed stale record %s: its process is gone", name)
+	}
+	out.Blank()
+	out.Heading("Health")
+	if len(report.Health) == 0 {
+		out.Line("nothing to check")
+	}
+	for _, h := range report.Health {
+		if h.Reachable {
+			out.Status(ui.OK, "%s at %s answers (HTTP %d)", h.Name, h.URL, h.HTTPStatus)
+		} else {
+			out.Status(ui.Warn, "%s at %s does not answer: %s", h.Name, h.URL, h.Error)
+		}
+	}
+	out.Blank()
+	out.Heading("GPU")
+	if report.GPU == nil {
+		out.Line("unknown (nvidia-smi is not available)")
+	} else {
+		out.Pairs([]ui.Pair{
+			{Key: "memory", Value: fmt.Sprintf("%d MiB free, %d MiB used, %d MiB total", report.GPU.FreeMiB, report.GPU.UsedMiB, report.GPU.TotalMiB)},
+			{Key: "temperature", Value: fmt.Sprintf("%d C", report.GPU.TemperatureC)},
+		})
+	}
+	out.Blank()
+	out.Heading("Versions")
+	versions := []ui.Pair{{Key: "pagevow", Value: report.Versions["pagevow"]}}
+	if v, ok := report.Versions["browser"]; ok {
+		versions = append(versions, ui.Pair{Key: "browser", Value: v})
+	}
+	out.Pairs(versions)
+	if len(report.Tripped) > 0 {
+		out.Blank()
+		out.Heading("Stopped by the GPU guard")
+		for _, t := range report.Tripped {
+			out.Status(ui.Warn, "%s", t.Message)
+		}
+	}
+}
+
+func processWord(p processState) string {
+	switch {
+	case !p.Alive:
+		return "gone"
+	case p.Ready:
+		return "ready"
+	}
+	return "starting"
+}
+
+func uptimeText(p processState) string {
+	if !p.Alive {
+		return "-"
+	}
+	return (time.Duration(p.UptimeSeconds) * time.Second).String()
+}

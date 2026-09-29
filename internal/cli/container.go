@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/samber/do/v2"
 
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
+	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 	"github.com/aymaneallaoui/pagevow/internal/version"
 )
@@ -40,6 +43,14 @@ type Options struct {
 	Interrupts       Interrupts
 	Exit             Exit
 	Now              Clock
+	Processes        Processes
+	ManagedBrowsers  ManagedBrowsers
+	GPU              GPUReader
+	Executable       Executable
+	CacheDir         CacheDir
+	HomeDir          HomeDir
+	LookPath         LookPath
+	OS               GOOS
 }
 
 // SystemOptions returns the options of a real run: process environment, OS keychain, terminal prompts.
@@ -53,6 +64,13 @@ func SystemOptions() Options {
 		Interrupts:       SystemInterrupts,
 		Exit:             os.Exit,
 		Now:              time.Now,
+		ManagedBrowsers:  systemManagedBrowsers{},
+		GPU:              server.NvidiaSMI{},
+		Executable:       os.Executable,
+		CacheDir:         os.UserCacheDir,
+		HomeDir:          os.UserHomeDir,
+		LookPath:         exec.LookPath,
+		OS:               GOOS(runtime.GOOS),
 	}
 }
 
@@ -69,6 +87,12 @@ func NewContainer(opts Options) do.Injector {
 	do.ProvideValue(injector, opts.Interrupts)
 	do.ProvideValue(injector, opts.Exit)
 	do.ProvideValue(injector, opts.Now)
+	do.ProvideValue(injector, opts.ManagedBrowsers)
+	do.ProvideValue(injector, opts.GPU)
+	do.ProvideValue(injector, opts.CacheDir)
+	do.ProvideValue(injector, opts.HomeDir)
+	do.ProvideValue(injector, opts.LookPath)
+	do.ProvideValue(injector, opts.OS)
 	do.ProvideValue(injector, version.Get())
 
 	do.Provide(injector, func(i do.Injector) (*keys.Resolver, error) {
@@ -81,6 +105,16 @@ func NewContainer(opts Options) do.Injector {
 			return nil, fmt.Errorf("resolve environment lookup: %w", err)
 		}
 		return keys.NewResolver(store, lookup), nil
+	})
+	do.Provide(injector, func(do.Injector) (Processes, error) {
+		if opts.Processes != nil {
+			return opts.Processes, nil
+		}
+		dir, err := config.StateDir(opts.CacheDir)
+		if err != nil {
+			return nil, err
+		}
+		return newSystemProcesses(dir, opts.Executable, opts.GPU), nil
 	})
 	do.Provide(injector, func(do.Injector) (ConfigPath, error) {
 		if opts.ConfigPath != "" {
@@ -117,6 +151,27 @@ func withDefaults(opts Options) Options {
 	}
 	if opts.Now == nil {
 		opts.Now = system.Now
+	}
+	if opts.ManagedBrowsers == nil {
+		opts.ManagedBrowsers = system.ManagedBrowsers
+	}
+	if opts.GPU == nil {
+		opts.GPU = system.GPU
+	}
+	if opts.Executable == nil {
+		opts.Executable = system.Executable
+	}
+	if opts.CacheDir == nil {
+		opts.CacheDir = system.CacheDir
+	}
+	if opts.HomeDir == nil {
+		opts.HomeDir = system.HomeDir
+	}
+	if opts.LookPath == nil {
+		opts.LookPath = system.LookPath
+	}
+	if opts.OS == "" {
+		opts.OS = system.OS
 	}
 	return opts
 }

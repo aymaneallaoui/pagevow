@@ -40,6 +40,7 @@ func NewRootCommand(injector do.Injector) *cobra.Command {
 		a.newDoctorCmd(),
 		a.newInitCmd(),
 		a.newRunCmd(),
+		a.newSuperviseCmd(),
 		a.newHookCmd(),
 		a.newPluginCmd(),
 		a.newKeysCmd(),

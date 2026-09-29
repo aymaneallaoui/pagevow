@@ -24,18 +24,6 @@ func (a *app) newInstallCmd() *cobra.Command {
 	})
 }
 
-func (a *app) newStartCmd() *cobra.Command {
-	return stub("start", "Start what the active backend needs, and the browser", 3, nil)
-}
-
-func (a *app) newStopCmd() *cobra.Command {
-	return stub("stop", "Stop everything pagevow started", 3, nil)
-}
-
-func (a *app) newDoctorCmd() *cobra.Command {
-	return stub("doctor", "Check the setup and say how to fix each problem", 3, nil)
-}
-
 func (a *app) newUpdateCmd() *cobra.Command {
 	return stub("update", "Replace the binary with the latest release", 5, nil)
 }

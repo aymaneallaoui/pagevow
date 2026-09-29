@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -22,6 +23,7 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/cli"
 	"github.com/aymaneallaoui/pagevow/internal/page"
 	"github.com/aymaneallaoui/pagevow/internal/runner"
+	"github.com/aymaneallaoui/pagevow/internal/server"
 )
 
 const (
@@ -156,6 +158,7 @@ func newRunEnv(t *testing.T) *runEnv {
 		}
 	}))
 	t.Cleanup(e.server.Close)
+	e.harness.launcher = e.launcher
 	e.dir = t.TempDir()
 	t.Chdir(e.dir)
 	e.mustRun("use", "custom", "--url", e.server.URL)
@@ -366,8 +369,8 @@ func TestRunPreflightFailsWhenTheBackendDoesNotAnswer(t *testing.T) {
 	assert.Equal(t, 2, cli.ExitCode(err))
 	assert.Empty(t, stdout)
 	assert.Contains(t, stderr, "Preflight failed; no test was run.")
-	assert.Contains(t, stderr, "The decision model at http://127.0.0.1:1 does not answer.")
-	assert.Contains(t, stderr, "`pagevow start` arrives in phase 3")
+	assert.Contains(t, stderr, "The local model server does not answer at http://127.0.0.1:1; start it with: pagevow start")
+	assert.NotContains(t, stderr, "phase 3")
 	assert.Contains(t, stderr, "Cause: ")
 	assert.Contains(t, stderr, "connection refused")
 	assert.Empty(t, e.launcher.specs)
@@ -441,7 +444,7 @@ func TestRunPreflightChecksTheCascadeVerifierAndTheLoopbackTextHelper(t *testing
 
 	require.Error(t, err)
 	assert.Equal(t, 2, cli.ExitCode(err))
-	assert.Contains(t, stderr, "The cascade verifier at http://127.0.0.1:1 does not answer.")
+	assert.Contains(t, stderr, "The local model server does not answer at http://127.0.0.1:1; start it with: pagevow start")
 	assert.Contains(t, stderr, "The local text helper at http://127.0.0.1:1/v1 does not answer.")
 	assert.NotContains(t, stderr, e.server.URL+" does not answer")
 }
@@ -681,4 +684,96 @@ func TestRunHeadedOverridesAConfigThatSaysHeadless(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, e.launcher.specs, 1)
 	assert.False(t, e.launcher.specs[0].Headless)
+}
+
+func (e *runEnv) managedBrowserRunning(port int) *fakeBrowser {
+	e.t.Helper()
+	e.procs.addRecord(server.Record{Name: server.RecordName(server.KindBrowser, port), Kind: server.KindBrowser, PID: 777, Port: port})
+	e.managed.versions["http://127.0.0.1:"+strconv.Itoa(port)] = "HeadlessChrome/140"
+	attached := &fakeBrowser{launcher: e.launcher, stopped: make(chan struct{})}
+	e.managed.attachedTo = attached
+	return attached
+}
+
+func TestRunAttachesToTheBrowserThatStartKeepsRunningAndDoesNotStopIt(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	attached := e.managedBrowserRunning(9333)
+
+	stdout, stderr, err := e.runCmd("--retries", "0")
+
+	require.NoError(t, err, stderr)
+	assert.Contains(t, stdout, "PASS")
+	assert.Equal(t, []string{"http://127.0.0.1:9333"}, e.managed.attached)
+	assert.Empty(t, e.launcher.specs, "no private browser is launched")
+	assert.Equal(t, 1, e.launcher.sessions)
+	assert.Len(t, attached.stops, 1, "the connection is released")
+	assert.Empty(t, e.procs.stopped, "the managed browser is never stopped by run")
+	assert.Contains(t, stderr, "using the browser that pagevow start keeps running (http://127.0.0.1:9333)")
+}
+
+func TestRunDoesNotNeedAnInstalledBrowserWhenItAttaches(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	e.managedBrowserRunning(9333)
+	e.launcher.findErr = errors.New("nothing found")
+
+	_, stderr, err := e.runCmd("--retries", "0")
+
+	require.NoError(t, err, stderr)
+}
+
+func TestRunLaunchesItsOwnBrowserWhenTheRecordedOneDoesNotAnswer(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	e.procs.addRecord(server.Record{Name: "browser-9333", Kind: server.KindBrowser, PID: 777, Port: 9333})
+
+	_, stderr, err := e.runCmd("--retries", "0")
+
+	require.NoError(t, err, stderr)
+	assert.Empty(t, e.managed.attached)
+	assert.Len(t, e.launcher.specs, 1)
+}
+
+func TestRunLaunchesItsOwnBrowserWhenTheRecordIsStale(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	e.managedBrowserRunning(9333)
+	e.procs.markDead("browser-9333")
+
+	_, stderr, err := e.runCmd("--retries", "0")
+
+	require.NoError(t, err, stderr)
+	assert.Empty(t, e.managed.attached)
+	assert.Len(t, e.launcher.specs, 1)
+}
+
+func TestRunAttachFailureExits2(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	e.managedBrowserRunning(9333)
+	e.managed.attachErr = errors.New("connect refused")
+
+	_, _, err := e.runCmd("--retries", "0")
+
+	require.Error(t, err)
+	assert.Equal(t, 2, cli.ExitCode(err))
+	assert.Contains(t, err.Error(), "start browser")
+}
+
+func TestRunPreflightNamesAnUnreadableKeyOfACascadeLegWithoutAnyRequest(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	e.mustRun("use", "cascade", "--primary", e.server.URL, "--verifier", "https://verifier.example.test", "--verifier-key", "env:VERIFIER_KEY")
+	posts := e.posts
+
+	_, stderr, err := e.runCmd("--retries", "0")
+
+	require.Error(t, err)
+	assert.Equal(t, 2, cli.ExitCode(err))
+	assert.Contains(t, stderr, "env:VERIFIER_KEY")
+	assert.Contains(t, stderr, "backends.cascade.verifier_key")
+	assert.Contains(t, stderr, "export VERIFIER_KEY=")
+	assert.Equal(t, posts, e.posts)
+	assert.Empty(t, e.launcher.specs)
 }

@@ -7,10 +7,12 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/samber/do/v2"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +22,7 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/cli"
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
+	"github.com/aymaneallaoui/pagevow/internal/server"
 )
 
 type fakePrompter struct {
@@ -54,6 +57,15 @@ type harness struct {
 	prompter    *fakePrompter
 	interactive bool
 	env         map[string]string
+	cacheDir    string
+	homeDir     string
+	procs       *fakeProcesses
+	gpu         *fakeGPU
+	managed     *fakeManaged
+	launcher    *fakeLauncher
+	missing     map[string]bool
+	goos        string
+	now         time.Time
 }
 
 func newHarness(t *testing.T) *harness {
@@ -61,12 +73,22 @@ func newHarness(t *testing.T) *harness {
 	for _, key := range config.Keys() {
 		t.Setenv(config.EnvName(key), "")
 	}
+	cacheDir := t.TempDir()
 	return &harness{
 		t:          t,
 		configPath: filepath.Join(t.TempDir(), "config", "config.yaml"),
 		store:      keys.NewMemory(),
 		prompter:   &fakePrompter{},
 		env:        map[string]string{},
+		cacheDir:   cacheDir,
+		homeDir:    t.TempDir(),
+		procs:      newFakeProcesses(filepath.Join(cacheDir, "pagevow", "run")),
+		gpu:        &fakeGPU{err: server.ErrNoGPUTool},
+		managed:    newFakeManaged(),
+		launcher:   &fakeLauncher{},
+		missing:    map[string]bool{},
+		goos:       "linux",
+		now:        time.Date(2026, 9, 30, 9, 0, 0, 0, time.UTC),
 	}
 }
 
@@ -77,6 +99,21 @@ func (h *harness) options() cli.Options {
 		Store:            h.store,
 		Prompter:         h.prompter,
 		StdinInteractive: func(io.Reader) bool { return h.interactive },
+		Browser:          h.launcher,
+		Processes:        h.procs,
+		ManagedBrowsers:  h.managed,
+		GPU:              h.gpu,
+		Executable:       func() (string, error) { return "/usr/local/bin/pagevow", nil },
+		CacheDir:         func() (string, error) { return h.cacheDir, nil },
+		HomeDir:          func() (string, error) { return h.homeDir, nil },
+		LookPath: func(name string) (string, error) {
+			if h.missing[name] {
+				return "", exec.ErrNotFound
+			}
+			return "/usr/bin/" + name, nil
+		},
+		OS:  cli.GOOS(h.goos),
+		Now: func() time.Time { return h.now },
 	}
 }
 
@@ -157,9 +194,6 @@ func TestStubCommandsExitWithCode2(t *testing.T) {
 		phase string
 	}{
 		{[]string{"install", "--browser"}, "phase 5"},
-		{[]string{"start"}, "phase 3"},
-		{[]string{"stop"}, "phase 3"},
-		{[]string{"doctor"}, "phase 3"},
 		{[]string{"hook", "stop"}, "phase 4"},
 		{[]string{"plugin", "install"}, "phase 4"},
 		{[]string{"plugin", "uninstall"}, "phase 4"},

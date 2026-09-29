@@ -39,15 +39,21 @@ var backendSpecs = map[string]backendSpec{
 	},
 	config.BackendCascade: {flagKeys: map[string]string{
 		"primary": "backends.cascade.primary", "verifier": "backends.cascade.verifier",
+		"primary-model": "backends.cascade.primary_model", "primary-mode": "backends.cascade.primary_mode",
+		"verifier-model": "backends.cascade.verifier_model", "verifier-mode": "backends.cascade.verifier_mode",
+		"primary-key": "backends.cascade.primary_key", "verifier-key": "backends.cascade.verifier_key",
 		"target-conf": "backends.cascade.target_conf", "veto-cache": "backends.cascade.veto_cache",
 	}},
 }
 
 func (a *app) newUseCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:       "use local|jev|custom|cascade",
-		Short:     "Choose the decision backend",
-		Long:      "Choose the decision backend and store it in the config file.\n\nFlags by backend:\n  local    --url --model --mode\n  jev      --url --key\n  custom   --url --key\n  cascade  --primary --verifier --target-conf --veto-cache\n\n--key takes a reference (keychain:NAME or env:NAME), never the secret itself.",
+		Use:   "use local|jev|custom|cascade",
+		Short: "Choose the decision backend",
+		Long: "Choose the decision backend and store it in the config file.\n\nFlags by backend:\n  local    --url --model --mode\n  jev      --url --key\n  custom   --url --key\n" +
+			"  cascade  --primary --verifier --primary-model --primary-mode --verifier-model --verifier-mode\n           --primary-key --verifier-key --target-conf --veto-cache\n\n" +
+			"--key, --primary-key and --verifier-key take a reference (keychain:NAME or env:NAME), never the secret itself.\n" +
+			"Modes: nf4, int8, bf16, default. Mode default is only allowed for models of 1B parameters or less.",
 		Args:      cobra.ExactArgs(1),
 		ValidArgs: config.BackendNames(),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -57,10 +63,16 @@ func (a *app) newUseCmd() *cobra.Command {
 	flags := cmd.Flags()
 	flags.String("url", "", "backend URL (local, jev, custom)")
 	flags.String("model", "", "local model name")
-	flags.String("mode", "", "local model precision mode, for example nf4, int8, bf16")
+	flags.String("mode", "", "local model mode: nf4, int8, bf16 or default")
 	flags.String("key", "", "API key reference: keychain:NAME or env:NAME (jev, custom)")
 	flags.String("primary", "", "primary model URL (cascade)")
 	flags.String("verifier", "", "verifier model URL (cascade)")
+	flags.String("primary-model", "", "run name or absolute path of the primary model (cascade)")
+	flags.String("primary-mode", "", "mode of the primary model: nf4, int8, bf16 or default (cascade)")
+	flags.String("verifier-model", "", "run name or absolute path of the verifier model (cascade)")
+	flags.String("verifier-mode", "", "mode of the verifier model: nf4, int8, bf16 or default (cascade)")
+	flags.String("primary-key", "", "API key reference for the primary model: keychain:NAME or env:NAME (cascade)")
+	flags.String("verifier-key", "", "API key reference for the verifier model: keychain:NAME or env:NAME (cascade)")
 	flags.Float64("target-conf", 0, "confidence below which the verifier is asked, at most 1; 0 means 0.5, a negative value never asks on confidence (cascade)")
 	flags.Bool("veto-cache", true, "reuse a verifier override on the same page (cascade)")
 	return cmd
@@ -211,13 +223,21 @@ func validateURL(flag, value string) error {
 }
 
 func (a *app) warnMissingKey(out *ui.Printer, cfg config.Config) {
-	var reference string
+	var references []string
 	switch cfg.Backend {
 	case config.BackendJev:
-		reference = cfg.Backends.Jev.Key
+		references = []string{cfg.Backends.Jev.Key}
 	case config.BackendCustom:
-		reference = cfg.Backends.Custom.Key
+		references = []string{cfg.Backends.Custom.Key}
+	case config.BackendCascade:
+		references = []string{cfg.Backends.Cascade.PrimaryKey, cfg.Backends.Cascade.VerifierKey}
 	}
+	for _, reference := range references {
+		a.warnMissingReference(out, reference)
+	}
+}
+
+func (a *app) warnMissingReference(out *ui.Printer, reference string) {
 	ref, err := keys.ParseRef(reference)
 	if err != nil || ref.IsZero() {
 		return

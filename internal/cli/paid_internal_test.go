@@ -55,6 +55,16 @@ func TestPaidServicesAreDecidedByDestinationAndKey(t *testing.T) {
 		{"cascade at public urls has no key", withBackend(config.BackendCascade, func(c *config.Config) {
 			c.Backends.Cascade.Primary, c.Backends.Cascade.Verifier = "https://a.example.test", "https://b.example.test"
 		}), nil},
+		{"cascade remote legs with keys", withBackend(config.BackendCascade, func(c *config.Config) {
+			c.Backends.Cascade.Primary, c.Backends.Cascade.PrimaryKey = "https://a.example.test", "keychain:hosted"
+			c.Backends.Cascade.Verifier, c.Backends.Cascade.VerifierKey = "https://b.example.test", "env:MY_KEY"
+		}), []string{"the cascade primary model at https://a.example.test", "the cascade verifier model at https://b.example.test"}},
+		{"cascade loopback legs with keys are not paid", withBackend(config.BackendCascade, func(c *config.Config) {
+			c.Backends.Cascade.PrimaryKey, c.Backends.Cascade.VerifierKey = "keychain:hosted", "env:MY_KEY"
+		}), nil},
+		{"cascade remote leg with an unset key", withBackend(config.BackendCascade, func(c *config.Config) {
+			c.Backends.Cascade.Verifier, c.Backends.Cascade.VerifierKey = "https://b.example.test", "env:EMPTY"
+		}), nil},
 		{"only the active backend counts", withBackend(config.BackendLocal, func(c *config.Config) {
 			c.Backends.Jev.Key = "keychain:hosted"
 		}), nil},

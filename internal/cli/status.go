@@ -18,13 +18,50 @@ type field struct {
 }
 
 type statusReport struct {
-	ConfigFile       string         `json:"config_file"`
-	ConfigFileExists bool           `json:"config_file_exists"`
-	PaidAPI          bool           `json:"paid_api"`
-	Backend          map[string]any `json:"backend"`
-	URLs             map[string]any `json:"urls"`
-	TextHelper       map[string]any `json:"text_helper"`
-	Browser          map[string]any `json:"browser"`
+	ConfigFile       string            `json:"config_file"`
+	ConfigFileExists bool              `json:"config_file_exists"`
+	PaidAPI          bool              `json:"paid_api"`
+	Backend          map[string]any    `json:"backend"`
+	URLs             map[string]any    `json:"urls"`
+	TextHelper       map[string]any    `json:"text_helper"`
+	Browser          map[string]any    `json:"browser"`
+	Processes        []processState    `json:"processes"`
+	Health           []healthState     `json:"health"`
+	GPU              *gpuState         `json:"gpu,omitempty"`
+	Versions         map[string]string `json:"versions"`
+	Tripped          []trippedState    `json:"tripped"`
+	StaleRemoved     []string          `json:"stale_removed"`
+}
+
+type processState struct {
+	Name          string `json:"name"`
+	Kind          string `json:"kind"`
+	PID           int    `json:"pid"`
+	Port          int    `json:"port"`
+	Alive         bool   `json:"alive"`
+	Ready         bool   `json:"ready"`
+	UptimeSeconds int64  `json:"uptime_seconds"`
+	Log           string `json:"log"`
+}
+
+type healthState struct {
+	Name       string `json:"name"`
+	URL        string `json:"url"`
+	Reachable  bool   `json:"reachable"`
+	HTTPStatus int    `json:"http_status,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+type gpuState struct {
+	TotalMiB     int `json:"total_mib"`
+	UsedMiB      int `json:"used_mib"`
+	FreeMiB      int `json:"free_mib"`
+	TemperatureC int `json:"temperature_c"`
+}
+
+type trippedState struct {
+	Name    string `json:"name"`
+	Message string `json:"message"`
 }
 
 func (a *app) newStatusCmd() *cobra.Command {
@@ -47,6 +84,9 @@ func (a *app) newStatusCmd() *cobra.Command {
 			}
 			_, statErr := os.Stat(path)
 			report := buildStatus(cfg, path, statErr == nil, resolver)
+			if err := a.collectRuntime(commandContext(cmd), cfg, &report); err != nil {
+				return err
+			}
 			if asJSON {
 				return writeJSON(cmd, report)
 			}
@@ -55,6 +95,7 @@ func (a *app) newStatusCmd() *cobra.Command {
 				return err
 			}
 			renderStatus(out, cfg, report, resolver)
+			renderRuntime(out, report)
 			return out.Err()
 		},
 	}
@@ -114,8 +155,8 @@ func destinations(cfg config.Config) []destination {
 		out = append(out, destination{"the custom decision backend", cfg.Backends.Custom.URL, cfg.Backends.Custom.Key})
 	case config.BackendCascade:
 		out = append(out,
-			destination{"the cascade primary model", cfg.Backends.Cascade.Primary, ""},
-			destination{"the cascade verifier model", cfg.Backends.Cascade.Verifier, ""})
+			destination{"the cascade primary model", cfg.Backends.Cascade.Primary, cfg.Backends.Cascade.PrimaryKey},
+			destination{"the cascade verifier model", cfg.Backends.Cascade.Verifier, cfg.Backends.Cascade.VerifierKey})
 	}
 	return append(out, destination{"the text helper", cfg.TextHelper.URL, cfg.TextHelper.Key})
 }
@@ -150,7 +191,11 @@ func activeFields(cfg config.Config) []field {
 		return []field{{"url", cfg.Backends.Custom.URL}, {"key", cfg.Backends.Custom.Key}}
 	case config.BackendCascade:
 		c := cfg.Backends.Cascade
-		return []field{{"primary", c.Primary}, {"verifier", c.Verifier}, {"target_conf", c.TargetConf}, {"veto_cache", c.VetoCache}}
+		return []field{
+			{"primary", c.Primary}, {"primary_model", c.PrimaryModel}, {"primary_mode", c.PrimaryMode}, {"primary_key", c.PrimaryKey},
+			{"verifier", c.Verifier}, {"verifier_model", c.VerifierModel}, {"verifier_mode", c.VerifierMode}, {"verifier_key", c.VerifierKey},
+			{"target_conf", c.TargetConf}, {"veto_cache", c.VetoCache},
+		}
 	}
 	return nil
 }

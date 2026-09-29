@@ -14,8 +14,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"github.com/aymaneallaoui/pagevow/internal/browser"
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/runner"
+	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/testsfile"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 )
@@ -98,9 +100,13 @@ func (a *app) runTests(cmd *cobra.Command) error {
 	}
 	collab := buildCollaborators(plan.cfg, resolver)
 	problems := collab.preflight(ctx)
-	execPath, findErr := launcher.Find()
-	if findErr != nil {
-		problems = append(problems, browserMissing)
+	managedURL := a.managedBrowserURL(ctx)
+	var execPath string
+	if managedURL == "" {
+		var findErr error
+		if execPath, findErr = launcher.Find(); findErr != nil {
+			problems = append(problems, browserMissing)
+		}
 	}
 	if ctx.Err() != nil {
 		return &ExitError{Code: ExitFailure, Err: errors.New("interrupted before the run started")}
@@ -117,7 +123,7 @@ func (a *app) runTests(cmd *cobra.Command) error {
 	}
 	defer stopWatching()
 
-	handle, err := launcher.Launch(ctx, BrowserSpec{ExecPath: execPath, Viewport: plan.cfg.Browser.Viewport, Headless: plan.cfg.Browser.Headless})
+	handle, err := a.openBrowser(ctx, notes, launcher, managedURL, execPath, plan.cfg)
 	if err != nil {
 		return infrastructure(fmt.Errorf("start browser: %w", err))
 	}
@@ -125,6 +131,45 @@ func (a *app) runTests(cmd *cobra.Command) error {
 	defer stopBrowser(stderr, handle)
 
 	return a.execute(ctx, cmd, plan, collab, handle)
+}
+
+func (a *app) openBrowser(ctx context.Context, notes *ui.Printer, launcher BrowserLauncher, managedURL, execPath string, cfg config.Config) (RunBrowser, error) {
+	if managedURL == "" {
+		return launcher.Launch(ctx, BrowserSpec{ExecPath: execPath, Viewport: cfg.Browser.Viewport, Headless: cfg.Browser.Headless})
+	}
+	browsers, err := service[ManagedBrowsers](a)
+	if err != nil {
+		return nil, err
+	}
+	handle, err := browsers.Attach(ctx, managedURL, cfg.Browser.Viewport)
+	if err != nil {
+		return nil, err
+	}
+	notes.Status(ui.Info, "using the browser that pagevow start keeps running (%s)", managedURL)
+	return handle, notes.Err()
+}
+
+// managedBrowserURL returns the debugging URL of the browser pagevow start keeps running, or "" when there is none that answers.
+func (a *app) managedBrowserURL(ctx context.Context) string {
+	procs, err := service[Processes](a)
+	if err != nil {
+		return ""
+	}
+	browsers, err := service[ManagedBrowsers](a)
+	if err != nil {
+		return ""
+	}
+	records, _ := procs.List()
+	for _, rec := range records {
+		if rec.Kind != server.KindBrowser || !procs.Alive(rec) {
+			continue
+		}
+		debugURL := browser.DebugURL(rec.Port)
+		if _, err := browsers.Version(ctx, debugURL); err == nil {
+			return debugURL
+		}
+	}
+	return ""
 }
 
 func commandContext(cmd *cobra.Command) context.Context {

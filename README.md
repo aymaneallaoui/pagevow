@@ -4,10 +4,10 @@ pagevow runs browser tests written as goals. A decision model drives a real Chro
 verifier checks the final page, and every test leaves PNG screenshots. A Claude Code plugin runs the suite after a
 coding task and sends failures back to Claude.
 
-Status: phase 2. `pagevow run` works: it drives its own headless Chromium with a decision backend you already have
-running, verifies each final page and writes screenshots. Starting and stopping local model servers, the Stop hook and
-the plugin are not implemented yet; those commands print `not implemented yet (phase N)` and exit with code 2. The
-design is in [docs/SPEC.md](docs/SPEC.md).
+Status: phase 3. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
+screenshots. `pagevow start`, `stop`, `status` and `doctor` manage the local model servers, the local text helper and a
+browser. The Stop hook, the plugin, `install` and `update` are not implemented yet; those commands print
+`not implemented yet (phase N)` and exit with code 2. The design is in [docs/SPEC.md](docs/SPEC.md).
 
 ## Install from source
 
@@ -29,12 +29,14 @@ make install    # installs into GOBIN
 | Command | State |
 |---|---|
 | `pagevow version` | works |
-| `pagevow status [--json]` | works: active backend, whether `run` would use a paid API, URLs, browser settings, config file |
+| `pagevow status [--json]` | works: active backend, paid API notice, URLs, browser settings, running processes, health, GPU, versions, guard messages |
 | `pagevow use local\|jev\|custom\|cascade` | works: writes the backend into the config file |
+| `pagevow start [--no-browser] [--json]` | works: starts the local model servers, the local text helper and a browser that stays running |
+| `pagevow stop [--json]` | works: stops what `start` started |
+| `pagevow doctor [--json]` | works: checks the setup and says how to fix each problem |
 | `pagevow keys set\|unset\|list` | works: keychain entries and a names-only index, values are never printed |
 | `pagevow init [DIR]` | works: writes a starter `pagevow.yaml`, refuses when a tests file already exists |
 | `pagevow run [--tests FILE] [--ids a,b] [--out DIR] [--screenshots final\|failed\|all] [--retries N] [--timeout SECONDS] [--full-page] [--headed] [--json]` | works: see below |
-| `pagevow start`, `stop`, `doctor` | phase 3 |
 | `pagevow install`, `update` | phase 5 |
 | `pagevow hook stop`, `plugin install\|uninstall\|path` | phase 4 |
 
@@ -44,10 +46,12 @@ make install    # installs into GOBIN
 `.claude/browser-tests.yaml`) or the file given with `--tests`. Before any test it checks that the decision backend
 answers, that the text helper answers when it is a loopback URL, and that a Chromium or Chrome is installed; a problem
 is printed with the way to fix it and the exit code is 2. A model server for the `local` and `cascade` backends must
-already be running: `pagevow start` arrives in phase 3.
+already be running: start it with `pagevow start`.
 
-`run` starts its own browser with a temporary profile under the user cache directory, opens every attempt in
-a fresh window, and stops the browser when it ends, also after an error or Ctrl+C. The browser is headless unless
+When `pagevow start` keeps a browser running and its debugging endpoint answers, `run` attaches to it, opens every
+attempt in a fresh window and leaves the browser running. Otherwise `run` starts its own browser with a temporary
+profile under the user cache directory, opens every attempt in a fresh window, and stops that browser when it ends,
+also after an error or Ctrl+C. The browser is headless unless
 `browser.headless` is `false` in the config (or `PAGEVOW_BROWSER_HEADLESS=false`) or you pass `--headed`; `status` shows
 the same setting. `--timeout` covers opening the page as well as the steps: a page that never loads ends the attempt
 with status `timeout`. The first Ctrl+C stops the current
@@ -85,6 +89,86 @@ exit code.
 When a model request fails, the failure block also prints `cause:` with the network error behind the fixed message, for
 example `connection refused`; it never contains a key.
 
+## Local servers and the browser
+
+`pagevow start` starts what the active backend needs, then a browser:
+
+| Process | Program | Started when |
+|---|---|---|
+| `model-<port>` | `uv run --extra serve python -m kev.serve --run <run> --port <port>` in `server.kev_dir` | backend `local`, or a loopback leg of `cascade` |
+| `text-helper-<port>` | `llama-server -hfr <repo> -hff <file> --alias <alias> --host 127.0.0.1 --port <port> ...` | `text_helper.local.enabled` is true and `text_helper.url` is a loopback URL |
+| `browser-<port>` | your Chromium or Chrome, headless unless `browser.headless` is false | always, unless `--no-browser` |
+
+The order is models (largest first, each one waited for), the text helper, the browser. `start` is idempotent: a
+process that is already running and answers is reported as `already running`. A port that answers but has no record
+of pagevow is refused with a message that names the port. With backend `jev` or `custom` only the browser (and the
+text helper, when enabled) starts. `start` prints the log path of every process. Exit code 0 means everything
+requested runs, 2 means something did not start; the last 20 lines of the log are printed for a process that did not
+become ready, and that process is stopped again. `--json` prints one JSON document with `ok`, `processes`
+(`name`, `kind`, `pid`, `port`, `action`, `ready`, `log`, `error`), `warnings`, `stale_removed` and `problems`.
+
+`pagevow stop` stops the browser, the text helper and the models in that order, then removes stale records. It only
+signals a process whose recorded identity still matches. A model server gets SIGTERM and 10 seconds, then SIGKILL for
+its process group; the browser gets SIGTERM and 5 seconds. The managed browser profile
+(`<user cache directory>/pagevow/profiles/managed`) stays on disk. Nothing to stop is exit code 0; a process that could
+not be stopped is exit code 2.
+
+`pagevow status` also lists the recorded processes (pid, port, whether alive and ready, uptime, log), asks each
+destination of the active backend for `/v1/models` with a 2 second timeout, shows GPU memory and temperature when
+`nvidia-smi` answers, the pagevow version and the browser version, and the messages left by the GPU guard. It exits
+with 0 also when something is down. `--json` adds the keys `processes`, `health`, `gpu` (omitted when unknown),
+`versions`, `tripped` and `stale_removed` to the existing ones.
+
+`pagevow doctor` runs a list of checks, each one `ok`, `warn` or `fail` with a finding and a fix: the config file, the
+key references of the active backend (the value is never printed), the backend destination, on Linux `uv`, the kev
+checkout, the quantisation switch in `kev/checkpoint.py`, the run directory, the mode for the model, `nvidia-smi` and
+free GPU memory, then the Chromium executable, the browser port, the text helper, stale records, guard messages and
+the state and log directories. The exit code is 1 when a check fails; warnings do not change it.
+
+### Modes and GPU memory
+
+`backends.local.mode` and the cascade mode fields take `nf4`, `int8`, `bf16` or `default`. The first three set
+`KEV_CUDA_GRAPHS=0`, `KEV_MAX_BATCH=1` and `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` and always set
+`KEV_LOAD_IN_4BIT` and `KEV_LOAD_IN_8BIT` (`1` for the one the mode names, `0` for the other), whatever the environment of
+`pagevow start` holds, so the memory check always matches what runs.
+`default` adds nothing, keeps CUDA graphs on and is refused for every model whose base model is larger than 1B
+(read from `adapter_config.json` in the run directory). `model` is a run name under `<kev_dir>/runs/` or an absolute
+path. pagevow never sets `KEV_API_KEY`: a local server is open and bound to 127.0.0.1.
+
+Known peaks are `nf4` 5.6 GiB, `int8` 7.2 GiB, `bf16` 10.6 GiB and `default` 6.4 GiB. Before it launches anything,
+`start` adds up the peaks of the models it is about to start (models that already run are not counted), adds a margin of
+1.5 GiB and compares the sum with the free GPU memory. When it does not fit, `start` refuses and prints all numbers.
+Without `nvidia-smi` it warns and continues.
+
+```
+pagevow use local --model jev-4b --mode nf4
+pagevow use cascade --primary-model jev-08b-d1a --primary-mode default --verifier-model jev-4b --verifier-mode nf4
+pagevow use cascade --primary https://gpu.example.test --primary-key env:GPU_KEY
+```
+
+A cascade leg is started only when its URL is a loopback address. A remote leg is never started; its key reference
+(`primary_key`, `verifier_key`) is resolved like the key of `jev` and `custom`, and the leg counts for the paid service
+notice. Local model serving needs Linux with an NVIDIA GPU; on other systems `start` says so and still starts the
+browser.
+
+### The GPU guard
+
+Every model server and the text helper runs under a small supervisor process (`pagevow supervise`, hidden from help).
+When `server.gpu_watch` is true and `nvidia-smi` is present, the supervisor samples the GPU once per second. It stops
+its process when the temperature reaches `server.gpu_max_temp_c` (default 87) or free memory falls to
+`server.gpu_min_free_mib` (default 1500). It then writes `guard: stopped <name>: <reason> (temp N C, free N MiB)` to
+the log and to `<user cache directory>/pagevow/run/<name>.tripped`, and exits with code 99. `status` and `doctor`
+show that message until the next `pagevow start` of the same process clears it. A sample that fails is ignored; five
+in a row end the watch and leave the process running.
+
+### Logs and records
+
+Logs are appended to `<user cache directory>/pagevow/logs/<name>.log` (mode 0600). Records are one JSON file per
+process in `<user cache directory>/pagevow/run/<name>.json` (directory 0700, files 0600, written atomically). A record
+holds names, pids, ports, the command, times and paths, never a key. A record is alive only while the pid exists, its
+start time is the recorded one and its command line still fits; otherwise it is stale, and `start`, `stop`, `status`
+and `doctor` remove it and say so.
+
 ## Configuration
 
 The config file is `pagevow/config.yaml` in the user config directory. Environment variables named `PAGEVOW_*`
@@ -111,6 +195,19 @@ reference that resolves to a value other than the placeholder `local`. Only lite
 `https://api.typesafe.ai` with a key therefore warns like `jev` does. The variables of the Python agent are read as a fallback: `TYPESAFE_BASE_URL` applies to
 `backends.custom.url` only (`jev` keeps `https://api.typesafe.ai`), and `TYPESAFE_API_KEY` applies to both keys as
 `env:TYPESAFE_API_KEY`.
+
+The server settings and their defaults:
+
+```
+server:
+  kev_dir: "~/kev"
+  start_timeout_seconds: 600    # 1 to 3600
+  gpu_watch: true
+  gpu_max_temp_c: 87            # 40 to 100
+  gpu_min_free_mib: 1500        # 0 to 65536
+text_helper:
+  local: {enabled: false, repo: "unsloth/Qwen3-1.7B-GGUF", file: "Qwen3-1.7B-Q4_K_M.gguf", alias: "qwen3-1.7b", gpu_layers: 99, start_timeout_seconds: 900}
+```
 
 `backends.cascade.target_conf` is at most 1. `0` means the default 0.5 and a negative value never asks the verifier
 because of a low target confidence (`pagevow use cascade --target-conf -1`).

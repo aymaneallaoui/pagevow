@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aymaneallaoui/pagevow/internal/mode"
 )
 
 const (
@@ -17,14 +19,6 @@ const (
 	mibPerGiB = 1024
 
 	fitsTolerance = 1e-6
-)
-
-// The quantisation modes a model server can run in.
-const (
-	ModeNF4     = "nf4"
-	ModeInt8    = "int8"
-	ModeBF16    = "bf16"
-	ModeDefault = "default"
 )
 
 // Errors returned by the GPU functions.
@@ -113,24 +107,19 @@ func ParseGPU(out string) (GPU, error) {
 	return GPU{TotalMiB: values[0], UsedMiB: values[1], FreeMiB: values[2], TempC: values[3]}, nil
 }
 
-// Peak returns the known peak memory in GiB of a model server in mode.
-func Peak(mode string) (float64, bool) {
-	switch mode {
-	case ModeNF4:
+// Peak returns the known peak memory in GiB of a model server in the named mode.
+func Peak(name string) (float64, bool) {
+	switch name {
+	case mode.NF4:
 		return 5.6, true
-	case ModeInt8:
+	case mode.Int8:
 		return 7.2, true
-	case ModeBF16:
+	case mode.BF16:
 		return 10.6, true
-	case ModeDefault:
+	case mode.Default:
 		return 6.4, true
 	}
 	return 0, false
-}
-
-func validMode(mode string) bool {
-	_, ok := Peak(mode)
-	return ok
 }
 
 // Fits checks that the peaks plus the margin fit into the free memory of gpu.

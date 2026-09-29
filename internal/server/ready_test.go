@@ -73,15 +73,6 @@ func TestProbeStopsWithinTwoSecondsOfASilentServer(t *testing.T) {
 	assert.Less(t, time.Since(started), 4*time.Second)
 }
 
-func TestPortInUse(t *testing.T) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-	port := listener.Addr().(*net.TCPAddr).Port
-	assert.True(t, server.PortInUse(t.Context(), port))
-	require.NoError(t, listener.Close())
-	assert.False(t, server.PortInUse(t.Context(), port))
-}
-
 func freePort(t *testing.T) int {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")

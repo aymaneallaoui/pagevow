@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+
+	"github.com/aymaneallaoui/pagevow/internal/mode"
 )
 
 // Backend names accepted in the backend field.
@@ -26,10 +28,10 @@ const (
 
 // Model server modes accepted in backends.local.mode and the cascade mode fields.
 const (
-	ModeNF4     = "nf4"
-	ModeInt8    = "int8"
-	ModeBF16    = "bf16"
-	ModeDefault = "default"
+	ModeNF4     = mode.NF4
+	ModeInt8    = mode.Int8
+	ModeBF16    = mode.BF16
+	ModeDefault = mode.Default
 )
 
 // EnvPrefix prefixes every environment variable that overrides a config key.
@@ -142,7 +144,7 @@ type Guards struct {
 
 // ModeNames lists every valid model server mode.
 func ModeNames() []string {
-	return []string{ModeNF4, ModeInt8, ModeBF16, ModeDefault}
+	return mode.Names()
 }
 
 // BackendNames lists every valid value of the backend field.

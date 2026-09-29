@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"github.com/aymaneallaoui/pagevow/internal/sysproc"
 )
 
 const (
@@ -36,7 +38,7 @@ func Spawn(ctx context.Context, executable string, spec Spec, store *Store) (Rec
 	cmd := exec.Command(executable, "supervise", "--spec", specPath) //nolint:gosec // the caller passes its own executable
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	sysproc.Detached(cmd)
 	err = cmd.Start()
 	_ = logFile.Close()
 	if err != nil {

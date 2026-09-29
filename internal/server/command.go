@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/aymaneallaoui/pagevow/internal/mode"
 )
 
 const (
@@ -29,9 +31,9 @@ type Command struct {
 }
 
 // ModelCommand builds the command of a model server; the environment it returns is set whatever the caller's environment holds.
-func ModelCommand(kevDir, model, mode string, port int) (Command, error) {
-	if !validMode(mode) {
-		return Command{}, fmt.Errorf("model command: unknown mode %q (use nf4, int8, bf16 or default)", mode)
+func ModelCommand(kevDir, model, modeName string, port int) (Command, error) {
+	if !mode.Valid(modeName) {
+		return Command{}, fmt.Errorf("model command: unknown mode %q (use %s)", modeName, strings.Join(mode.Names(), ", "))
 	}
 	if port < 1 || port > 65535 {
 		return Command{}, fmt.Errorf("model command: invalid port %d", port)
@@ -43,7 +45,7 @@ func ModelCommand(kevDir, model, mode string, port int) (Command, error) {
 	if err != nil {
 		return Command{}, err
 	}
-	if mode == ModeDefault {
+	if modeName == mode.Default {
 		base, err := BaseModel(runDir)
 		if err != nil {
 			return Command{}, ErrDefaultModeUnsafe
@@ -55,7 +57,7 @@ func ModelCommand(kevDir, model, mode string, port int) (Command, error) {
 	return Command{
 		Argv: []string{"uv", "run", "--extra", "serve", "python", "-m", "kev.serve", "--run", runDir, "--port", strconv.Itoa(port)},
 		Dir:  kevDir,
-		Env:  modeEnvironment(mode),
+		Env:  modeEnvironment(modeName),
 	}, nil
 }
 
@@ -77,15 +79,15 @@ func resolveRunDir(kevDir, model string) (string, error) {
 	return runDir, nil
 }
 
-func modeEnvironment(mode string) []string {
-	if mode == ModeDefault {
+func modeEnvironment(modeName string) []string {
+	if modeName == mode.Default {
 		return nil
 	}
 	fourBit, eightBit := "0", "0"
-	switch mode {
-	case ModeNF4:
+	switch modeName {
+	case mode.NF4:
 		fourBit = "1"
-	case ModeInt8:
+	case mode.Int8:
 		eightBit = "1"
 	}
 	return []string{

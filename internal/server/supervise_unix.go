@@ -13,6 +13,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/aymaneallaoui/pagevow/internal/sysproc"
 )
 
 const (
@@ -126,7 +128,7 @@ func Supervise(ctx context.Context, spec Spec, store *Store, gpu GPUSource) (int
 	cmd.Env = append(os.Environ(), spec.Env...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
-	setChildAttr(cmd)
+	sysproc.Child(cmd)
 	proc, err := startChild(cmd)
 	if err != nil {
 		return 1, fmt.Errorf("supervise %s: %w", spec.Name, err)

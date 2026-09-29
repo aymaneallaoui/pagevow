@@ -32,24 +32,17 @@ func inspect(pid int) procInfo {
 func groupMembers(pgid int) []groupMember {
 	ctx, cancel := context.WithTimeout(context.Background(), psTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "ps", "-A", "-o", "pid=", "-o", "ppid=", "-o", "pgid=", "-o", "stat=")
+	cmd := exec.CommandContext(ctx, "ps", "-A", "-o", "pid=", "-o", "ppid=", "-o", "pgid=", "-o", "sess=", "-o", "stat=", "-o", "lstart=")
+	cmd.Env = append(cmd.Environ(), "LC_ALL=C")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil
 	}
 	var members []groupMember
 	for _, line := range strings.Split(string(out), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 4 {
-			continue
+		if member, group, ok := parseGroupLine(line); ok && group == pgid {
+			members = append(members, member)
 		}
-		pid, err1 := strconv.Atoi(fields[0])
-		ppid, err2 := strconv.Atoi(fields[1])
-		group, err3 := strconv.Atoi(fields[2])
-		if err1 != nil || err2 != nil || err3 != nil || group != pgid {
-			continue
-		}
-		members = append(members, groupMember{PID: pid, PPID: ppid, Zombie: strings.HasPrefix(fields[3], "Z")})
 	}
 	return members
 }

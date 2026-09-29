@@ -3,17 +3,16 @@ package server
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aymaneallaoui/pagevow/internal/port"
 )
 
 const (
 	probeTimeout   = 2 * time.Second
-	portDialLimit  = 500 * time.Millisecond
 	readyThreshold = http.StatusInternalServerError
 )
 
@@ -79,12 +78,6 @@ func WaitReady(ctx context.Context, store *Store, rec Record, interval, timeout 
 }
 
 // PortInUse reports whether something accepts connections on 127.0.0.1 at port.
-func PortInUse(ctx context.Context, port int) bool {
-	dialer := net.Dialer{Timeout: portDialLimit}
-	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
-	if err != nil {
-		return false
-	}
-	_ = conn.Close()
-	return true
+func PortInUse(ctx context.Context, number int) bool {
+	return port.InUse(ctx, number)
 }

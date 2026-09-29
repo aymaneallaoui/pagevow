@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/aymaneallaoui/pagevow/internal/keys"
+	"github.com/aymaneallaoui/pagevow/internal/mode"
 )
 
 // Validate checks a configuration and returns every problem it finds, joined into one error.
@@ -54,7 +55,7 @@ func Validate(c Config) error {
 		{"backends.cascade.primary_mode", c.Backends.Cascade.PrimaryMode},
 		{"backends.cascade.verifier_mode", c.Backends.Cascade.VerifierMode},
 	} {
-		if !slices.Contains(ModeNames(), field.value) {
+		if !mode.Valid(field.value) {
 			errs = append(errs, fmt.Errorf("%s: %q is not one of %s", field.key, field.value, strings.Join(ModeNames(), ", ")))
 		}
 	}

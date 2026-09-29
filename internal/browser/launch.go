@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -18,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/aymaneallaoui/pagevow/internal/port"
 )
 
 const (
@@ -25,7 +26,6 @@ const (
 	defaultViewportHeight = 780
 	startTimeout          = 30 * time.Second
 	startPollInterval     = 50 * time.Millisecond
-	portDialTimeout       = 500 * time.Millisecond
 	stopGracePeriod       = 5 * time.Second
 	stopKillWait          = 5 * time.Second
 	versionTimeout        = 5 * time.Second
@@ -136,7 +136,7 @@ func Launch(ctx context.Context, opts LaunchOptions) (*Process, error) {
 	if opts.LogPath != "" && !opts.Detached {
 		return nil, errors.New("launch browser: a log path requires a detached browser")
 	}
-	if opts.Port != 0 && portAccepts(ctx, opts.Port) {
+	if opts.Port != 0 && port.InUse(ctx, opts.Port) {
 		return nil, fmt.Errorf("launch browser: port %d is already in use", opts.Port)
 	}
 	if err := os.MkdirAll(opts.ProfileDir, 0o700); err != nil {
@@ -260,16 +260,6 @@ func (p *Process) waitReady(ctx context.Context, profileDir string, wantPort int
 		case <-ticker.C:
 		}
 	}
-}
-
-func portAccepts(ctx context.Context, port int) bool {
-	dialer := net.Dialer{Timeout: portDialTimeout}
-	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
-	if err != nil {
-		return false
-	}
-	_ = conn.Close()
-	return true
 }
 
 func readActivePort(profileDir string) (int, error) {

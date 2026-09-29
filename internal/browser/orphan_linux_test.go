@@ -26,7 +26,7 @@ func processGone(pid int) bool {
 }
 
 // launchThroughHelper starts a separate process that calls Launch and returns it with the pid of its browser.
-func launchThroughHelper(t *testing.T, execPath, profile, args string) (*exec.Cmd, int) {
+func launchThroughHelper(t *testing.T, execPath, profile, args string, extraEnv ...string) (*exec.Cmd, int) {
 	t.Helper()
 	pidFile := filepath.Join(t.TempDir(), "browser.pid")
 	helper := exec.Command(os.Args[0], "-test.run=^TestHelperProcess$") //nolint:gosec // re-executes this test binary
@@ -37,6 +37,7 @@ func launchThroughHelper(t *testing.T, execPath, profile, args string) (*exec.Cm
 		"PAGEVOW_HELPER_ARGS="+args,
 		"PAGEVOW_HELPER_PIDFILE="+pidFile,
 	)
+	helper.Env = append(helper.Env, extraEnv...)
 	require.NoError(t, helper.Start())
 	t.Cleanup(func() {
 		_ = helper.Process.Kill()

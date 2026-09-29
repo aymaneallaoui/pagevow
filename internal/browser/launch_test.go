@@ -151,6 +151,7 @@ func writeFakeBrowser(t *testing.T) string {
 for arg in "$@"; do
   case "$arg" in --user-data-dir=*) dir="${arg#--user-data-dir=}";; esac
 done
+if [ -n "$FAKE_MARKER" ]; then : > "$FAKE_MARKER"; fi
 if [ -n "$FAKE_PORT" ]; then printf '%s\n/devtools/browser/fake\n' "$FAKE_PORT" > "$dir/DevToolsActivePort"; fi
 exec sleep 60
 `
@@ -195,6 +196,29 @@ func TestLaunchRefusesAnEndpointOnAnotherPort(t *testing.T) {
 	assert.ErrorContains(t, err, "not the requested")
 }
 
+func TestLaunchRefusesAPortThatIsAlreadyInUse(t *testing.T) {
+	port := fakeDebugServer(t)
+	marker := filepath.Join(t.TempDir(), "started")
+	t.Setenv("FAKE_MARKER", marker)
+
+	_, err := Launch(context.Background(), LaunchOptions{ExecPath: writeFakeBrowser(t), ProfileDir: t.TempDir(), Port: port})
+
+	assert.ErrorContains(t, err, "already in use")
+	assert.NoFileExists(t, marker, "the browser must not be started")
+}
+
+func TestWaitReadyUsesAFixedPortWhenChromiumWritesNoEndpointFile(t *testing.T) {
+	port := fakeDebugServer(t)
+	process := &Process{done: make(chan struct{}), stderr: emptyTail{}}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	debugURL, err := process.waitReady(ctx, t.TempDir(), port)
+
+	require.NoError(t, err)
+	assert.Equal(t, DebugURL(port), debugURL)
+}
+
 func TestLaunchIgnoresAStaleEndpointFileAndStopsWhenTheContextEnds(t *testing.T) {
 	profile := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(profile, activePortFile), []byte("1\n/x\n"), 0o600))
@@ -233,6 +257,7 @@ func runLaunchHelper(t *testing.T) {
 		ExecPath:   os.Getenv("PAGEVOW_HELPER_EXEC"),
 		ProfileDir: os.Getenv("PAGEVOW_HELPER_PROFILE"),
 		Headless:   true,
+		Detached:   os.Getenv("PAGEVOW_HELPER_DETACHED") != "",
 		ExtraArgs:  strings.Fields(os.Getenv("PAGEVOW_HELPER_ARGS")),
 	})
 	if err != nil {
@@ -244,6 +269,9 @@ func runLaunchHelper(t *testing.T) {
 	}
 	if err := os.Rename(pidFile+".tmp", pidFile); err != nil {
 		t.Fatal(err)
+	}
+	if os.Getenv("PAGEVOW_HELPER_EXIT") != "" {
+		return
 	}
 	time.Sleep(time.Minute)
 }

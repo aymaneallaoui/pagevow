@@ -11,9 +11,16 @@ import (
 	"unsafe"
 )
 
-const taskkillTimeout = 5 * time.Second
+const (
+	taskkillTimeout = 5 * time.Second
+	detachedProcess = 0x00000008
+)
 
 func setSysProcAttr(*exec.Cmd) {}
+
+func setDetachedSysProcAttr(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP | detachedProcess}
+}
 
 // Windows offers no gentle termination signal for a headless browser.
 func requestExit(*Process) bool { return false }

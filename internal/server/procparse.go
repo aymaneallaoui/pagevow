@@ -23,23 +23,30 @@ func parsePS(line string) (procInfo, bool) {
 	if err != nil {
 		return procInfo{}, false
 	}
-	fields := strings.SplitN(strings.TrimSpace(line[len(psStartLayout):]), " ", 3)
-	if len(fields) < 3 {
-		return procInfo{}, false
-	}
-	pgid, err := strconv.Atoi(fields[1])
-	if err != nil {
+	state, rest := cutField(line[len(psStartLayout):])
+	pgidText, command := cutField(rest)
+	pgid, err := strconv.Atoi(pgidText)
+	if state == "" || err != nil {
 		return procInfo{}, false
 	}
 	return procInfo{
 		Exists:       true,
-		Zombie:       strings.HasPrefix(fields[0], "Z"),
+		Zombie:       strings.HasPrefix(state, "Z"),
 		StartTicks:   uint64(started.Unix()), //nolint:gosec // dates after 1970 are positive
 		TicksKnown:   true,
 		PGID:         pgid,
-		CmdText:      strings.TrimSpace(fields[2]),
+		CmdText:      strings.TrimSpace(command),
 		CmdlineKnown: true,
 	}, true
+}
+
+func cutField(text string) (field, rest string) {
+	text = strings.TrimLeft(text, " \t")
+	end := strings.IndexAny(text, " \t")
+	if end < 0 {
+		return text, ""
+	}
+	return text[:end], text[end:]
 }
 
 // parseStat reads state, process group and start time from /proc/<pid>/stat, whose second field may itself contain spaces and parentheses.

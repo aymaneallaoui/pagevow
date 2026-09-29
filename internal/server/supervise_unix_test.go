@@ -142,6 +142,20 @@ func TestSuperviseGivesTheChildTheExtraEnvironmentAndTheLog(t *testing.T) {
 	assert.Contains(t, tail, "oops")
 }
 
+func TestSuperviseLetsTheSpecEnvironmentOverrideTheAmbientOne(t *testing.T) {
+	t.Setenv("KEV_MAX_BATCH", "64")
+	t.Setenv("KEV_LOAD_IN_8BIT", "1")
+	spec := modelSpec(t, 8208, shell(`echo "batch=$KEV_MAX_BATCH eight=$KEV_LOAD_IN_8BIT kept=$PAGEVOW_TEST_KEPT"`)...)
+	spec.Env = []string{"KEV_MAX_BATCH=1", "KEV_LOAD_IN_8BIT=0"}
+	t.Setenv("PAGEVOW_TEST_KEPT", "yes")
+	s := runSupervise(t, spec, nil)
+	require.Equal(t, 0, s.wait(t).code)
+
+	tail, err := server.LogTail(spec.Log, 5)
+	require.NoError(t, err)
+	assert.Equal(t, "batch=1 eight=0 kept=yes", tail)
+}
+
 func TestSuperviseRunsTheChildInTheSpecDirectory(t *testing.T) {
 	spec := modelSpec(t, 8207, shell("pwd")...)
 	s := runSupervise(t, spec, nil)

@@ -6,11 +6,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-const baseModelFile = "adapter_config.json"
+const (
+	baseModelFile          = "adapter_config.json"
+	maxDefaultModeBillions = 1.0
+)
+
+var modelSizePattern = regexp.MustCompile(`(^|[^0-9.])(\d+(?:\.\d+)?)b`)
 
 // ErrDefaultModeUnsafe is returned when mode default is asked for a model that is not a 0.8B model.
 var ErrDefaultModeUnsafe = errors.New("mode default keeps CUDA graphs on and needs more GPU memory than is safe for this model; use nf4, int8 or bf16")
@@ -22,8 +28,8 @@ type Command struct {
 	Env  []string
 }
 
-// ModelCommand builds the command of a model server; a variable already set in environ is not added again.
-func ModelCommand(kevDir, model, mode string, port int, environ []string) (Command, error) {
+// ModelCommand builds the command of a model server; the environment it returns is set whatever the caller's environment holds.
+func ModelCommand(kevDir, model, mode string, port int) (Command, error) {
 	if !validMode(mode) {
 		return Command{}, fmt.Errorf("model command: unknown mode %q (use nf4, int8, bf16 or default)", mode)
 	}
@@ -39,14 +45,17 @@ func ModelCommand(kevDir, model, mode string, port int, environ []string) (Comma
 	}
 	if mode == ModeDefault {
 		base, err := BaseModel(runDir)
-		if err != nil || !strings.Contains(strings.ToLower(base), "0.8b") {
+		if err != nil {
+			return Command{}, ErrDefaultModeUnsafe
+		}
+		if size, ok := modelSizeBillions(base); !ok || size > maxDefaultModeBillions {
 			return Command{}, ErrDefaultModeUnsafe
 		}
 	}
 	return Command{
 		Argv: []string{"uv", "run", "--extra", "serve", "python", "-m", "kev.serve", "--run", runDir, "--port", strconv.Itoa(port)},
 		Dir:  kevDir,
-		Env:  modeEnvironment(mode, environ),
+		Env:  modeEnvironment(mode),
 	}, nil
 }
 
@@ -68,38 +77,48 @@ func resolveRunDir(kevDir, model string) (string, error) {
 	return runDir, nil
 }
 
-func modeEnvironment(mode string, environ []string) []string {
+func modeEnvironment(mode string) []string {
 	if mode == ModeDefault {
 		return nil
 	}
-	lookup := func(key string) (string, bool) {
-		for _, entry := range environ {
-			if value, ok := strings.CutPrefix(entry, key+"="); ok {
-				return value, true
-			}
-		}
-		return "", false
-	}
-	var env []string
-	add := func(key, value string) {
-		if _, set := lookup(key); !set {
-			env = append(env, key+"="+value)
-		}
-	}
+	fourBit, eightBit := "0", "0"
 	switch mode {
 	case ModeNF4:
-		if other, _ := lookup("KEV_LOAD_IN_8BIT"); other != "1" {
-			add("KEV_LOAD_IN_4BIT", "1")
-		}
+		fourBit = "1"
 	case ModeInt8:
-		if other, _ := lookup("KEV_LOAD_IN_4BIT"); other != "1" {
-			add("KEV_LOAD_IN_8BIT", "1")
+		eightBit = "1"
+	}
+	return []string{
+		"KEV_LOAD_IN_4BIT=" + fourBit,
+		"KEV_LOAD_IN_8BIT=" + eightBit,
+		"KEV_CUDA_GRAPHS=0",
+		"KEV_MAX_BATCH=1",
+		"PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True",
+	}
+}
+
+// modelSizeBillions returns the largest parameter count in billions that a model name states, such as 0.8 for Qwen3.5-0.8B-Base.
+func modelSizeBillions(name string) (float64, bool) {
+	lower := strings.ToLower(name)
+	var largest float64
+	found := false
+	for _, match := range modelSizePattern.FindAllStringSubmatchIndex(lower, -1) {
+		if end := match[1]; end < len(lower) && isNameChar(lower[end]) {
+			continue
+		}
+		size, err := strconv.ParseFloat(lower[match[4]:match[5]], 64)
+		if err != nil {
+			continue
+		}
+		if !found || size > largest {
+			largest, found = size, true
 		}
 	}
-	add("KEV_CUDA_GRAPHS", "0")
-	add("KEV_MAX_BATCH", "1")
-	add("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
-	return env
+	return largest, found
+}
+
+func isNameChar(b byte) bool {
+	return b >= 'a' && b <= 'z' || b >= '0' && b <= '9'
 }
 
 // BaseModel returns the base model name a run directory was trained from.

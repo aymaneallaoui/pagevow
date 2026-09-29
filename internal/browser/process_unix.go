@@ -3,13 +3,8 @@
 package browser
 
 import (
-	"os/exec"
 	"syscall"
 )
-
-func setSysProcAttr(cmd *exec.Cmd) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-}
 
 func requestExit(p *Process) bool {
 	return p.cmd.Process.Signal(syscall.SIGTERM) == nil

@@ -37,6 +37,15 @@ type Action struct {
 	Delta        int     `json:"delta,omitempty"`
 }
 
+// FrameInfo describes one visible iframe of the page; its content is not part of the snapshot.
+type FrameInfo struct {
+	URL string `json:"url"`
+	// SameOrigin is false when the frame document cannot be read from the page.
+	SameOrigin bool `json:"same_origin"`
+	// Controls counts the focusable controls of a readable frame and is zero otherwise.
+	Controls int `json:"controls"`
+}
+
 // Scroll is the vertical scroll position and the document height.
 type Scroll struct {
 	Y      float64 `json:"y"`
@@ -57,6 +66,8 @@ type State struct {
 	Guards         map[string]json.RawMessage `json:"guards"`
 	OmittedActions int                        `json:"omitted_actions"`
 	Fingerprint    string                     `json:"fingerprint,omitempty"`
+	// Frames is gathered apart from the snapshot; it is not part of the fingerprint and is never sent to a model.
+	Frames []FrameInfo `json:"frames,omitempty"`
 }
 
 // HeldValue is the value a control holds: its current value when reported, otherwise its value.

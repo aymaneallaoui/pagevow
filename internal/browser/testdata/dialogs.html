@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Dialogs</title>
+<button id="alert" onclick="alert('hello alert'); log('alert-done')">Show alert</button>
+<button id="confirm" onclick="log('confirm:' + confirm('are you sure?'))">Show confirm</button>
+<button id="prompt" onclick="log('prompt:' + prompt('your name?', 'Ada'))">Show prompt</button>
+<button id="long" onclick="alert('é'.repeat(500)); log('long-done')">Show long alert</button>
+<button id="later" onclick="setTimeout(() => { alert('late'); log('late-done') }, 50)">Alert later</button>
+<pre id="out"></pre>
+<script>
+  let entries = [];
+  function log(text) {
+    entries.push(text);
+    document.getElementById('out').textContent = entries.join(' ');
+  }
+</script>

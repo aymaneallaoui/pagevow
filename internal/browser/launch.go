@@ -137,14 +137,24 @@ func startProcess(cmd *exec.Cmd) (*Process, error) {
 	}
 	cmd.Stderr = process.stderr
 	setSysProcAttr(cmd)
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("start %s: %w", cmd.Path, err)
-	}
-	process.PID = cmd.Process.Pid
+	started := make(chan error, 1)
 	go func() {
+		if runtime.GOOS == "linux" {
+			// Pdeathsig fires when the thread that forked the child exits, so this goroutine keeps its thread until it has reaped the child.
+			runtime.LockOSThread()
+		}
+		err := cmd.Start()
+		started <- err
+		if err != nil {
+			return
+		}
 		_ = cmd.Wait()
 		close(process.done)
 	}()
+	if err := <-started; err != nil {
+		return nil, fmt.Errorf("start %s: %w", cmd.Path, err)
+	}
+	process.PID = cmd.Process.Pid
 	return process, nil
 }
 

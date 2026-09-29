@@ -61,6 +61,25 @@ const targetScript = `(action => {
   return {x,y};
 })`
 
+const framesScript = `(() => {
+  const focusable='a[href],button,input:not([type="hidden"]),select,textarea,summary,[tabindex]:not([tabindex="-1"]),[contenteditable]:not([contenteditable="false"])';
+  const shown=e=>e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
+  try {
+    return [...document.querySelectorAll('iframe,frame')].filter(f=>f.offsetWidth>0 && f.offsetHeight>0 && shown(f)).map(f=>{
+      let doc=null;
+      try { doc=f.contentDocument; } catch {}
+      let url=f.src||'';
+      if (doc) { try { url=f.contentWindow.location.href; } catch {} }
+      const controls=doc ? [...doc.querySelectorAll(focusable)].filter(e=>!e.disabled && shown(e)).length : 0;
+      return {url, same_origin: !!doc, controls};
+    });
+  } catch { return []; }
+})()`
+
+func observeExpression() string {
+	return "(() => { const state=" + snapshotScript + "; return state ? {state, frames: " + framesScript + "} : null; })()"
+}
+
 func markerExpression() string {
 	return "(() => { const state=" + snapshotScript + `; return state?.marker ?? null; })()`
 }

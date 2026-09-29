@@ -89,3 +89,15 @@ func TestEmbeddedSnapshotFiltersSensitiveInputs(t *testing.T) {
 	assert.Contains(t, snapshotScript, `['password','file','hidden']`)
 	assert.Contains(t, markerExpression(), "state?.marker")
 }
+
+func TestFingerprintIgnoresFrames(t *testing.T) {
+	plain := sampleState()
+	framed := sampleState()
+	framed.Frames = []page.FrameInfo{{URL: "https://ads.example/frame", SameOrigin: false}, {URL: "about:srcdoc", SameOrigin: true, Controls: 4}}
+	assert.Equal(t, Fingerprint(plain), Fingerprint(framed))
+}
+
+func TestObserveExpressionEmbedsTheSnapshotUntouched(t *testing.T) {
+	assert.Contains(t, observeExpression(), snapshotScript)
+	assert.Contains(t, markerExpression(), snapshotScript)
+}

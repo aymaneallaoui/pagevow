@@ -10,24 +10,27 @@ import (
 	"time"
 
 	"github.com/chromedp/cdproto"
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/runtime"
+	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 
 	"github.com/aymaneallaoui/pagevow/internal/page"
 )
 
 const (
-	settleLimit       = 5 * time.Second
-	settlePollPeriod  = 50 * time.Millisecond
-	waitActionPeriod  = 100 * time.Millisecond
-	captureTimeout    = 5 * time.Second
-	wheelX            = 550
-	wheelY            = 650
-	modifierControl   = 2
-	modifierMeta      = 4
-	enterKeyCode      = 13
-	captureFormatPNG  = "png"
-	captureFormatJPEG = "jpeg"
+	settleLimit        = 5 * time.Second
+	settlePollPeriod   = 50 * time.Millisecond
+	waitActionPeriod   = 100 * time.Millisecond
+	captureTimeout     = 5 * time.Second
+	defaultCallTimeout = 10 * time.Second
+	wheelX             = 550
+	wheelY             = 650
+	modifierControl    = 2
+	modifierMeta       = 4
+	enterKeyCode       = 13
+	captureFormatPNG   = "png"
+	captureFormatJPEG  = "jpeg"
 )
 
 var (
@@ -37,12 +40,58 @@ var (
 
 // Session is one tab; its methods are meant to be called by one goroutine at a time.
 type Session struct {
-	ctx      context.Context
-	cancel   context.CancelFunc
-	viewport Viewport
+	ctx              context.Context
+	cancel           context.CancelFunc
+	viewport         Viewport
+	targetID         target.ID
+	browser          cdp.Executor
+	callTimeout      time.Duration
+	downloadsAllowed bool
+
+	crashCtx      context.Context
+	markCrashed   context.CancelFunc
+	stopListening context.CancelFunc
 
 	mu         sync.Mutex
 	afterInput *inputMark
+	current    string
+	closing    bool
+	dialogs    []DialogEvent
+	downloads  []DownloadEvent
+	popups     []PopupEvent
+	popupIndex map[target.ID]int
+	frames     map[cdp.FrameID]struct{}
+	handlers   sync.WaitGroup
+}
+
+type sessionConfig struct {
+	targetID         target.ID
+	browser          cdp.Executor
+	viewport         Viewport
+	callTimeout      time.Duration
+	downloadsAllowed bool
+}
+
+func newSession(ctx context.Context, cancel context.CancelFunc, cfg sessionConfig) *Session {
+	crashCtx, markCrashed := context.WithCancel(context.Background())
+	callTimeout := cfg.callTimeout
+	if callTimeout <= 0 {
+		callTimeout = defaultCallTimeout
+	}
+	return &Session{
+		ctx:              ctx,
+		cancel:           cancel,
+		viewport:         cfg.viewport,
+		targetID:         cfg.targetID,
+		browser:          cfg.browser,
+		callTimeout:      callTimeout,
+		downloadsAllowed: cfg.downloadsAllowed,
+		crashCtx:         crashCtx,
+		markCrashed:      markCrashed,
+		stopListening:    func() {},
+		popupIndex:       map[target.ID]int{},
+		frames:           map[cdp.FrameID]struct{}{cdp.FrameID(cfg.targetID): {}},
+	}
 }
 
 type inputMark struct {
@@ -61,7 +110,23 @@ type point struct {
 	Y float64 `json:"y"`
 }
 
+type observation struct {
+	State  page.State       `json:"state"`
+	Frames []page.FrameInfo `json:"frames"`
+}
+
 func (s *Session) bind(ctx context.Context) (context.Context, context.CancelFunc) {
+	bound, cancel := context.WithCancel(s.ctx)
+	stopCaller := context.AfterFunc(ctx, cancel)
+	stopCrash := context.AfterFunc(s.crashCtx, cancel)
+	return bound, func() {
+		stopCaller()
+		stopCrash()
+		cancel()
+	}
+}
+
+func (s *Session) bindClose(ctx context.Context) (context.Context, context.CancelFunc) {
 	bound, cancel := context.WithCancel(s.ctx)
 	stop := context.AfterFunc(ctx, cancel)
 	return bound, func() {
@@ -70,14 +135,34 @@ func (s *Session) bind(ctx context.Context) (context.Context, context.CancelFunc
 	}
 }
 
+func (s *Session) gone() error {
+	if s.ctx.Err() != nil {
+		return ErrSessionClosed
+	}
+	if s.crashCtx.Err() != nil {
+		return page.ErrTargetCrashed
+	}
+	return nil
+}
+
 func (s *Session) interrupted(ctx context.Context, err error) error {
 	if cerr := ctx.Err(); cerr != nil {
 		return cerr
 	}
-	if s.ctx.Err() != nil {
-		return ErrSessionClosed
+	if gone := s.gone(); gone != nil {
+		return gone
 	}
 	return err
+}
+
+func (s *Session) call(ctx context.Context, fn func(context.Context) error) error {
+	return withTimeout(ctx, s.callTimeout, fn)
+}
+
+func (s *Session) setCurrent(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.current = id
 }
 
 func evaluate(ctx context.Context, expression string, awaitPromise bool) (json.RawMessage, error) {
@@ -94,6 +179,16 @@ func evaluate(ctx context.Context, expression string, awaitPromise bool) (json.R
 		value = append(json.RawMessage(nil), result.Value...)
 		return nil
 	}))
+	return value, err
+}
+
+func (s *Session) eval(ctx context.Context, expression string, awaitPromise bool) (json.RawMessage, error) {
+	var value json.RawMessage
+	err := s.call(ctx, func(ctx context.Context) error {
+		var err error
+		value, err = evaluate(ctx, expression, awaitPromise)
+		return err
+	})
 	return value, err
 }
 
@@ -133,6 +228,9 @@ func (s *Session) setInput(mark *inputMark) {
 
 // Observe waits for the page to settle after the previous action and returns its snapshot.
 func (s *Session) Observe(ctx context.Context) (page.State, error) {
+	if err := s.gone(); err != nil {
+		return page.State{}, fmt.Errorf("observe: %w", err)
+	}
 	bound, cancel := s.bind(ctx)
 	defer cancel()
 	if mark := s.takeInput(); mark != nil {
@@ -141,9 +239,12 @@ func (s *Session) Observe(ctx context.Context) (page.State, error) {
 			return page.State{}, fmt.Errorf("observe: encode input mark: %w", err)
 		}
 		// Read-only; navigation may interrupt it after the action was logged, which is fine.
-		_, _ = evaluate(bound, afterInputScript+"("+string(payload)+")", true)
+		_, err = s.eval(bound, afterInputScript+"("+string(payload)+")", true)
 		if bound.Err() != nil {
 			return page.State{}, fmt.Errorf("observe: %w", s.interrupted(ctx, bound.Err()))
+		}
+		if errors.Is(err, ErrCallTimeout) {
+			return page.State{}, fmt.Errorf("observe: %w", err)
 		}
 	}
 	deadline := time.Now().Add(settleLimit)
@@ -160,7 +261,8 @@ func (s *Session) Observe(ctx context.Context) (page.State, error) {
 			return page.State{}, fmt.Errorf("observe: %w", err)
 		}
 		if !time.Now().Before(deadline) {
-			return page.State{}, fmt.Errorf("observe: document did not settle within %s (%v): %w", settleLimit, err, page.ErrStalePage)
+			msg := fmt.Sprintf("observe: document did not settle within %s (%v)", settleLimit, err)
+			return page.State{}, &classifiedError{msg: msg, kind: page.ErrStalePage, cause: err}
 		}
 		if err := sleep(bound, settlePollPeriod); err != nil {
 			return page.State{}, fmt.Errorf("observe: %w", s.interrupted(ctx, err))
@@ -169,16 +271,20 @@ func (s *Session) Observe(ctx context.Context) (page.State, error) {
 }
 
 func (s *Session) snapshot(ctx context.Context) (page.State, error) {
-	value, err := evaluate(ctx, snapshotScript, false)
+	value, err := s.eval(ctx, observeExpression(), false)
 	if err != nil {
 		return page.State{}, err
 	}
 	if isNull(value) {
 		return page.State{}, errNavigating
 	}
-	var state page.State
-	if err := json.Unmarshal(value, &state); err != nil {
+	var seen observation
+	if err := json.Unmarshal(value, &seen); err != nil {
 		return page.State{}, fmt.Errorf("decode snapshot: %w", err)
+	}
+	state := seen.State
+	if len(seen.Frames) > 0 {
+		state.Frames = seen.Frames
 	}
 	return state, nil
 }
@@ -189,6 +295,9 @@ func guarded(kind string) bool {
 
 // Fresh reports whether the page still matches what was observed, for the action when one is given.
 func (s *Session) Fresh(ctx context.Context, state page.State, action *page.Action) (bool, error) {
+	if err := s.gone(); err != nil {
+		return false, fmt.Errorf("check freshness: %w", err)
+	}
 	bound, cancel := s.bind(ctx)
 	defer cancel()
 	fresh, err := s.fresh(bound, state, action)
@@ -203,7 +312,7 @@ func (s *Session) fresh(ctx context.Context, state page.State, action *page.Acti
 		if action.Node <= 0 {
 			return false, nil
 		}
-		value, err := evaluate(ctx, fmt.Sprintf(guardScript, action.Node), false)
+		value, err := s.eval(ctx, fmt.Sprintf(guardScript, action.Node), false)
 		if err != nil {
 			return false, staleOrError(ctx, err)
 		}
@@ -216,7 +325,7 @@ func (s *Session) fresh(ctx context.Context, state page.State, action *page.Acti
 		}
 		return equalJSON(current[0], state.PageKey) && equalJSON(current[1], state.Guards[strconv.Itoa(action.Node)]), nil
 	}
-	value, err := evaluate(ctx, markerExpression(), false)
+	value, err := s.eval(ctx, markerExpression(), false)
 	if err != nil {
 		return false, staleOrError(ctx, err)
 	}

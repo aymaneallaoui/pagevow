@@ -15,9 +15,13 @@ func (s *Session) Capture(ctx context.Context, format string, fullPage bool) ([]
 	if err != nil {
 		return nil, err
 	}
+	if err := s.gone(); err != nil {
+		return nil, fmt.Errorf("capture screenshot: %w", err)
+	}
 	bound, cancel := s.bind(ctx)
 	defer cancel()
-	timed, stopTimer := context.WithTimeout(bound, captureTimeout)
+	limit := min(captureTimeout, s.callTimeout)
+	timed, stopTimer := context.WithTimeout(bound, limit)
 	defer stopTimer()
 
 	var data []byte
@@ -40,7 +44,7 @@ func (s *Session) Capture(ctx context.Context, format string, fullPage bool) ([]
 			return nil, fmt.Errorf("capture screenshot: %w", cerr)
 		}
 		if errors.Is(timed.Err(), context.DeadlineExceeded) {
-			return nil, fmt.Errorf("capture screenshot: no result within %s: %w", captureTimeout, context.DeadlineExceeded)
+			return nil, fmt.Errorf("capture screenshot: no result within %s: %w: %w", limit, ErrCallTimeout, context.DeadlineExceeded)
 		}
 		return nil, fmt.Errorf("capture screenshot: %w", s.interrupted(ctx, err))
 	}
@@ -58,13 +62,24 @@ func screenshotFormatOf(format string) (cdppage.CaptureScreenshotFormat, error) 
 	}
 }
 
-// Close closes this session's own tab and releases its connection.
+// Close closes this session's own tab and every tab its page opened, waits until they are gone, and releases its connection.
 func (s *Session) Close(ctx context.Context) error {
-	bound, cancel := s.bind(ctx)
+	s.mu.Lock()
+	already := s.closing
+	s.closing = true
+	s.mu.Unlock()
+	if already {
+		return nil
+	}
+	popups, popupErr := s.closePopups(ctx)
+	bound, cancel := s.bindClose(ctx)
 	defer cancel()
-	err := chromedp.Cancel(bound)
+	cancelErr := chromedp.Cancel(bound)
 	s.cancel()
-	if err != nil {
+	s.stopListening()
+	s.handlers.Wait()
+	goneErr := s.waitClosed(ctx, append(popups, s.targetID))
+	if err := errors.Join(cancelErr, popupErr, goneErr); err != nil {
 		return fmt.Errorf("close session: %w", err)
 	}
 	return nil

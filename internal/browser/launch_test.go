@@ -215,11 +215,35 @@ func TestHelperProcess(t *testing.T) {
 	if mode == "" {
 		t.Skip("helper process only")
 	}
+	if mode == "launch" {
+		runLaunchHelper(t)
+		return
+	}
 	if ready := os.Getenv("PAGEVOW_HELPER_READY"); ready != "" {
 		if mode == "ignore-term" {
 			signal.Ignore(syscall.SIGTERM)
 		}
 		_ = os.WriteFile(ready, []byte("ready"), 0o600)
+	}
+	time.Sleep(time.Minute)
+}
+
+func runLaunchHelper(t *testing.T) {
+	process, err := Launch(context.Background(), LaunchOptions{
+		ExecPath:   os.Getenv("PAGEVOW_HELPER_EXEC"),
+		ProfileDir: os.Getenv("PAGEVOW_HELPER_PROFILE"),
+		Headless:   true,
+		ExtraArgs:  strings.Fields(os.Getenv("PAGEVOW_HELPER_ARGS")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pidFile := os.Getenv("PAGEVOW_HELPER_PIDFILE")
+	if err := os.WriteFile(pidFile+".tmp", []byte(strconv.Itoa(process.PID)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(pidFile+".tmp", pidFile); err != nil {
+		t.Fatal(err)
 	}
 	time.Sleep(time.Minute)
 }

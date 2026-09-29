@@ -6,8 +6,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
+	cdpbrowser "github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
@@ -39,6 +42,11 @@ type Browser struct {
 type SessionOptions struct {
 	URL      string
 	Viewport Viewport
+	// CallTimeout bounds every single browser call of the session; zero means 10 seconds.
+	CallTimeout time.Duration
+	// DownloadDir receives the files the page downloads; empty denies every download.
+	// The setting is browser-wide and applies from the moment the session opens.
+	DownloadDir string
 }
 
 // Attach connects to a browser that is already running at the given debugging URL.
@@ -102,9 +110,25 @@ func (b *Browser) NewSession(ctx context.Context, opts SessionOptions) (*Session
 	if url == "" {
 		url = "about:blank"
 	}
+	downloadDir, err := prepareDownloadDir(opts.DownloadDir)
+	if err != nil {
+		return nil, fmt.Errorf("open session: %w", err)
+	}
+	callTimeout := opts.CallTimeout
+	if callTimeout <= 0 {
+		callTimeout = defaultCallTimeout
+	}
 	browserCtx := cdp.WithExecutor(ctx, b.executor)
+	if err := withTimeout(browserCtx, callTimeout, func(ctx context.Context) error { return setDownloadBehavior(ctx, downloadDir) }); err != nil {
+		return nil, fmt.Errorf("open session: set download behavior: %w", err)
+	}
+	var targetID target.ID
 	// A tab that shares a window with another one gets no compositor frames while hidden, so its screenshots hang.
-	targetID, err := target.CreateTarget("about:blank").WithNewWindow(true).Do(browserCtx)
+	err = withTimeout(browserCtx, callTimeout, func(ctx context.Context) error {
+		var err error
+		targetID, err = target.CreateTarget("about:blank").WithNewWindow(true).Do(ctx)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("open session: create target: %w", err)
 	}
@@ -112,11 +136,21 @@ func (b *Browser) NewSession(ctx context.Context, opts SessionOptions) (*Session
 	stop := context.AfterFunc(ctx, cancel)
 	defer stop()
 
+	session := newSession(sessionCtx, cancel, sessionConfig{
+		targetID:         targetID,
+		browser:          b.executor,
+		viewport:         viewport,
+		callTimeout:      callTimeout,
+		downloadsAllowed: downloadDir != "",
+	})
+	session.listen(sessionCtx)
 	err = chromedp.Run(sessionCtx, chromedp.ActionFunc(func(ctx context.Context) error {
-		return openPage(ctx, url, viewport)
+		return session.openPage(ctx, url)
 	}))
 	if err != nil {
 		cancel()
+		session.stopListening()
+		session.handlers.Wait()
 		closeCtx, closeCancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
 		defer closeCancel()
 		_ = target.CloseTarget(targetID).Do(cdp.WithExecutor(closeCtx, b.executor))
@@ -125,31 +159,60 @@ func (b *Browser) NewSession(ctx context.Context, opts SessionOptions) (*Session
 		}
 		return nil, fmt.Errorf("open session: %w", err)
 	}
-	return &Session{ctx: sessionCtx, cancel: cancel, viewport: viewport}, nil
+	return session, nil
 }
 
-func openPage(ctx context.Context, url string, viewport Viewport) error {
-	metrics := emulation.SetDeviceMetricsOverride(int64(viewport.Width), int64(viewport.Height), 1, false)
-	if err := metrics.Do(ctx); err != nil {
+func prepareDownloadDir(dir string) (string, error) {
+	if dir == "" {
+		return "", nil
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", fmt.Errorf("resolve download directory: %w", err)
+	}
+	if err := os.MkdirAll(abs, 0o750); err != nil {
+		return "", fmt.Errorf("create download directory: %w", err)
+	}
+	return abs, nil
+}
+
+func setDownloadBehavior(ctx context.Context, dir string) error {
+	params := cdpbrowser.SetDownloadBehavior(cdpbrowser.SetDownloadBehaviorBehaviorDeny)
+	if dir != "" {
+		params = cdpbrowser.SetDownloadBehavior(cdpbrowser.SetDownloadBehaviorBehaviorAllow).WithDownloadPath(dir)
+	}
+	return params.WithEventsEnabled(true).Do(ctx)
+}
+
+func (s *Session) openPage(ctx context.Context, url string) error {
+	metrics := emulation.SetDeviceMetricsOverride(int64(s.viewport.Width), int64(s.viewport.Height), 1, false)
+	err := s.call(ctx, metrics.Do)
+	if err != nil {
 		return fmt.Errorf("set viewport: %w", err)
 	}
-	if err := emulation.SetFocusEmulationEnabled(true).Do(ctx); err != nil {
+	if err := s.call(ctx, emulation.SetFocusEmulationEnabled(true).Do); err != nil {
 		return fmt.Errorf("enable focus emulation: %w", err)
 	}
-	_, _, errorText, _, err := page.Navigate(url).Do(ctx)
+	var errorText string
+	// Page.navigate answers only when the navigation commits, which can take longer than an ordinary call.
+	err = withTimeout(ctx, max(s.callTimeout, loadTimeout), func(ctx context.Context) error {
+		var err error
+		_, _, errorText, _, err = page.Navigate(url).Do(ctx)
+		return err
+	})
 	if err != nil {
 		return fmt.Errorf("navigate to %s: %w", url, err)
 	}
 	if errorText != "" {
 		return fmt.Errorf("navigate to %s: %w: %s", url, ErrNavigation, errorText)
 	}
-	return waitForLoad(ctx)
+	return s.waitForLoad(ctx)
 }
 
-func waitForLoad(ctx context.Context) error {
+func (s *Session) waitForLoad(ctx context.Context) error {
 	deadline := time.Now().Add(loadTimeout)
 	for time.Now().Before(deadline) {
-		state, err := evaluate(ctx, "document.readyState", false)
+		state, err := s.eval(ctx, "document.readyState", false)
 		if err == nil && string(state) == `"complete"` {
 			return nil
 		}

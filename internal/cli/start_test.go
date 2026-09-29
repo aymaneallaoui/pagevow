@@ -608,3 +608,36 @@ func TestStartUsesTheConfiguredTimeoutsAndGuardLimits(t *testing.T) {
 	assert.Equal(t, server.Guard{MaxTempC: 80, MinFreeMiB: 2000}, h.procs.spawned[0].Guard)
 	assert.Contains(t, stdout, "within 30 seconds")
 }
+
+func TestStartCountsTheTextHelperInTheGPUPreflight(t *testing.T) {
+	h := newHarness(t)
+	h.kevCheckout()
+	h.mustRun("use", "local", "--mode", "nf4")
+	h.setConfig(map[string]any{"text_helper.url": "http://127.0.0.1:8081/v1", "text_helper.local.enabled": true})
+	h.gpu.reading = server.GPU{TotalMiB: 24000, FreeMiB: 8000}
+
+	stdout, _, err := h.runSplit(context.Background(), "start", "--no-browser")
+
+	require.Error(t, err)
+	assert.Contains(t, stdout, "needed 9.1 GiB")
+	assert.Empty(t, h.procs.spawned)
+
+	h.setConfig(map[string]any{"text_helper.local.gpu_layers": 0})
+	h.gpu.reading.FreeMiB = 8000
+	_, stderr, err := h.runSplit(context.Background(), "start", "--no-browser")
+	require.NoError(t, err, stderr)
+	assert.Len(t, h.procs.spawned, 2, "a helper on the CPU needs no GPU memory")
+}
+
+func TestStartReportsAnUnreadableKevDirOnce(t *testing.T) {
+	h := newHarness(t)
+	h.mustRun("use", "cascade")
+	h.homeDir = ""
+	h.setConfig(map[string]any{"server.kev_dir": "~/kev"})
+	h.homeFails = true
+
+	stdout, _, err := h.runSplit(context.Background(), "start", "--no-browser")
+
+	require.Error(t, err)
+	assert.Equal(t, 1, strings.Count(stdout, "server.kev_dir"))
+}

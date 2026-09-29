@@ -240,7 +240,8 @@ Logs: `<os.UserCacheDir()>/pagevow/logs/<name>.log`, appended, mode 0600.
 GPU safety: before starting a local model, `start` reads free GPU memory (`nvidia-smi`, when present) and refuses when
 the model's known peak plus a 1.5 GiB margin does not fit, with the numbers in the message. Known peaks: `nf4` 5.6 GiB,
 `int8` 7.2 GiB, `bf16` 10.6 GiB, `default` (0.8B models) 6.4 GiB. The peaks of every model that `start` is about to
-launch are summed and the margin is added once; when the sum does not fit, nothing is launched.
+launch are summed, the local text helper counts 2.0 GiB when it uses GPU layers, and the margin is added once; when
+the sum does not fit, nothing is launched.
 
 GPU guard: while a model runs, its supervisor samples the GPU once per second and stops the model when the
 temperature reaches `server.gpu_max_temp_c` or free memory falls to `server.gpu_min_free_mib`. It exits with code 99

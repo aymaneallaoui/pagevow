@@ -102,7 +102,7 @@ func startSleeper(t *testing.T, name string) (*exec.Cmd, server.Record) {
 	})
 	ticks, err := server.StartTicks(cmd.Process.Pid)
 	require.NoError(t, err)
-	return cmd, server.Record{
+	rec := server.Record{
 		Name:       name,
 		Kind:       server.KindBrowser,
 		PID:        cmd.Process.Pid,
@@ -111,6 +111,14 @@ func startSleeper(t *testing.T, name string) (*exec.Cmd, server.Record) {
 		StartedAt:  time.Now(),
 		StartTicks: ticks,
 	}
+	requireAliveEventually(t, rec)
+	return cmd, rec
+}
+
+func requireAliveEventually(t *testing.T, rec server.Record) {
+	t.Helper()
+	store := newStore(t)
+	require.Eventually(t, func() bool { return store.Alive(rec) }, 5*time.Second, 5*time.Millisecond, "the helper process never matched its record")
 }
 
 func shellProcess(t *testing.T, script string) *exec.Cmd {

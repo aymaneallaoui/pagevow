@@ -359,3 +359,28 @@ func TestDoctorJSONPrintsExactlyOneDocument(t *testing.T) {
 	assert.Contains(t, doc, "ok")
 	assert.Contains(t, doc, "checks")
 }
+
+func TestDoctorTreatsAServerErrorAsNotAnswering(t *testing.T) {
+	h := newHarness(t)
+	h.mustRun("use", "custom", "--url", "https://models.example.test")
+	h.procs.answer("https://models.example.test/v1/models", 502)
+
+	report, err := doctorOf(t, h)
+
+	require.Error(t, err)
+	c := report.check(t, "backend:custom")
+	assert.Equal(t, "fail", c.Level)
+	assert.Contains(t, c.Finding, "HTTP 502")
+}
+
+func TestDoctorCountsTheTextHelperInTheGPUMemoryCheck(t *testing.T) {
+	h := newHarness(t)
+	healthyLocalSetup(h)
+	h.setConfig(map[string]any{"text_helper.local.enabled": true})
+	h.gpu.reading.FreeMiB = 8000
+
+	report, err := doctorOf(t, h)
+
+	require.Error(t, err)
+	assert.Contains(t, report.check(t, "local:gpu-memory").Finding, "needed 9.1 GiB")
+}

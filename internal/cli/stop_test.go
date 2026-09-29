@@ -97,7 +97,7 @@ func TestStopJSONPrintsExactlyOneDocument(t *testing.T) {
 
 	empty, _, err := newHarness(t).runSplit(context.Background(), "stop", "--json")
 	require.NoError(t, err)
-	assert.JSONEq(t, `{"ok":true,"stopped":[]}`, empty)
+	assert.JSONEq(t, `{"ok":true,"stopped":[],"problems":[]}`, empty)
 }
 
 func TestStopDoesNotNeedAValidConfig(t *testing.T) {
@@ -109,4 +109,44 @@ func TestStopDoesNotNeedAValidConfig(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"model-8009"}, h.procs.stopped)
+}
+
+func TestStopFailsWhenARecordCannotBeReadButStillStopsTheReadableOnes(t *testing.T) {
+	h := newHarness(t)
+	h.procs.addRecord(server.Record{Name: "model-8009", Kind: server.KindModel, PID: 11})
+	h.procs.listErr = errors.New("decode model-8010.json: invalid character")
+
+	stdout, _, err := h.runSplit(context.Background(), "stop", "--json")
+
+	require.Error(t, err)
+	assert.Equal(t, 2, cli.ExitCode(err))
+	var report struct {
+		OK       bool     `json:"ok"`
+		Problems []string `json:"problems"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(stdout), &report), stdout)
+	assert.False(t, report.OK)
+	require.Len(t, report.Problems, 1)
+	assert.Contains(t, report.Problems[0], "model-8010.json")
+	assert.Equal(t, []string{"model-8009"}, h.procs.stopped)
+
+	plain, _, err := h.runSplit(context.Background(), "stop")
+	require.Error(t, err)
+	assert.Contains(t, plain, "could not be read")
+}
+
+func TestStopFailsWhenTheContextEndsBeforeEveryRecordIsProcessed(t *testing.T) {
+	h := newHarness(t)
+	h.procs.addRecord(server.Record{Name: "browser-9333", Kind: server.KindBrowser, PID: 14})
+	h.procs.addRecord(server.Record{Name: "model-8009", Kind: server.KindModel, PID: 11})
+	ctx, cancel := context.WithCancel(context.Background())
+	h.procs.onStop = cancel
+
+	stdout, _, err := h.runSplit(ctx, "stop", "--json")
+
+	require.Error(t, err)
+	assert.Equal(t, 2, cli.ExitCode(err))
+	assert.Contains(t, stdout, `"ok": false`)
+	assert.Contains(t, stdout, "interrupted: 1 record(s) were not processed")
+	assert.Equal(t, []string{"browser-9333"}, h.procs.stopped)
 }

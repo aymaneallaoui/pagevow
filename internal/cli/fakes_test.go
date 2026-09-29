@@ -35,6 +35,8 @@ type fakeProcesses struct {
 	waitErr       map[string]error
 	stopErr       map[string]error
 	trackErr      error
+	listErr       error
+	onStop        func()
 	superviseCode int
 	superviseErr  error
 
@@ -86,7 +88,7 @@ func (f *fakeProcesses) List() ([]server.Record, error) {
 		out = append(out, rec)
 	}
 	slices.SortFunc(out, func(a, b server.Record) int { return compareStrings(a.Name, b.Name) })
-	return out, nil
+	return out, f.listErr
 }
 
 func compareStrings(a, b string) int {
@@ -139,6 +141,9 @@ func (f *fakeProcesses) Stop(_ context.Context, rec server.Record) (server.StopR
 	defer f.mu.Unlock()
 	f.stopped = append(f.stopped, rec.Name)
 	f.events = append(f.events, "stop "+rec.Name)
+	if f.onStop != nil {
+		f.onStop()
+	}
 	if err := f.stopErr[rec.Name]; err != nil {
 		return server.Stopped, err
 	}

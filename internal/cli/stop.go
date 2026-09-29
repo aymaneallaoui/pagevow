@@ -26,8 +26,9 @@ type stoppedProcess struct {
 }
 
 type stopReport struct {
-	OK      bool             `json:"ok"`
-	Stopped []stoppedProcess `json:"stopped"`
+	OK       bool             `json:"ok"`
+	Stopped  []stoppedProcess `json:"stopped"`
+	Problems []string         `json:"problems"`
 }
 
 func (a *app) newStopCmd() *cobra.Command {
@@ -57,17 +58,21 @@ func (a *app) runStop(cmd *cobra.Command) error {
 	records, listErr := procs.List()
 	slices.SortStableFunc(records, func(x, y server.Record) int { return stopRank(x.Kind) - stopRank(y.Kind) })
 
-	report := stopReport{OK: true, Stopped: []stoppedProcess{}}
+	report := stopReport{OK: true, Stopped: []stoppedProcess{}, Problems: []string{}}
 	var out *ui.Printer
 	if !asJSON {
 		if out, err = a.printer(cmd.OutOrStdout()); err != nil {
 			return err
 		}
 	}
-	if listErr != nil && out != nil {
-		out.Status(ui.Warn, "some process records could not be read: %v", listErr)
+	if listErr != nil {
+		report.OK = false
+		report.Problems = append(report.Problems, fmt.Sprintf("some process records could not be read: %v", listErr))
+		if out != nil {
+			out.Status(ui.Fail, "%s", report.Problems[0])
+		}
 	}
-	for _, rec := range records {
+	for i, rec := range records {
 		entry := stoppedProcess{Name: rec.Name, Kind: string(rec.Kind), PID: rec.PID}
 		result, err := procs.Stop(ctx, rec)
 		switch {
@@ -83,12 +88,18 @@ func (a *app) runStop(cmd *cobra.Command) error {
 		if out != nil {
 			printStopped(out, entry)
 		}
-		if ctx.Err() != nil {
+		if ctx.Err() != nil && i < len(records)-1 {
+			report.OK = false
+			problem := fmt.Sprintf("interrupted: %d record(s) were not processed", len(records)-1-i)
+			report.Problems = append(report.Problems, problem)
+			if out != nil {
+				out.Status(ui.Fail, "%s", problem)
+			}
 			break
 		}
 	}
 	if out != nil {
-		if len(records) == 0 {
+		if len(records) == 0 && listErr == nil {
 			out.Status(ui.OK, "nothing to stop: pagevow has no recorded processes")
 		}
 		if err := out.Err(); err != nil {
@@ -101,7 +112,7 @@ func (a *app) runStop(cmd *cobra.Command) error {
 		}
 	}
 	if !report.OK {
-		return infrastructure(errors.New("some processes could not be stopped"))
+		return infrastructure(errors.New("not everything could be stopped"))
 	}
 	return nil
 }

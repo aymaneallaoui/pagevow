@@ -55,7 +55,7 @@ func TestAliveAcceptsABrowserThatKeepsItsProfileArgument(t *testing.T) {
 		Name: "browser-9222", Kind: server.KindBrowser, PID: cmd.Process.Pid, StartTicks: ticks,
 		Command: []string{"/usr/bin/chromium"}, ProfileDir: "/profile",
 	}
-	assert.True(t, newStore(t).Alive(rec))
+	requireAliveEventually(t, rec)
 }
 
 func TestAliveIsFalseForASupervisorRecordWhoseProcessIsNotASupervisor(t *testing.T) {

@@ -237,24 +237,22 @@ func (s *starter) run() bool {
 }
 
 func (s *starter) removeStale() map[string]server.Record {
-	records, err := s.procs.List()
-	if err != nil {
-		s.warn("some process records could not be read: %v", err)
+	swept := sweepRecords(s.ctx, s.procs)
+	if swept.ListErr != nil {
+		s.warn("some process records could not be read: %v", swept.ListErr)
 	}
-	live := map[string]server.Record{}
-	for _, rec := range records {
-		if s.procs.Alive(rec) {
-			live[rec.Name] = rec
-			continue
-		}
-		if _, err := s.procs.Stop(s.ctx, rec); err != nil {
-			s.warn("could not remove the stale record %s: %v", rec.Name, err)
-			continue
-		}
+	for _, failure := range swept.Failed {
+		s.warn("could not remove the stale record %s: %v", failure.Name, failure.Err)
+	}
+	for _, rec := range swept.Gone {
 		s.report.StaleRemoved = append(s.report.StaleRemoved, rec.Name)
 		if s.out != nil {
 			s.out.Status(ui.Info, "removed stale record %s: its process is gone", rec.Name)
 		}
+	}
+	live := map[string]server.Record{}
+	for _, rec := range swept.Live {
+		live[rec.Name] = rec
 	}
 	return live
 }
@@ -270,6 +268,9 @@ func (s *starter) plan() ([]startTarget, []startedProcess) {
 		*problems = append(*problems, err.Error())
 	}
 	kevDir, kevErr := kevDirOf(s.cfg, s.home)
+	if kevErr != nil && len(legs) > 0 && s.goos == "linux" {
+		*problems = append(*problems, kevErr.Error())
+	}
 	for _, leg := range legs {
 		entry := startedProcess{Name: leg.recordName(), Kind: string(server.KindModel), Port: leg.port, Action: actionFailed, Log: logPathOf(s.logDir, leg.recordName())}
 		if s.goos != "linux" {
@@ -278,7 +279,6 @@ func (s *starter) plan() ([]startTarget, []startedProcess) {
 			continue
 		}
 		if kevErr != nil {
-			*problems = append(*problems, kevErr.Error())
 			continue
 		}
 		command, err := server.ModelCommand(kevDir, leg.model, leg.mode, leg.port)
@@ -326,15 +326,11 @@ func (s *starter) planHelper(helper *localTextHelper, targets []startTarget, uns
 		s.report.Problems = append(s.report.Problems, err.Error())
 		return targets, unsupported
 	}
-	insert := len(targets)
-	if i := slices.IndexFunc(targets, func(t startTarget) bool { return t.kind == server.KindBrowser }); i >= 0 {
-		insert = i
-	}
 	target := startTarget{
 		name: helper.recordName(), kind: server.KindTextHelper, port: helper.port, readyURL: helper.readyURL(), command: command,
-		timeout: time.Duration(local.StartTimeoutSeconds) * time.Second,
+		timeout: time.Duration(local.StartTimeoutSeconds) * time.Second, peakGiB: server.TextHelperPeak(local.GPULayers),
 	}
-	return slices.Insert(targets, insert, target), unsupported
+	return append(targets, target), unsupported
 }
 
 func (s *starter) preflight(fresh []startTarget) []string {
@@ -349,7 +345,7 @@ func (s *starter) preflight(fresh []startTarget) []string {
 		if s.procs.PortInUse(s.ctx, t.port) {
 			problems = append(problems, fmt.Sprintf("port %d is in use by a process that pagevow did not start; stop it or change the port in the config (%s)", t.port, t.name))
 		}
-		if t.kind == server.KindModel {
+		if t.peakGiB > 0 {
 			peaks = append(peaks, t.peakGiB)
 		}
 		if t.kind == server.KindBrowser && s.execPath == "" {
@@ -433,8 +429,7 @@ func (s *starter) answers(t startTarget) bool {
 		_, err := s.browsers.Version(s.ctx, t.readyURL)
 		return err == nil
 	}
-	status, err := s.procs.Probe(s.ctx, t.readyURL)
-	return err == nil && status < 500
+	return answered(s.procs.Probe(s.ctx, t.readyURL))
 }
 
 func (s *starter) launchSupervised(t startTarget) startedProcess {

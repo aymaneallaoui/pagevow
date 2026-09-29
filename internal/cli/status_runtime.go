@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -89,8 +90,11 @@ func (a *app) collectRuntime(ctx context.Context, cfg config.Config, report *sta
 			report.GPU = &gpuState{TotalMiB: reading.TotalMiB, UsedMiB: reading.UsedMiB, FreeMiB: reading.FreeMiB, TemperatureC: reading.TempC}
 		}
 	}()
-	records, _ := procs.List()
-	report.Processes, report.StaleRemoved = processStates(ctx, procs, records, now())
+	swept := sweepRecords(ctx, procs)
+	report.Processes = processStates(ctx, procs, swept.Live, swept.Gone, now())
+	for _, rec := range swept.Gone {
+		report.StaleRemoved = append(report.StaleRemoved, rec.Name)
+	}
 	for _, p := range report.Processes {
 		if p.Kind != string(server.KindBrowser) || !p.Alive {
 			continue
@@ -108,37 +112,28 @@ func (a *app) collectRuntime(ctx context.Context, cfg config.Config, report *sta
 	return nil
 }
 
-func processStates(ctx context.Context, procs Processes, records []server.Record, now time.Time) ([]processState, []string) {
-	states := make([]processState, len(records))
+func processStates(ctx context.Context, procs Processes, live, gone []server.Record, now time.Time) []processState {
+	states := make([]processState, 0, len(live)+len(gone))
+	for _, rec := range live {
+		states = append(states, processState{
+			Name: rec.Name, Kind: string(rec.Kind), PID: rec.PID, Port: rec.Port, Alive: true, Log: rec.Log,
+			UptimeSeconds: max(int64(now.Sub(rec.StartedAt).Seconds()), 0),
+		})
+	}
 	var wg sync.WaitGroup
-	for i, rec := range records {
-		state := processState{Name: rec.Name, Kind: string(rec.Kind), PID: rec.PID, Port: rec.Port, Alive: procs.Alive(rec), Log: rec.Log}
-		states[i] = state
-		if !state.Alive {
-			continue
-		}
-		states[i].UptimeSeconds = max(int64(now.Sub(rec.StartedAt).Seconds()), 0)
+	for i, rec := range live {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			status, err := procs.Probe(ctx, readyURLOf(rec))
-			states[i].Ready = err == nil && status < 500
+			states[i].Ready = answered(procs.Probe(ctx, readyURLOf(rec)))
 		}()
 	}
 	wg.Wait()
-	stale := []string{}
-	for _, rec := range records {
-		if procs.Alive(rec) {
-			continue
-		}
-		if _, err := procs.Stop(ctx, rec); err == nil {
-			stale = append(stale, rec.Name)
-		}
+	for _, rec := range gone {
+		states = append(states, processState{Name: rec.Name, Kind: string(rec.Kind), PID: rec.PID, Port: rec.Port, Log: rec.Log})
 	}
-	if states == nil {
-		states = []processState{}
-	}
-	return states, stale
+	slices.SortFunc(states, func(a, b processState) int { return strings.Compare(a.Name, b.Name) })
+	return states
 }
 
 func readyURLOf(rec server.Record) string {
@@ -157,9 +152,12 @@ func probeHealth(ctx context.Context, procs Processes, targets []healthTarget) [
 			defer wg.Done()
 			state := healthState{Name: target.name, URL: target.url}
 			status, err := procs.Probe(ctx, target.probeURL)
-			if err != nil {
+			switch {
+			case err != nil:
 				state.Error = rootCause(err)
-			} else {
+			case !answered(status, nil):
+				state.HTTPStatus, state.Error = status, fmt.Sprintf("HTTP %d", status)
+			default:
 				state.Reachable, state.HTTPStatus = true, status
 			}
 			states[i] = state

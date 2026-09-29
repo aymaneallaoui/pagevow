@@ -187,3 +187,15 @@ func TestStatusStillShowsTheCascadeModelsAndKeys(t *testing.T) {
 	assert.Contains(t, out, "verifier_mode")
 	assert.Contains(t, out, "env:PRIMARY_KEY")
 }
+
+func TestStatusTreatsAServerErrorAsNotAnswering(t *testing.T) {
+	h := newHarness(t)
+	h.procs.answer("http://127.0.0.1:8009/v1/models", 503)
+
+	report, _ := statusOf(t, h)
+
+	require.Len(t, report.Health, 1)
+	assert.False(t, report.Health[0].Reachable)
+	assert.Equal(t, 503, report.Health[0].HTTPStatus)
+	assert.Equal(t, "HTTP 503", report.Health[0].Error)
+}

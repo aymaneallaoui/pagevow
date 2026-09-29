@@ -61,6 +61,7 @@ type runPlan struct {
 	warnings  []string
 	asJSON    bool
 	fullPage  bool
+	headed    bool
 }
 
 func infrastructure(err error) error {
@@ -100,7 +101,11 @@ func (a *app) runTests(cmd *cobra.Command) error {
 	}
 	collab := buildCollaborators(plan.cfg, resolver)
 	problems := collab.preflight(ctx)
-	managedURL := a.managedBrowserURL(ctx)
+	managedURL := a.managedBrowserURL(ctx, plan.cfg.Browser.Port)
+	if plan.headed && managedURL != "" {
+		notes.Status(ui.Info, "--headed: starting a private browser with a window instead of using the browser that pagevow start keeps running")
+		managedURL = ""
+	}
 	var execPath string
 	if managedURL == "" {
 		var findErr error
@@ -150,7 +155,7 @@ func (a *app) openBrowser(ctx context.Context, notes *ui.Printer, launcher Brows
 }
 
 // managedBrowserURL returns the debugging URL of the browser pagevow start keeps running, or "" when there is none that answers.
-func (a *app) managedBrowserURL(ctx context.Context) string {
+func (a *app) managedBrowserURL(ctx context.Context, port int) string {
 	procs, err := service[Processes](a)
 	if err != nil {
 		return ""
@@ -161,7 +166,7 @@ func (a *app) managedBrowserURL(ctx context.Context) string {
 	}
 	records, _ := procs.List()
 	for _, rec := range records {
-		if rec.Kind != server.KindBrowser || !procs.Alive(rec) {
+		if rec.Name != server.RecordName(server.KindBrowser, port) || !procs.Alive(rec) {
 			continue
 		}
 		debugURL := browser.DebugURL(rec.Port)
@@ -294,6 +299,7 @@ func (a *app) planRun(cmd *cobra.Command) (runPlan, error) {
 	if err != nil {
 		return runPlan{}, fmt.Errorf("read --headed: %w", err)
 	}
+	plan.headed = headed
 	if headed {
 		plan.cfg.Browser.Headless = false
 	}

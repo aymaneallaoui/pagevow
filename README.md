@@ -135,8 +135,8 @@ the state and log directories. The exit code is 1 when a check fails; warnings d
 (read from `adapter_config.json` in the run directory). `model` is a run name under `<kev_dir>/runs/` or an absolute
 path. pagevow never sets `KEV_API_KEY`: a local server is open and bound to 127.0.0.1.
 
-Known peaks are `nf4` 5.6 GiB, `int8` 7.2 GiB, `bf16` 10.6 GiB and `default` 6.4 GiB. Before it launches anything,
-`start` adds up the peaks of the models it is about to start (models that already run are not counted), adds a margin of
+Known peaks are `nf4` 5.6 GiB, `int8` 7.2 GiB, `bf16` 10.6 GiB and `default` 6.4 GiB. The local text helper counts 2.0 GiB when `text_helper.local.gpu_layers` is above 0 and nothing otherwise. Before it launches anything,
+`start` adds up the peaks of the models and the text helper it is about to start (processes that already run are not counted), adds a margin of
 1.5 GiB and compares the sum with the free GPU memory. When it does not fit, `start` refuses and prints all numbers.
 Without `nvidia-smi` it warns and continues.
 

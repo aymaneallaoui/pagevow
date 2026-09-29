@@ -107,6 +107,17 @@ func ParseGPU(out string) (GPU, error) {
 	return GPU{TotalMiB: values[0], UsedMiB: values[1], FreeMiB: values[2], TempC: values[3]}, nil
 }
 
+// TextHelperPeakGiB is the known peak GPU memory of the local text helper when it offloads layers to the GPU.
+const TextHelperPeakGiB = 2.0
+
+// TextHelperPeak returns the GPU memory in GiB the text helper needs with the given number of offloaded layers.
+func TextHelperPeak(gpuLayers int) float64 {
+	if gpuLayers > 0 {
+		return TextHelperPeakGiB
+	}
+	return 0
+}
+
 // Peak returns the known peak memory in GiB of a model server in the named mode.
 func Peak(name string) (float64, bool) {
 	switch name {

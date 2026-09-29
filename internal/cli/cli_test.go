@@ -65,6 +65,7 @@ type harness struct {
 	launcher    *fakeLauncher
 	missing     map[string]bool
 	goos        string
+	homeFails   bool
 	now         time.Time
 }
 
@@ -105,7 +106,12 @@ func (h *harness) options() cli.Options {
 		GPU:              h.gpu,
 		Executable:       func() (string, error) { return "/usr/local/bin/pagevow", nil },
 		CacheDir:         func() (string, error) { return h.cacheDir, nil },
-		HomeDir:          func() (string, error) { return h.homeDir, nil },
+		HomeDir: func() (string, error) {
+			if h.homeFails {
+				return "", errors.New("no home")
+			}
+			return h.homeDir, nil
+		},
 		LookPath: func(name string) (string, error) {
 			if h.missing[name] {
 				return "", exec.ErrNotFound

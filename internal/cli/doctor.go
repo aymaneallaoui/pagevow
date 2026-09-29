@@ -183,24 +183,20 @@ func (d *doctor) run(cfg config.Config, path string, loadErr error) {
 }
 
 func (d *doctor) records() {
-	records, err := d.procs.List()
-	if err != nil {
-		d.add("records", levelWarn, "remove the unreadable file from "+d.procs.StateDir(), "some process records could not be read: %v", err)
+	swept := sweepRecords(d.ctx, d.procs)
+	if swept.ListErr != nil {
+		d.add("records", levelWarn, "remove the unreadable file from "+d.procs.StateDir(), "some process records could not be read: %v", swept.ListErr)
 	}
-	stale := 0
-	for _, rec := range records {
-		if d.procs.Alive(rec) {
-			d.live[rec.Name] = rec
-			continue
-		}
-		stale++
-		if _, err := d.procs.Stop(d.ctx, rec); err != nil {
-			d.add("records", levelFail, "remove "+filepath.Join(d.procs.StateDir(), rec.Name+".json")+" by hand", "the stale record %s could not be removed: %v", rec.Name, err)
-			continue
-		}
+	for _, rec := range swept.Live {
+		d.live[rec.Name] = rec
+	}
+	for _, failure := range swept.Failed {
+		d.add("records", levelFail, "remove "+filepath.Join(d.procs.StateDir(), failure.Name+".json")+" by hand", "the stale record %s could not be removed: %v", failure.Name, failure.Err)
+	}
+	for _, rec := range swept.Gone {
 		d.add("records", levelWarn, "", "removed the stale record %s: its process is gone", rec.Name)
 	}
-	if stale == 0 {
+	if len(swept.Failed) == 0 && len(swept.Gone) == 0 {
 		d.add("records", levelOK, "", "no stale process records (%d running)", len(d.live))
 	}
 }
@@ -260,12 +256,12 @@ func (d *doctor) backend() {
 		}
 		status, err := d.procs.Probe(d.ctx, target.probeURL)
 		switch {
-		case err == nil:
+		case answered(status, err):
 			d.add(id, levelOK, "", "the %s answers at %s (HTTP %d)", target.label, target.url, status)
 		case target.startable:
 			d.add(id, levelWarn, "start it with: pagevow start", "the %s does not answer at %s yet", target.label, target.url)
 		default:
-			d.add(id, levelFail, "check the URL and your network connection; pagevow status shows what is configured", "the %s does not answer at %s: %v", target.label, target.url, rootCause(err))
+			d.add(id, levelFail, "check the URL and your network connection; pagevow status shows what is configured", "the %s does not answer at %s: %s", target.label, target.url, failureText(status, err))
 		}
 	}
 }
@@ -301,6 +297,13 @@ func (d *doctor) localServing() {
 		d.checkLeg(kevDir, leg)
 		if _, running := d.live[leg.recordName()]; !running {
 			peaks = append(peaks, leg.peakGiB())
+		}
+	}
+	if helper, _ := localTextHelperOf(d.cfg); helper != nil {
+		if _, running := d.live[helper.recordName()]; !running {
+			if peak := server.TextHelperPeak(d.cfg.TextHelper.Local.GPULayers); peak > 0 {
+				peaks = append(peaks, peak)
+			}
 		}
 	}
 	d.gpuChecks(peaks)
@@ -418,6 +421,13 @@ func (d *doctor) textHelper() {
 		return
 	}
 	d.add("text-helper:llama-server", levelOK, "", "llama-server is on PATH")
+	if legs, _ := modelLegs(d.cfg); len(legs) == 0 && d.goos != "windows" {
+		if _, running := d.live[server.RecordName(server.KindTextHelper, portOfTextHelper(d.cfg))]; !running {
+			if peak := server.TextHelperPeak(t.Local.GPULayers); peak > 0 {
+				d.gpuChecks([]float64{peak})
+			}
+		}
+	}
 }
 
 func (d *doctor) tripped() {
@@ -474,4 +484,16 @@ func fileExists(path string) bool {
 func dirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
+}
+
+func failureText(status int, err error) string {
+	if err != nil {
+		return rootCause(err)
+	}
+	return fmt.Sprintf("HTTP %d", status)
+}
+
+func portOfTextHelper(cfg config.Config) int {
+	port, _ := portOfURL(cfg.TextHelper.URL)
+	return port
 }

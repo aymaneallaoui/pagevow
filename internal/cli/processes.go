@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -180,4 +181,40 @@ func (b *attachedBrowser) Stop(ctx context.Context) error {
 		return fmt.Errorf("release browser connection: %w", err)
 	}
 	return nil
+}
+
+// answered reports whether an HTTP probe got an answer that shows the server is up: any status below 500.
+func answered(status int, err error) bool {
+	return err == nil && status < http.StatusInternalServerError
+}
+
+type sweepFailure struct {
+	Name string
+	Err  error
+}
+
+// sweep is the outcome of removing the stale records.
+type sweep struct {
+	Live    []server.Record
+	Gone    []server.Record
+	Failed  []sweepFailure
+	ListErr error
+}
+
+// sweepRecords lists the records, removes the stale ones and returns the live ones with the names of what it removed.
+func sweepRecords(ctx context.Context, procs Processes) sweep {
+	records, listErr := procs.List()
+	result := sweep{ListErr: listErr}
+	for _, rec := range records {
+		if procs.Alive(rec) {
+			result.Live = append(result.Live, rec)
+			continue
+		}
+		if _, err := procs.Stop(ctx, rec); err != nil {
+			result.Failed = append(result.Failed, sweepFailure{Name: rec.Name, Err: err})
+			continue
+		}
+		result.Gone = append(result.Gone, rec)
+	}
+	return result
 }

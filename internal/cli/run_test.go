@@ -777,3 +777,29 @@ func TestRunPreflightNamesAnUnreadableKeyOfACascadeLegWithoutAnyRequest(t *testi
 	assert.Equal(t, posts, e.posts)
 	assert.Empty(t, e.launcher.specs)
 }
+
+func TestRunIgnoresAManagedBrowserOnAnotherPort(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	e.managedBrowserRunning(9444)
+
+	_, stderr, err := e.runCmd("--retries", "0")
+
+	require.NoError(t, err, stderr)
+	assert.Empty(t, e.managed.attached)
+	assert.Len(t, e.launcher.specs, 1)
+}
+
+func TestRunHeadedStartsItsOwnBrowserAndSaysSo(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	e.managedBrowserRunning(9333)
+
+	_, stderr, err := e.runCmd("--retries", "0", "--headed")
+
+	require.NoError(t, err, stderr)
+	assert.Empty(t, e.managed.attached)
+	require.Len(t, e.launcher.specs, 1)
+	assert.False(t, e.launcher.specs[0].Headless)
+	assert.Contains(t, stderr, "--headed: starting a private browser")
+}

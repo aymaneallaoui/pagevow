@@ -25,3 +25,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+Agent skills under .claude/skills/
+
+These files guide coding agents and reviewers. They are not part of the
+pagevow binary and are not included in release archives.
+
+The directories golang-benchmark, golang-concurrency, golang-context,
+golang-error-handling, golang-performance, golang-safety and golang-security
+come from samber/cc-skills-golang
+(https://github.com/samber/cc-skills-golang), used under the MIT License,
+Copyright (c) 2026 Samuel Berthe. The permission notice is the MIT text above.
+
+The directory my-golang-performancer/references holds pages of the Go
+Optimization Guide (https://goperf.dev/,
+https://github.com/astavonin/go-optimization-guide) by Alexander Stavonin,
+used under the Creative Commons Attribution 4.0 International License
+(https://creativecommons.org/licenses/by/4.0/). Each file names its source
+page in its first line. The pages were converted to Markdown; the text was
+not otherwise changed.

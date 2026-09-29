@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Select page</title>
+<label for="color">Color</label>
+<select id="color">
+  <option value="red" selected>Red</option>
+  <option value="it's &quot;odd&quot; &amp; &lt;b&gt;">Odd option</option>
+  <option value="blue">Blue</option>
+</select>
+<pre id="log"></pre>
+<script>
+  const color = document.getElementById('color');
+  const events = [];
+  for (const type of ['input', 'change']) {
+    color.addEventListener(type, () => {
+      events.push(type + ':' + color.value);
+      document.getElementById('log').textContent = events.join(' ');
+    });
+  }
+</script>

@@ -1,0 +1,197 @@
+{
+  "name": "untimed_step",
+  "url": "http://localhost:3000/contact.html",
+  "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+  "ops": [
+    {
+      "op": "step",
+      "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "page": {
+            "url": "http://localhost:3000/contact.html",
+            "title": "Contact",
+            "text": "Name\nEmail"
+          },
+          "elements": [
+            "[1] CLICK"
+          ]
+        },
+        "questions": {
+          "operation": {
+            "type": "choice",
+            "criteria": {
+              "1": "Click",
+              "2": "Done"
+            }
+          }
+        }
+      },
+      "result": {
+        "model": "jev-4b",
+        "answers": {
+          "operation": {
+            "choice": "CLICK",
+            "probabilities": {
+              "CLICK": 0.0625,
+              "DONE": 0.9375
+            },
+            "confidence": 0.9
+          }
+        },
+        "usage": {
+          "input_tokens": 100,
+          "output_tokens": 12
+        }
+      },
+      "latency_ms": 101,
+      "awaiting_text": false,
+      "retries": null,
+      "cascade": null
+    },
+    {
+      "op": "step",
+      "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "page": {
+            "url": "http://localhost:3000/contact.html",
+            "title": "Contact",
+            "text": "Name\nEmail"
+          },
+          "elements": [
+            "[1] CLICK"
+          ]
+        },
+        "questions": {
+          "operation": {
+            "type": "choice",
+            "criteria": {
+              "1": "Click",
+              "2": "Done"
+            }
+          }
+        }
+      },
+      "result": {
+        "model": "jev-4b",
+        "answers": {
+          "operation": {
+            "choice": "CLICK",
+            "probabilities": {
+              "CLICK": 0.0625,
+              "DONE": 0.9375
+            },
+            "confidence": 0.9
+          }
+        },
+        "usage": {
+          "input_tokens": 100,
+          "output_tokens": 12
+        }
+      },
+      "latency_ms": 200,
+      "awaiting_text": true,
+      "retries": null,
+      "cascade": null
+    },
+    {
+      "op": "type_text",
+      "context": {
+        "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+        "field": {
+          "label": "City",
+          "role": "textbox",
+          "value": ""
+        },
+        "page": {
+          "title": "Contact - Shelf",
+          "text": "Shelf\nContact us\nName\nEmail"
+        },
+        "recent_actions": [
+          {
+            "action": "Name",
+            "text": "x"
+          }
+        ]
+      },
+      "text": "Zurich"
+    },
+    {
+      "op": "step",
+      "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "page": {
+            "url": "http://localhost:3000/contact.html",
+            "title": "Contact",
+            "text": "Name\nEmail"
+          },
+          "elements": [
+            "[1] DONE"
+          ]
+        },
+        "questions": {
+          "operation": {
+            "type": "choice",
+            "criteria": {
+              "1": "Click",
+              "2": "Done"
+            }
+          }
+        }
+      },
+      "result": {
+        "model": "jev-4b",
+        "answers": {
+          "operation": {
+            "choice": "DONE",
+            "probabilities": {
+              "CLICK": 0.0625,
+              "DONE": 0.9375
+            },
+            "confidence": 0.9
+          }
+        },
+        "usage": {
+          "input_tokens": 100,
+          "output_tokens": 12
+        }
+      },
+      "latency_ms": 150,
+      "awaiting_text": false,
+      "retries": null,
+      "cascade": null
+    },
+    {
+      "op": "gate",
+      "note": {
+        "from": "DONE"
+      },
+      "operation": "DONE"
+    },
+    {
+      "op": "finish",
+      "status": "DONE",
+      "elapsed_ms": 10,
+      "error": null,
+      "raw_response": null,
+      "reason": null
+    },
+    {
+      "op": "end_step",
+      "error": null
+    },
+    {
+      "op": "finish",
+      "status": "ERROR",
+      "elapsed_ms": 20,
+      "error": "ignored",
+      "raw_response": null,
+      "reason": null
+    }
+  ]
+}

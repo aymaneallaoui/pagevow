@@ -1,0 +1,218 @@
+[
+ {
+  "input": "",
+  "output": ""
+ },
+ {
+  "input": "  ",
+  "output": ""
+ },
+ {
+  "input": "Hello   World",
+  "output": "hello world"
+ },
+ {
+  "input": "\tTabs\nand\r\nnewlines ",
+  "output": "tabs and newlines"
+ },
+ {
+  "input": "Zürich",
+  "output": "zurich"
+ },
+ {
+  "input": "ZURICH",
+  "output": "zurich"
+ },
+ {
+  "input": "Ça va, très bien",
+  "output": "ca va, tres bien"
+ },
+ {
+  "input": "Ñandú",
+  "output": "nandu"
+ },
+ {
+  "input": "İstanbul",
+  "output": "istanbul"
+ },
+ {
+  "input": "ıi",
+  "output": "ıi"
+ },
+ {
+  "input": "ẞ",
+  "output": "ss"
+ },
+ {
+  "input": "Straße",
+  "output": "strasse"
+ },
+ {
+  "input": "ﬁ ﬂ ﬃ",
+  "output": "fi fl ffi"
+ },
+ {
+  "input": "ℌ𝔢𝔩𝔩𝔬",
+  "output": "hello"
+ },
+ {
+  "input": "Ⅷ ⅷ",
+  "output": "viii viii"
+ },
+ {
+  "input": "ＡＢＣ　１２３",
+  "output": "abc 123"
+ },
+ {
+  "input": "①②③",
+  "output": "123"
+ },
+ {
+  "input": "½",
+  "output": "1⁄2"
+ },
+ {
+  "input": "㎏",
+  "output": "kg"
+ },
+ {
+  "input": "ǅ ǆ Ǆ",
+  "output": "dz dz dz"
+ },
+ {
+  "input": "ΟΔΟΣ ος σ Σ",
+  "output": "οδοσ οσ σ σ"
+ },
+ {
+  "input": "ᾳ ᾼ ᾈ",
+  "output": "α α α"
+ },
+ {
+  "input": " nbsp ",
+  "output": "nbsp"
+ },
+ {
+  "input": "a b c d",
+  "output": "a b c d"
+ },
+ {
+  "input": "a\u001cb\u001dc\u001ed\u001fe",
+  "output": "a b c d e"
+ },
+ {
+  "input": "ab",
+  "output": "a b"
+ },
+ {
+  "input": "a b c",
+  "output": "a b c"
+ },
+ {
+  "input": "a　b",
+  "output": "a b"
+ },
+ {
+  "input": "a﻿b",
+  "output": "a﻿b"
+ },
+ {
+  "input": "مَرْحَبًا",
+  "output": "مرحبا"
+ },
+ {
+  "input": "١٢٣ ٤٥٦",
+  "output": "١٢٣ ٤٥٦"
+ },
+ {
+  "input": "עִבְרִית",
+  "output": "עברית"
+ },
+ {
+  "input": "한글 조선",
+  "output": "한글 조선"
+ },
+ {
+  "input": "ｶﾀｶﾅ",
+  "output": "カタカナ"
+ },
+ {
+  "input": "क्षि हिन्दी",
+  "output": "कषि हिनदी"
+ },
+ {
+  "input": "ก็ ค่ะ",
+  "output": "ก็ คะ"
+ },
+ {
+  "input": "日本語 テスト",
+  "output": "日本語 テスト"
+ },
+ {
+  "input": "😀 👍🏽",
+  "output": "😀 👍🏽"
+ },
+ {
+  "input": "é é",
+  "output": "e e"
+ },
+ {
+  "input": "ạ̈ ạ̈",
+  "output": "a a"
+ },
+ {
+  "input": "Å Å",
+  "output": "a a"
+ },
+ {
+  "input": "ǰ",
+  "output": "j"
+ },
+ {
+  "input": "ŉ",
+  "output": "ʼn"
+ },
+ {
+  "input": "ǆ",
+  "output": "dz"
+ },
+ {
+  "input": "ᵃ ᵇ",
+  "output": "a b"
+ },
+ {
+  "input": "ⓐ",
+  "output": "a"
+ },
+ {
+  "input": "™ ℠",
+  "output": "tm sm"
+ },
+ {
+  "input": "ﷺ",
+  "output": "صلى الله عليه وسلم"
+ },
+ {
+  "input": "ﬗ",
+  "output": "մխ"
+ },
+ {
+  "input": "ẛ",
+  "output": "s"
+ },
+ {
+  "input": "ῼ",
+  "output": "ω"
+ },
+ {
+  "input": "ͅ",
+  "output": ""
+ },
+ {
+  "input": "K K",
+  "output": "k k"
+ },
+ {
+  "input": "ſ",
+  "output": "s"
+ }
+]

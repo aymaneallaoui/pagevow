@@ -1,0 +1,193 @@
+{
+  "name": "usage_omitted_null_or_empty",
+  "url": "http://localhost:3000/contact.html",
+  "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+  "ops": [
+    {
+      "op": "step",
+      "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "page": {
+            "url": "http://localhost:3000/contact.html",
+            "title": "Contact",
+            "text": "Name\nEmail"
+          },
+          "elements": [
+            "[1] CLICK"
+          ]
+        },
+        "questions": {
+          "operation": {
+            "type": "choice",
+            "criteria": {
+              "1": "Click",
+              "2": "Done"
+            }
+          }
+        }
+      },
+      "result": {
+        "model": "jev-4b",
+        "answers": {
+          "operation": {
+            "choice": "CLICK",
+            "probabilities": {
+              "CLICK": 0.0625,
+              "DONE": 0.9375
+            },
+            "confidence": 0.9
+          }
+        }
+      },
+      "latency_ms": 100,
+      "awaiting_text": false,
+      "retries": null,
+      "cascade": null
+    },
+    {
+      "op": "step",
+      "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "page": {
+            "url": "http://localhost:3000/contact.html",
+            "title": "Contact",
+            "text": "Name\nEmail"
+          },
+          "elements": [
+            "[1] CLICK"
+          ]
+        },
+        "questions": {
+          "operation": {
+            "type": "choice",
+            "criteria": {
+              "1": "Click",
+              "2": "Done"
+            }
+          }
+        }
+      },
+      "result": {
+        "model": "jev-4b",
+        "answers": {
+          "operation": {
+            "choice": "CLICK",
+            "probabilities": {
+              "CLICK": 0.0625,
+              "DONE": 0.9375
+            },
+            "confidence": 0.9
+          }
+        },
+        "usage": null
+      },
+      "latency_ms": 110,
+      "awaiting_text": false,
+      "retries": null,
+      "cascade": null
+    },
+    {
+      "op": "step",
+      "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "page": {
+            "url": "http://localhost:3000/contact.html",
+            "title": "Contact",
+            "text": "Name\nEmail"
+          },
+          "elements": [
+            "[1] CLICK"
+          ]
+        },
+        "questions": {
+          "operation": {
+            "type": "choice",
+            "criteria": {
+              "1": "Click",
+              "2": "Done"
+            }
+          }
+        }
+      },
+      "result": {
+        "model": "jev-4b",
+        "answers": {
+          "operation": {
+            "choice": "CLICK",
+            "probabilities": {
+              "CLICK": 0.0625,
+              "DONE": 0.9375
+            },
+            "confidence": 0.9
+          }
+        },
+        "usage": {}
+      },
+      "latency_ms": 120,
+      "awaiting_text": false,
+      "retries": null,
+      "cascade": null
+    },
+    {
+      "op": "step",
+      "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "page": {
+            "url": "http://localhost:3000/contact.html",
+            "title": "Contact",
+            "text": "Name\nEmail"
+          },
+          "elements": [
+            "[1] DONE"
+          ]
+        },
+        "questions": {
+          "operation": {
+            "type": "choice",
+            "criteria": {
+              "1": "Click",
+              "2": "Done"
+            }
+          }
+        }
+      },
+      "result": {
+        "model": "jev-4b",
+        "answers": {
+          "operation": {
+            "choice": "DONE",
+            "probabilities": {
+              "CLICK": 0.0625,
+              "DONE": 0.9375
+            },
+            "confidence": 0.9
+          }
+        },
+        "usage": {
+          "input_tokens": 7,
+          "output_tokens": 12
+        }
+      },
+      "latency_ms": 130,
+      "awaiting_text": false,
+      "retries": null,
+      "cascade": null
+    },
+    {
+      "op": "finish",
+      "status": "DONE",
+      "elapsed_ms": 10,
+      "error": null,
+      "raw_response": null,
+      "reason": null
+    }
+  ]
+}

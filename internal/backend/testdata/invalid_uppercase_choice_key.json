@@ -1,0 +1,60 @@
+{
+  "name": "uppercase_choice_key",
+  "goal": "Open the pricing page",
+  "model_option": "",
+  "state": {
+    "url": "https://example.test/",
+    "title": "Home",
+    "text": "Welcome\nPricing",
+    "scroll": {
+      "y": 0,
+      "height": 1200
+    },
+    "actions": [
+      {
+        "id": "e1",
+        "kind": "click",
+        "label": "Pricing",
+        "node": 10,
+        "role": "link",
+        "value": ""
+      },
+      {
+        "id": "wait",
+        "kind": "wait",
+        "label": "Wait for the page to update"
+      }
+    ]
+  },
+  "history": [],
+  "response": {
+    "model": "jev-test",
+    "answers": {
+      "operation": {
+        "confidence": 0.7,
+        "probabilities": {
+          "CLICK": 0.1,
+          "WAIT": 0.1,
+          "DONE": 0.7,
+          "BLOCKED": 0.1
+        },
+        "CHOICE": "DONE"
+      },
+      "click_target": {
+        "choice": "1",
+        "confidence": 0.6,
+        "probabilities": {
+          "1": 1.0
+        }
+      }
+    },
+    "usage": {
+      "input_tokens": 120,
+      "output_tokens": 4
+    }
+  },
+  "expected": {
+    "error": "InvalidModelResponse",
+    "message": "Invalid TypeSafe response; no action executed."
+  }
+}

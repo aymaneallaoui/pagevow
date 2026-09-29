@@ -1,0 +1,134 @@
+[
+ {
+  "value": "",
+  "repr": "''"
+ },
+ {
+  "value": "abc",
+  "repr": "'abc'"
+ },
+ {
+  "value": "it's",
+  "repr": "\"it's\""
+ },
+ {
+  "value": "say \"hi\"",
+  "repr": "'say \"hi\"'"
+ },
+ {
+  "value": "it's \"x\"",
+  "repr": "'it\\'s \"x\"'"
+ },
+ {
+  "value": "tab\t",
+  "repr": "'tab\\t'"
+ },
+ {
+  "value": "nl\n",
+  "repr": "'nl\\n'"
+ },
+ {
+  "value": "cr\r",
+  "repr": "'cr\\r'"
+ },
+ {
+  "value": "\u0000",
+  "repr": "'\\x00'"
+ },
+ {
+  "value": "\u001f",
+  "repr": "'\\x1f'"
+ },
+ {
+  "value": "",
+  "repr": "'\\x7f'"
+ },
+ {
+  "value": "é",
+  "repr": "'é'"
+ },
+ {
+  "value": " ",
+  "repr": "'\\xa0'"
+ },
+ {
+  "value": "​",
+  "repr": "'\\u200b'"
+ },
+ {
+  "value": "日本",
+  "repr": "'日本'"
+ },
+ {
+  "value": "😀",
+  "repr": "'😀'"
+ },
+ {
+  "value": "󠀁",
+  "repr": "'\\U000e0001'"
+ },
+ {
+  "value": "back\\slash",
+  "repr": "'back\\\\slash'"
+ },
+ {
+  "value": "",
+  "repr": "'\\x85'"
+ },
+ {
+  "value": "﻿",
+  "repr": "'\\ufeff'"
+ },
+ {
+  "value": " ",
+  "repr": "'\\u2028'"
+ },
+ {
+  "value": "　",
+  "repr": "'\\u3000'"
+ },
+ {
+  "value": "�",
+  "repr": "'�'"
+ },
+ {
+  "value": "a'b\"c",
+  "repr": "'a\\'b\"c'"
+ },
+ {
+  "value": "'",
+  "repr": "\"'\""
+ },
+ {
+  "value": "\"",
+  "repr": "'\"'"
+ },
+ {
+  "value": "􏿿",
+  "repr": "'\\U0010ffff'"
+ },
+ {
+  "value": "͸",
+  "repr": "'\\u0378'"
+ },
+ {
+  "value": "퟿",
+  "repr": "'\\ud7ff'"
+ },
+ {
+  "value": "é",
+  "repr": "'é'"
+ },
+ {
+  "value": "­",
+  "repr": "'\\xad'"
+ },
+ {
+  "value": "ÿ",
+  "repr": "'ÿ'"
+ },
+ {
+  "value": "Ā",
+  "repr": "'Ā'"
+ }
+]

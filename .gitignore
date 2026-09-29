@@ -1,6 +1,8 @@
+/pagevow
+/pagevow.exe
 /bin/
 /dist/
-/.pagevow/
+.pagevow/
 *.test
 *.out
 coverage.txt

@@ -1,0 +1,87 @@
+[
+ {
+  "a": "https://a.com/post",
+  "b": "https://a.com/post",
+  "same": true
+ },
+ {
+  "a": "https://www.a.com/post/",
+  "b": "https://a.com/post",
+  "same": true
+ },
+ {
+  "a": "https://A.COM/post",
+  "b": "https://a.com/post",
+  "same": true
+ },
+ {
+  "a": "https://a.com:8080/post",
+  "b": "https://a.com/post",
+  "same": true
+ },
+ {
+  "a": "https://a.com/post?x=1",
+  "b": "https://a.com/post",
+  "same": false
+ },
+ {
+  "a": "https://a.com/post#f",
+  "b": "https://a.com/post",
+  "same": true
+ },
+ {
+  "a": "https://a.com/Post",
+  "b": "https://a.com/post",
+  "same": false
+ },
+ {
+  "a": "https://a.com/post//",
+  "b": "https://a.com/post",
+  "same": true
+ },
+ {
+  "a": "http://a.com/post",
+  "b": "https://a.com/post",
+  "same": true
+ },
+ {
+  "a": "https://wwwa.com/post",
+  "b": "https://a.com/post",
+  "same": false
+ },
+ {
+  "a": "https://a.com/p%C3%A4ge",
+  "b": "https://a.com/päge",
+  "same": false
+ },
+ {
+  "a": "https://a.com",
+  "b": "https://a.com/",
+  "same": true
+ },
+ {
+  "a": "https://www.www.a.com/",
+  "b": "https://www.a.com/",
+  "same": false
+ },
+ {
+  "a": "",
+  "b": "",
+  "same": true
+ },
+ {
+  "a": "https://a.com/x;p=1",
+  "b": "https://a.com/x",
+  "same": true
+ },
+ {
+  "a": "/x",
+  "b": "/x",
+  "same": true
+ },
+ {
+  "a": "https://user@a.com/x",
+  "b": "https://a.com/x",
+  "same": true
+ }
+]

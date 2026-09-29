@@ -1,0 +1,32 @@
+# pagevow tests. Each test is a goal for the decision model plus a check on the final page.
+# Run them with: pagevow run
+# Edit the urls and goals below to match your project; delete the examples you do not need.
+
+# The simplest test: open a page and check that it shows what you expect.
+- id: home-loads
+  url: http://localhost:3000/
+  goal: "Open the home page. Stop when the page has finished loading."
+  verify: page
+  verify_args:
+    url: /$
+    text: ["Welcome"]
+
+# A form test: fill fields but do not submit. "fields" maps a label to the expected value.
+- id: contact-form
+  url: http://localhost:3000/contact.html
+  goal: "On the contact page, enter name Ada Lovelace and email ada@example.com. Stop when both values are in the form. Do not send."
+  tags: [forms]
+  verify: page
+  verify_args:
+    url: /contact\.html
+    fields: {Name: Ada Lovelace, Email: ada@example.com}
+
+# A date test. {date+N} in a goal becomes today plus N days, so dates never go stale.
+- id: booking-date
+  url: http://localhost:3000/booking.html
+  goal: "Pick {date+7} as the arrival date. Stop when that date is selected. Do not book."
+  tags: [forms, dates]
+  verify: page
+  verify_args:
+    url: /booking\.html
+    values: ["{date+7}"]

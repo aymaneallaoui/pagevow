@@ -1,0 +1,145 @@
+package backend
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func httpResponse(status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Status:     http.StatusText(status),
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
+	}
+}
+
+func clientOf(rt roundTripFunc) *http.Client { return &http.Client{Transport: rt} }
+
+func noSleep(context.Context, time.Duration) error { return nil }
+
+func newTestClient(t *testing.T, opts Options) *Client {
+	t.Helper()
+	if opts.BaseURL == "" {
+		opts.BaseURL = "http://primary"
+	}
+	if opts.Sleep == nil {
+		opts.Sleep = noSleep
+	}
+	client, err := New(opts)
+	require.NoError(t, err)
+	return client
+}
+
+func loadFixture(t *testing.T, path string, into any) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(data, into))
+}
+
+func fixturePaths(t *testing.T, pattern string) []string {
+	t.Helper()
+	paths, err := filepath.Glob(filepath.Join("testdata", pattern))
+	require.NoError(t, err)
+	require.NotEmpty(t, paths)
+	return paths
+}
+
+func readBody(t *testing.T, r *http.Request) []byte {
+	t.Helper()
+	data, err := io.ReadAll(r.Body)
+	require.NoError(t, err)
+	return data
+}
+
+func jsonTokens(t *testing.T, data []byte) []any {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	var tokens []any
+	for {
+		token, err := decoder.Token()
+		if errors.Is(err, io.EOF) {
+			return tokens
+		}
+		require.NoError(t, err)
+		tokens = append(tokens, token)
+	}
+}
+
+func assertSameOrder(t *testing.T, want, got []byte) {
+	t.Helper()
+	assert.Equal(t, jsonTokens(t, want), jsonTokens(t, got), "the request differs from the Python request in content or key order")
+}
+
+// tokensMasked is jsonTokens with the value of every member called mask replaced by 0 at any depth, so its place in the
+// key order still counts.
+func tokensMasked(t *testing.T, data []byte, mask string) []any {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	var out []any
+	appendTokens(t, decoder, mask, &out)
+	return out
+}
+
+func appendTokens(t *testing.T, decoder *json.Decoder, mask string, out *[]any) {
+	t.Helper()
+	token, err := decoder.Token()
+	require.NoError(t, err)
+	*out = append(*out, token)
+	delim, isDelim := token.(json.Delim)
+	if !isDelim {
+		return
+	}
+	for decoder.More() {
+		if delim == '{' {
+			keyToken, err := decoder.Token()
+			require.NoError(t, err)
+			key, _ := keyToken.(string)
+			*out = append(*out, key)
+			if key == mask {
+				var skipped json.RawMessage
+				require.NoError(t, decoder.Decode(&skipped))
+				*out = append(*out, json.Number("0"))
+				continue
+			}
+		}
+		appendTokens(t, decoder, mask, out)
+	}
+	closing, err := decoder.Token()
+	require.NoError(t, err)
+	*out = append(*out, closing)
+}
+
+func toGeneric(t *testing.T, value any) any {
+	t.Helper()
+	data, err := json.Marshal(value)
+	require.NoError(t, err)
+	var out any
+	require.NoError(t, json.Unmarshal(data, &out))
+	return out
+}
+
+func toJSON(t *testing.T, value any) []byte {
+	t.Helper()
+	data, err := json.Marshal(value)
+	require.NoError(t, err)
+	return data
+}

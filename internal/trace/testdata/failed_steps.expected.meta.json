@@ -1,0 +1,9 @@
+{
+  "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+  "url": "http://localhost:3000/contact.html",
+  "status": "error",
+  "steps": 2,
+  "elapsed_ms": 4100,
+  "verified": false,
+  "error": "CDP call timed out"
+}

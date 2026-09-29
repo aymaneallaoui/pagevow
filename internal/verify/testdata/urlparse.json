@@ -1,0 +1,392 @@
+[
+ {
+  "url": "https://www.google.com/travel/flights/search?tfs=abc#f",
+  "scheme": "https",
+  "netloc": "www.google.com",
+  "hostname": "www.google.com",
+  "path": "/travel/flights/search",
+  "params": "",
+  "query": "tfs=abc",
+  "fragment": "f"
+ },
+ {
+  "url": "http://a.com",
+  "scheme": "http",
+  "netloc": "a.com",
+  "hostname": "a.com",
+  "path": "",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "http://a.com/",
+  "scheme": "http",
+  "netloc": "a.com",
+  "hostname": "a.com",
+  "path": "/",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "http://a.com?x=1#f",
+  "scheme": "http",
+  "netloc": "a.com",
+  "hostname": "a.com",
+  "path": "",
+  "params": "",
+  "query": "x=1",
+  "fragment": "f"
+ },
+ {
+  "url": "http://a.com#f?x",
+  "scheme": "http",
+  "netloc": "a.com",
+  "hostname": "a.com",
+  "path": "",
+  "params": "",
+  "query": "",
+  "fragment": "f?x"
+ },
+ {
+  "url": "https://user:pw@Host.Example.com:8080/p/a/t/h;p=1?q=1&r=2#frag",
+  "scheme": "https",
+  "netloc": "user:pw@Host.Example.com:8080",
+  "hostname": "host.example.com",
+  "path": "/p/a/t/h",
+  "params": "p=1",
+  "query": "q=1&r=2",
+  "fragment": "frag"
+ },
+ {
+  "url": "https://[::1]:8080/x",
+  "scheme": "https",
+  "netloc": "[::1]:8080",
+  "hostname": "::1",
+  "path": "/x",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "https://[fe80::1%25en0]/x",
+  "scheme": "https",
+  "netloc": "[fe80::1%25en0]",
+  "hostname": "fe80::1%25en0",
+  "path": "/x",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "//x.test/p",
+  "scheme": "",
+  "netloc": "x.test",
+  "hostname": "x.test",
+  "path": "/p",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "/relative/path?x=1",
+  "scheme": "",
+  "netloc": "",
+  "hostname": null,
+  "path": "/relative/path",
+  "params": "",
+  "query": "x=1",
+  "fragment": ""
+ },
+ {
+  "url": "relative",
+  "scheme": "",
+  "netloc": "",
+  "hostname": null,
+  "path": "relative",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "?q=1",
+  "scheme": "",
+  "netloc": "",
+  "hostname": null,
+  "path": "",
+  "params": "",
+  "query": "q=1",
+  "fragment": ""
+ },
+ {
+  "url": "#frag",
+  "scheme": "",
+  "netloc": "",
+  "hostname": null,
+  "path": "",
+  "params": "",
+  "query": "",
+  "fragment": "frag"
+ },
+ {
+  "url": "",
+  "scheme": "",
+  "netloc": "",
+  "hostname": null,
+  "path": "",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "  https://lead.space/x",
+  "scheme": "https",
+  "netloc": "lead.space",
+  "hostname": "lead.space",
+  "path": "/x",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "https://tab\t.test/\nx",
+  "scheme": "https",
+  "netloc": "tab.test",
+  "hostname": "tab.test",
+  "path": "/x",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "mailto:a@b.com",
+  "scheme": "mailto",
+  "netloc": "",
+  "hostname": null,
+  "path": "a@b.com",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "data:text/html,hi",
+  "scheme": "data",
+  "netloc": "",
+  "hostname": null,
+  "path": "text/html,hi",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "javascript:void(0)",
+  "scheme": "javascript",
+  "netloc": "",
+  "hostname": null,
+  "path": "void(0)",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "about:blank",
+  "scheme": "about",
+  "netloc": "",
+  "hostname": null,
+  "path": "blank",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "HTTP://UPPER.TEST/Path",
+  "scheme": "http",
+  "netloc": "UPPER.TEST",
+  "hostname": "upper.test",
+  "path": "/Path",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "http://a.com/a;b/c;d?x",
+  "scheme": "http",
+  "netloc": "a.com",
+  "hostname": "a.com",
+  "path": "/a;b/c",
+  "params": "d",
+  "query": "x",
+  "fragment": ""
+ },
+ {
+  "url": "http://a.com/a;b/c/d?x",
+  "scheme": "http",
+  "netloc": "a.com",
+  "hostname": "a.com",
+  "path": "/a;b/c/d",
+  "params": "",
+  "query": "x",
+  "fragment": ""
+ },
+ {
+  "url": "file:///etc/hosts",
+  "scheme": "file",
+  "netloc": "",
+  "hostname": null,
+  "path": "/etc/hosts",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "ftp://f.test/a;type=i",
+  "scheme": "ftp",
+  "netloc": "f.test",
+  "hostname": "f.test",
+  "path": "/a",
+  "params": "type=i",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "localhost:3000/x",
+  "scheme": "localhost",
+  "netloc": "",
+  "hostname": null,
+  "path": "3000/x",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "http://a.com:/x",
+  "scheme": "http",
+  "netloc": "a.com:",
+  "hostname": "a.com",
+  "path": "/x",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "http://:80/x",
+  "scheme": "http",
+  "netloc": ":80",
+  "hostname": null,
+  "path": "/x",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "http://@a.com/x",
+  "scheme": "http",
+  "netloc": "@a.com",
+  "hostname": "a.com",
+  "path": "/x",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "http://a.com/x?a=1?b=2#c#d",
+  "scheme": "http",
+  "netloc": "a.com",
+  "hostname": "a.com",
+  "path": "/x",
+  "params": "",
+  "query": "a=1?b=2",
+  "fragment": "c#d"
+ },
+ {
+  "url": "https://news.ycombinator.com/item?id=22",
+  "scheme": "https",
+  "netloc": "news.ycombinator.com",
+  "hostname": "news.ycombinator.com",
+  "path": "/item",
+  "params": "",
+  "query": "id=22",
+  "fragment": ""
+ },
+ {
+  "url": "https://example.com/p%C3%A4ge",
+  "scheme": "https",
+  "netloc": "example.com",
+  "hostname": "example.com",
+  "path": "/p%C3%A4ge",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "https://a.com//double//slash//",
+  "scheme": "https",
+  "netloc": "a.com",
+  "hostname": "a.com",
+  "path": "//double//slash//",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "1abc://x.test/",
+  "scheme": "",
+  "netloc": "",
+  "hostname": null,
+  "path": "1abc://x.test/",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "a+b-c.d://x.test/y",
+  "scheme": "a+b-c.d",
+  "netloc": "x.test",
+  "hostname": "x.test",
+  "path": "/y",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "a_b://x.test/y",
+  "scheme": "",
+  "netloc": "",
+  "hostname": null,
+  "path": "a_b://x.test/y",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "https://x.test:99999/",
+  "scheme": "https",
+  "netloc": "x.test:99999",
+  "hostname": "x.test",
+  "path": "/",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "http://a.com/;",
+  "scheme": "http",
+  "netloc": "a.com",
+  "hostname": "a.com",
+  "path": "/",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ },
+ {
+  "url": "http://a.com;x/y",
+  "scheme": "http",
+  "netloc": "a.com;x",
+  "hostname": "a.com;x",
+  "path": "/y",
+  "params": "",
+  "query": "",
+  "fragment": ""
+ }
+]

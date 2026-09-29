@@ -1,0 +1,1304 @@
+[
+ {
+  "pattern": "/order/\\d+$",
+  "url": "https://x.test/order/%D9%A3",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/order/\\d+$",
+  "url": "https://x.test/order/12",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/order/\\d$",
+  "url": "https://x.test/order/%D9%A3",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/order/\\d{2}$",
+  "url": "https://x.test/order/%D9%A1%D9%A2",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/\\d$",
+  "url": "https://x.test/o/%EF%BC%91",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/\\d$",
+  "url": "https://x.test/o/%DB%B1",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/\\d$",
+  "url": "https://x.test/o/%E2%91%A0",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/o/\\d$",
+  "url": "https://x.test/o/%C2%B2",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/o/\\d$",
+  "url": "https://x.test/o/%E2%85%A7",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/o/\\d$",
+  "url": "https://x.test/o/x",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/o/\\d$",
+  "url": "https://x.test/o/%E0%A5%A9",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "\\d{4}-\\d{2}",
+  "url": "https://x.test/d/2026-09",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "\\d{4}-\\d{2}",
+  "url": "https://x.test/d/%DB%B2%DB%B0%DB%B2%DB%B6-%DB%B0%DB%B9",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\D+$",
+  "url": "https://x.test/abc",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\D$",
+  "url": "https://x.test/%D9%A3",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\D$",
+  "url": "https://x.test/%E2%91%A0",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/id/\\D\\d",
+  "url": "https://x.test/id/a1",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/id/\\D\\d",
+  "url": "https://x.test/id/%C3%A91",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\D*$",
+  "url": "https://x.test/",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/caf\\w$",
+  "url": "https://x.test/caf%C3%A9",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/caf\\w$",
+  "url": "https://x.test/caf-",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/caf\\w$",
+  "url": "https://x.test/caf%0A",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w+$",
+  "url": "https://x.test/r%C3%A9sum%C3%A9",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w+$",
+  "url": "https://x.test/a-b",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w+$",
+  "url": "https://x.test/a_b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/\\w$",
+  "url": "https://x.test/%E2%91%A0",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w+$",
+  "url": "https://x.test/e%CC%81",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w{2}$",
+  "url": "https://x.test/%E6%97%A5%E6%9C%AC",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w+$",
+  "url": "https://x.test/%CE%B1%CE%B2%CE%B3",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w+$",
+  "url": "https://x.test/%D8%B3%D9%84%D8%A7%D9%85",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w$",
+  "url": "https://x.test/%F0%9F%98%80",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w$",
+  "url": "https://x.test/%E2%80%94",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w+$",
+  "url": "https://x.test/%E0%A4%A8%E0%A4%AE%E0%A4%B8%E0%A5%8D%E0%A4%A4%E0%A5%87",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w+$",
+  "url": "https://x.test/%C2%AA",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w$",
+  "url": "https://x.test/%C2%B5",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w$",
+  "url": "https://x.test/%CA%B0",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^\\w+://",
+  "url": "https://x.test/",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/a\\W$",
+  "url": "https://x.test/a%C3%A9",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/a\\W$",
+  "url": "https://x.test/a-",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/a\\W$",
+  "url": "https://x.test/a%C2%A0",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/a\\W",
+  "url": "https://x.test/a%E2%80%94",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/a\\W$",
+  "url": "https://x.test/a_",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/a\\W$",
+  "url": "https://x.test/a%F0%9F%98%80",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/\\W\\W$",
+  "url": "https://x.test/--",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%C2%A0b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%E3%80%80b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%E2%80%8Bb",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%0Bb",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%1Cb",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a+b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%C2%85b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%E1%A0%8Eb",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%E2%80%A8b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%EF%BB%BFb",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%E2%80%AFb",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/ab",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "a\\s+b",
+  "url": "https://x.test/a%20%C2%A0%20b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%1Fb",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\sb",
+  "url": "https://x.test/a%1Bb",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a\\Sb$",
+  "url": "https://x.test/a+b",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a\\Sb$",
+  "url": "https://x.test/a%C2%A0b",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a\\Sb$",
+  "url": "https://x.test/a-b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a\\Sb$",
+  "url": "https://x.test/a%E2%80%8Bb",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\S+$",
+  "url": "https://x.test/abc",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\d]$",
+  "url": "https://x.test/o/%D9%A3",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[^\\d]$",
+  "url": "https://x.test/o/%D9%A3",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/o/[^\\d]$",
+  "url": "https://x.test/o/x",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\w-]+$",
+  "url": "https://x.test/o/caf%C3%A9-x",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\W]$",
+  "url": "https://x.test/o/%C3%A9",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\W]$",
+  "url": "https://x.test/o/-",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\S]$",
+  "url": "https://x.test/o/%C2%A0",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\S]$",
+  "url": "https://x.test/o/x",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\D\\s]$",
+  "url": "https://x.test/o/%D9%A3",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\D\\s]$",
+  "url": "https://x.test/o/+",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[a\\W]$",
+  "url": "https://x.test/o/a",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[a\\W]$",
+  "url": "https://x.test/o/%C3%A9",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/o/[a\\W]$",
+  "url": "https://x.test/o/-",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\w\\s]+$",
+  "url": "https://x.test/o/a%C2%A0%C3%A9",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[^\\W]$",
+  "url": "https://x.test/o/%C3%A9",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[^\\W]$",
+  "url": "https://x.test/o/-",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/o/[^\\S]$",
+  "url": "https://x.test/o/%C2%A0",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[^\\s]$",
+  "url": "https://x.test/o/%C2%A0",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "a[\\b]b",
+  "url": "https://x.test/a%08b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a[\\b]b",
+  "url": "https://x.test/ab",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "[\\w.]+@",
+  "url": "https://x.test/x.y@z",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "[]a]+$",
+  "url": "https://x.test/a]",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "[^]a]+$",
+  "url": "https://x.test/a]",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "[^]a]$",
+  "url": "https://x.test/b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[$]",
+  "url": "https://x.test/o/$",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\]]",
+  "url": "https://x.test/o/]",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[\\\\]",
+  "url": "https://x.test/o/%5C",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "x[[:alpha:]]",
+  "url": "https://x.test/xb]",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "x[[:alpha:]]",
+  "url": "https://x.test/x:]",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[[]",
+  "url": "https://x.test/o/[",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/o/[a-c\\d]+$",
+  "url": "https://x.test/o/a%D9%A3c",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "done$",
+  "url": "https://x.test/done%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "done$",
+  "url": "https://x.test/done",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "done$",
+  "url": "https://x.test/done%0A%0A",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "done\\Z",
+  "url": "https://x.test/done%0A",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "done\\Z",
+  "url": "https://x.test/done",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "done$",
+  "url": "https://x.test/done%0Ax",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "(a|done$)",
+  "url": "https://x.test/done%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/(done|ok)$",
+  "url": "https://x.test/ok%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "done$|nope",
+  "url": "https://x.test/done%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a$b",
+  "url": "https://x.test/a%0Ab",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "done$$",
+  "url": "https://x.test/done%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "[$]",
+  "url": "https://x.test/a$b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\$",
+  "url": "https://x.test/a$",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\$$",
+  "url": "https://x.test/a$%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\\\$",
+  "url": "https://x.test/a%5C%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(?m)b$",
+  "url": "https://x.test/a%0Ab%0Ac",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(?m)^b$",
+  "url": "https://x.test/a%0Ab%0Ac",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "b$",
+  "url": "https://x.test/a%0Ab%0Ac",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "(?m:b$)",
+  "url": "https://x.test/a%0Ab%0Ac",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(?m)c$",
+  "url": "https://x.test/a%0Ab%0Ac",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(?i)DONE$",
+  "url": "https://x.test/done%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(?ms)b.$",
+  "url": "https://x.test/b%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(?-m:b$)",
+  "url": "https://x.test/a%0Ab%0Ac",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "(?im)^B$",
+  "url": "https://x.test/a%0Ab%0Ac",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(?s)a.b$",
+  "url": "https://x.test/a%0Ab%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(x(?m:b$)y)",
+  "url": "https://x.test/xb%0Ay",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "(?:done$)",
+  "url": "https://x.test/done%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^$",
+  "url": "https://x.test",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "$",
+  "url": "https://x.test/x",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "\\Ahttps",
+  "url": "https://x.test/",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "x\\Ahttps",
+  "url": "https://x.test/",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a$",
+  "url": "https://x.test/a",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a$",
+  "url": "https://x.test/a%0A",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(?s)a.b",
+  "url": "https://x.test/a%0Ab",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a.b",
+  "url": "https://x.test/a%0Ab",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "a.b",
+  "url": "https://x.test/a%20b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a[^x]b",
+  "url": "https://x.test/a%0Ab",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{,2}$",
+  "url": "https://x.test/aa",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{,2}$",
+  "url": "https://x.test/aaa",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{,2}$",
+  "url": "https://x.test/a{,2}",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{,}$",
+  "url": "https://x.test/aaaa",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{,}$",
+  "url": "https://x.test/a{,}",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\d{,3}$",
+  "url": "https://x.test/%D9%A1%D9%A2",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{,0}$",
+  "url": "https://x.test/",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{2,}$",
+  "url": "https://x.test/aaa",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{2}$",
+  "url": "https://x.test/aa",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{}$",
+  "url": "https://x.test/a{}",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{x}$",
+  "url": "https://x.test/a{x}",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{1,x}$",
+  "url": "https://x.test/a{1,x}",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/a{ 1}$",
+  "url": "https://x.test/a{ 1}",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/(ab){,2}c$",
+  "url": "https://x.test/ababc",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/(ab){,2}c$",
+  "url": "https://x.test/abababc",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/[ab]{,2}$",
+  "url": "https://x.test/ba",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/\\w{,3}$",
+  "url": "https://x.test/%C3%A9%C3%A9",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/ÉTÉ$",
+  "url": "https://x.test/%C3%A9t%C3%A9",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/été$",
+  "url": "https://x.test/%C3%89T%C3%89",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "k",
+  "url": "https://x.test/%E2%84%AA",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "s",
+  "url": "https://x.test/%C5%BF",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "ss",
+  "url": "https://x.test/%C3%9F",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "/\\w+\\.html$",
+  "url": "https://x.test/caf%C3%A9.html",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https://x\\.test/(a|b)+$",
+  "url": "https://x.test/abba",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(?:a|b)c",
+  "url": "https://x.test/bc",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "/(?P<n>ab)\\.",
+  "url": "https://x.test/ab.",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a.c",
+  "url": "https://x.test/abc",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\.c",
+  "url": "https://x.test/abc",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "a\\\\b",
+  "url": "https://x.test/a%5Cb",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "\\(x\\)",
+  "url": "https://x.test/(x)",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\x2fb",
+  "url": "https://x.test/a/b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\tb",
+  "url": "https://x.test/a%09b",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a\\nb",
+  "url": "https://x.test/a%0Ab",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "colou?r",
+  "url": "https://x.test/color",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a+?b",
+  "url": "https://x.test/aab",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a*$",
+  "url": "https://x.test/aaa",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "^https",
+  "url": "https://x.test/",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "$^",
+  "url": "https://x.test/",
+  "boundary": false,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "(",
+  "url": "https://x.test/",
+  "boundary": false,
+  "matches": null,
+  "error": "re.error: missing ), unterminated subpattern at position 0"
+ },
+ {
+  "pattern": "a{1",
+  "url": "https://x.test/a{1",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a**",
+  "url": "https://x.test/a",
+  "boundary": false,
+  "matches": null,
+  "error": "re.error: multiple repeat at position 2"
+ },
+ {
+  "pattern": "[z-a]",
+  "url": "https://x.test/a",
+  "boundary": false,
+  "matches": null,
+  "error": "re.error: bad character range z-a at position 1"
+ },
+ {
+  "pattern": "(?u)caf\\w$",
+  "url": "https://x.test/caf%C3%A9",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(?s:a.b)$",
+  "url": "https://x.test/a%0Ab",
+  "boundary": false,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "\\bsum",
+  "url": "https://x.test/r%C3%A9sum%C3%A9",
+  "boundary": true,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "\\bsum",
+  "url": "https://x.test/sum",
+  "boundary": true,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "cart\\b",
+  "url": "https://x.test/cart",
+  "boundary": true,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "cart\\b",
+  "url": "https://x.test/carte",
+  "boundary": true,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "\\Bx",
+  "url": "https://x.test/ax",
+  "boundary": true,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "(\\bfoo|bar\\b)",
+  "url": "https://x.test/foo",
+  "boundary": true,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "a[\\b]b\\b",
+  "url": "https://x.test/a%08b",
+  "boundary": true,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "\\b\\d+\\b",
+  "url": "https://x.test/12",
+  "boundary": true,
+  "matches": true,
+  "error": null
+ },
+ {
+  "pattern": "\\bcaf\\b",
+  "url": "https://x.test/caf%C3%A9",
+  "boundary": true,
+  "matches": false,
+  "error": null
+ },
+ {
+  "pattern": "(?i)\\bABC\\b",
+  "url": "https://x.test/abc",
+  "boundary": true,
+  "matches": true,
+  "error": null
+ }
+]

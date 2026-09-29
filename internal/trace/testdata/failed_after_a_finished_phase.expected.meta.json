@@ -1,0 +1,9 @@
+{
+  "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+  "url": "http://localhost:3000/contact.html",
+  "status": "max_steps",
+  "steps": 1,
+  "elapsed_ms": 900,
+  "verified": null,
+  "error": "Stopped at the 60-action demo budget"
+}

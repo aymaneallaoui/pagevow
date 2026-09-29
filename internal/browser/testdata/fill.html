@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Fill page</title>
+<input id="q" aria-label="Search" value="old text">
+<div id="mirror"></div>
+<script>
+  const q = document.getElementById('q');
+  q.addEventListener('input', () => {
+    document.getElementById('mirror').textContent = 'typed:' + q.value;
+  });
+</script>

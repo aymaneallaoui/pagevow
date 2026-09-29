@@ -235,7 +235,8 @@ verifier to make a test pass; report remaining failures plainly.
 - `pagevow install --browser` downloads a pinned Chrome for Testing build for the current OS and architecture into the
   data directory, verifies its checksum, and records the version.
 - `start` launches it headless with its own profile directory and a fixed debugging port bound to 127.0.0.1.
-- Each test gets a new target (tab) and closes it at the end.
+- Each test gets a new target in its own window and closes it at the end. A tab inside an existing window gets no
+  compositor frames while hidden, so screenshots and wheel scrolling stall for up to 5 seconds, in headless mode too.
 - Headless is the default because a hidden window under Wayland receives no frames and screenshots hang. With
   `browser.headless: false` on Linux, pagevow adds `--ozone-platform=x11`.
 - Screenshot capture uses a 5 second timeout. After the first failure in a test no further step capture is tried;
@@ -283,10 +284,58 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Listing stored keys | `keys set` and `keys unset` maintain an index of names (names only) in the config directory; `keys list` shows indexed names and referenced names with their state |
 | Starter tests file | three real example tests with comments |
 | `--config FILE` global flag | accepted |
+| Cascade `target_conf` | 0 means the default 0.5; a negative value disables escalation on target confidence |
+| Error causes | transport errors stay wrapped for `errors.Is`; message text never contains a key |
+| History type | the agent owns its history type and converts it for the text helper |
+| `run_id` | local time, as in the Python traces; run directories are UTC |
+| Unicode text matching | `golang.org/x/text` (NFKD, case folding), verified against Python 3.13 on 18,945 code points |
+| Regular expressions | Go RE2: no lookaround, no backreferences; an invalid pattern fails when the tests file loads |
+| Tests file strictness | `verify_args` without `verify` is an error; unknown top-level keys produce a warning, not an error |
+| Text helper reasoning switch | `text_helper.reasoning: none` in the config, wired in phase 2 |
+| Screenshot timeouts | cause found: hidden tabs receive no compositor frames. Fixed by one window per session; the 5 second timeout and the step fallback stay as a safety net |
+| Browser errors | `ErrTargetRefused` and `ErrStalePage` are separate values; the agent tests for each |
+| Navigation failure | opening the start URL fails the test with `ErrNavigation` instead of observing the browser error page |
+| Browser port | `Launch` reads the port from `DevToolsActivePort` in its own profile, so it never attaches to another browser |
+| Runner and browser lifetime | `run` starts its own headless browser and stops it at the end, unless a browser managed by `pagevow start` is running |
+| Request key order | the model prompt is built from the request in JSON order, so every object of the `/v1/systemone` body and of the text helper request keeps the key order of the Python reference; parity tests compare token streams, never sorted maps |
+| Trace redaction | secrets are replaced by `***` in trace files only, never in the request sent to a model; values shorter than 12 characters (the placeholder key `local`) are never redacted |
+| Agent timeout | the runner always gives the agent a deadline; a page that stays stale spends no budget and would loop otherwise |
+
+### Decisions from the review of pull request 1
+
+| Topic | Decision |
+|---|---|
+| Secrets | one rule in `internal/secret`: a value is a secret only when it has 12 or more characters; placeholders such as `local` never are. Secrets are removed from the full text before it is cut, in plain, JSON-escaped, HTML-escaped and ASCII-escaped form, longest first. Requests sent to a model are never redacted |
+| Reply fields | replies are read by exact key; a duplicate key takes its last value, as in Python |
+| Non-JSON reply with status 200 | the decision model client treats it as transient, so the agent asks once more. Python does not retry. Deliberate difference |
+| Missing `usage` | the trace records `null`, as Python does |
+| Error texts | errors written into traces use the Python sentences; the transport cause stays reachable through `Unwrap` and the CLI prints it |
+| URL patterns | translated from Python `re` semantics when the tests file loads: `\d`, `\w` and `\s` cover Unicode as Python's do, `$` also matches before a final newline, `\Z` is the end of the text. `\b` and `\B` are rejected with a message because RE2 cannot evaluate them on Unicode text. Not reproduced: Python's equivalence of dotless and dotted i under case-insensitive matching, and a pattern that consumes the final newline after `$` |
+| Empty verifier | a verifier that would run no checks is an error when the tests file loads and names the test id. Stricter than the Python runner |
+| YAML tags | explicit core tags (`!!str`, `!!int`, `!!float`, `!!bool`, `!!null`) in `verify_args` are honoured as PyYAML's safe loader honours them; other tags are an error |
+| Run directories | names are planned before the run, one per attempt, compared without case and without trailing dots or spaces; clashes get a `-N` suffix; names are limited to 120 bytes with a hash suffix; Windows device names get a `_` prefix; a directory that cannot be created fails only that test |
+| Timeout | `--timeout` bounds opening the page as well as the run |
+| Headless | `run` uses `browser.headless` from the config; `--headed` overrides it |
+| Paid services | decided by destination, not by backend name: a service is paid when its URL is not a literal loopback address or the host `localhost` and its key reference resolves to a value other than the placeholder |
+| Loopback | only literal loopback addresses and the exact host `localhost`; `*.localhost` names do not count |
+| Cascade `target_conf` | values above 1 are rejected; negative values disable escalation |
+| Dialogs | `alert`, `confirm`, `prompt` and `beforeunload` are accepted automatically and recorded; a dialog never counts as a second execution of an action |
+| Crashed or destroyed page | every call fails at once with `ErrTargetCrashed` and the run ends with status `error` |
+| Call timeout | every browser call has its own timeout (10 s). A timeout after input was dispatched is `ErrOutcomeUnknown`: the action is written to the history as possibly executed and the run ends; the agent never chooses again after it |
+| Downloads | denied by default; nothing is written to the user's download directory |
+| Tabs opened by the page | recorded and closed with the session; the agent stays on its own tab |
+| Iframes | content inside iframes is not observed (same as the Python reference). Visible frames are listed in `State.Frames`, outside the fingerprint and never sent to a model, and the runner warns about them |
+| Warnings | dialogs, denied downloads, new tabs and unseen iframes appear as `warnings` in `result.json` and in the report; they never change a verdict or an exit code |
+| Orphaned browser | on Linux the browser gets a parent-death signal, so it exits when pagevow is killed |
+| Release archives | ship `LICENSE`, `NOTICE` and `README.md`; build date taken from the commit for reproducible builds |
+| Result fields | `result.json` gains `warnings` (list of strings, empty when none) and `error_cause` (present only when the underlying error is not part of `error`); `report.json` totals gain `tests_with_warnings` |
+| History | an action that ends in `ErrOutcomeUnknown` or `ErrSelectInterrupted` stays in the history with `outcome_unknown: true` |
+| Blocked reason | after three refusals: `Target refused 3 times: <label>: ` followed by the browser's own text with no prefix |
 
 ## 17. Open questions
 
 1. TypeSafe terms on training models from API output decide whether the local checkpoints may be distributed.
    Until checked, pagevow ships no model and `install --model` takes a path or a private Hugging Face repository.
 2. Windows local model serving is not planned; Windows uses `jev` or `custom`.
-3. Root cause of `Page.captureScreenshot` timing out on idle pages is unknown; the fallback covers it.
+3. The cascade configuration has no key fields, so a remote cascade endpoint cannot be recognised as a paid service. Add key references for primary and verifier in phase 3.
+4. Windows and macOS code paths compile but have not run on those systems.

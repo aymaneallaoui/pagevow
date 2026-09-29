@@ -1,0 +1,72 @@
+{
+  "name": "abandoned",
+  "url": "http://localhost:3000/contact.html",
+  "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+  "ops": [
+    {
+      "op": "start_step",
+      "t_ms": 0,
+      "url": "http://localhost:3000/contact.html"
+    },
+    {
+      "op": "phase",
+      "name": "model",
+      "seconds": 0.5,
+      "fail": null
+    },
+    {
+      "op": "step",
+      "goal": "On the contact page, enter Zoë Müller <zoe@example.com> & stop. 日本語",
+      "request": {
+        "model": "jev-latest",
+        "state": {
+          "page": {
+            "url": "http://localhost:3000/contact.html",
+            "title": "Contact",
+            "text": "Name\nEmail"
+          },
+          "elements": [
+            "[1] TYPE_TEXT"
+          ]
+        },
+        "questions": {
+          "operation": {
+            "type": "choice",
+            "criteria": {
+              "1": "Click",
+              "2": "Done"
+            }
+          }
+        }
+      },
+      "result": {
+        "model": "jev-4b",
+        "answers": {
+          "operation": {
+            "choice": "TYPE_TEXT",
+            "probabilities": {
+              "CLICK": 0.0625,
+              "DONE": 0.9375
+            },
+            "confidence": 0.9
+          }
+        },
+        "usage": {
+          "input_tokens": 100,
+          "output_tokens": 12
+        }
+      },
+      "latency_ms": 400,
+      "awaiting_text": true,
+      "retries": null,
+      "cascade": null
+    },
+    {
+      "op": "gate",
+      "note": {
+        "from": "TYPE_TEXT"
+      },
+      "operation": "TYPE_TEXT"
+    }
+  ]
+}

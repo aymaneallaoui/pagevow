@@ -64,10 +64,10 @@ behaviour is the Python source in `~/jev-ultrafast` at branch `browser-tests`:
 ```
 pagevow install [--browser] [--model NAME]   download the browser, and optionally a local model
 pagevow use local|jev|custom|cascade [...]   choose the decision backend
-pagevow start                                start what the active backend needs, and the browser
-pagevow stop                                 stop everything pagevow started
-pagevow status [--json]                      backend, ports, health, versions, GPU memory when known
-pagevow doctor                               check the setup and say how to fix each problem
+pagevow start [--no-browser] [--json]        start what the active backend needs, and the browser
+pagevow stop [--json]                        stop everything pagevow started
+pagevow status [--json]                      backend, processes, health, versions, GPU memory when known
+pagevow doctor [--json]                      check the setup and say how to fix each problem
 pagevow init [DIR]                           write a starter pagevow.yaml
 pagevow run [--tests FILE] [--ids a,b] [--out DIR] [--screenshots final|failed|all]
             [--retries N] [--timeout SECONDS] [--full-page] [--json]
@@ -80,6 +80,11 @@ pagevow version
 
 Exit codes of `run`: 0 all passed; 1 at least one test failed or is unverified; 2 infrastructure problem (backend or
 browser not reachable, invalid tests file). `hook stop` follows section 10.
+
+Exit codes of `start` and `stop`: 0 everything requested runs or is stopped; 2 otherwise. `status` exits 0 also when
+something is down. `doctor` exits 1 when a check fails; warnings do not change its exit code.
+
+`pagevow supervise --spec FILE` is a hidden command that `start` runs in the background; see section 9.
 
 ## 5. Packages
 
@@ -123,8 +128,24 @@ backends:
   local:   {url: "http://127.0.0.1:8009", model: jev-4b, mode: nf4}
   jev:     {url: "https://api.typesafe.ai", key: keychain:typesafe}
   custom:  {url: "", key: ""}
-  cascade: {primary: "http://127.0.0.1:8009", verifier: "http://127.0.0.1:8010", target_conf: 0.5, veto_cache: true}
-text_helper: {url: "", model: "", key: keychain:text-helper, timeout_seconds: 20}
+  cascade:
+    primary: "http://127.0.0.1:8009"
+    verifier: "http://127.0.0.1:8010"
+    primary_key: ""              # key reference; empty for a local server
+    verifier_key: ""
+    primary_model: jev-08b-d1a
+    primary_mode: default
+    verifier_model: jev-4b
+    verifier_mode: nf4
+    target_conf: 0.5
+    veto_cache: true
+server: {kev_dir: "~/kev", start_timeout_seconds: 600, gpu_watch: true, gpu_max_temp_c: 87, gpu_min_free_mib: 1500}
+text_helper:
+  url: ""
+  model: ""
+  key: keychain:text-helper
+  timeout_seconds: 20
+  local: {enabled: false, repo: "unsloth/Qwen3-1.7B-GGUF", file: "Qwen3-1.7B-Q4_K_M.gguf", alias: "qwen3-1.7b", gpu_layers: 99, start_timeout_seconds: 900}
 browser: {port: 9333, headless: true, viewport: {width: 1480, height: 780}, channel: chrome-for-testing}
 run: {retries: 1, timeout_seconds: 120, screenshots: failed, max_steps: 60}
 guards: {loop_guard: false, done_min_conf: 0, blocked_min_conf: 0}
@@ -186,16 +207,45 @@ All backends speak `POST <url>/v1/systemone` with a bearer key.
 |---|---|---|
 | `jev` | nothing | key in keychain |
 | `custom` | nothing | reachable URL |
-| `local` | starts the model server as a background process, waits for `/v1/models` | Linux + NVIDIA in phase 2, macOS in phase 3 |
-| `cascade` | starts primary and verifier, largest first | as `local` |
+| `local` | starts the model server as a background process, waits for `/v1/models` | Linux + NVIDIA in phase 3, macOS in phase 6 |
+| `cascade` | starts each leg whose URL is loopback, largest first, one after the other | as `local` |
 
 Local model serving stays in Python (`kev.serve`). `internal/server` manages it as a child process: it never links to
 Python. Process records live in the state directory (`os.UserCacheDir()/pagevow/run/*.json`: pid, port, command, start
 time); `stop` only ever stops processes recorded there and verifies the command line before sending a signal.
 
+Supervisor: a model server and a local text helper run as the child of `pagevow supervise`, which `start` launches
+in its own session. The supervisor starts the program in the program's own process group, with a parent-death signal
+on Linux, writes the record, watches the GPU, and removes the record when the program ends. The browser has no
+supervisor; `start` launches it detached with the profile `<cache>/pagevow/profiles/managed`.
+
+Records: one file per process (`model-<port>`, `text-helper-<port>`, `browser-<port>`), written atomically with mode
+0600. A record is alive when the pid exists, its start time equals the recorded one, and its command line fits the
+kind. Any other record is stale and is removed by `start`, `stop`, `status` and `doctor`.
+
+Stop sequence: SIGTERM to the supervisor, which sends SIGTERM to the program's process group, waits 10 seconds, sends
+SIGKILL to the group, removes the record and exits. When the supervisor still runs after 15 seconds, `stop` kills
+the group and the supervisor itself. A group is signalled only when it can be tied to the record. Order: browser,
+text helper, models.
+
+Modes: `nf4` and `int8` load the model quantised; `nf4`, `int8` and `bf16` turn CUDA graphs off, set the batch size
+to 1 and use expandable allocator segments. pagevow sets these variables itself; values in the environment of
+`pagevow start` do not change them, so the GPU check and the launched process agree. `default` passes nothing and
+keeps CUDA graphs on; it is refused unless the base model named in the run directory is 1B or smaller, read as a
+number from the model name. `model` is a directory under `<kev_dir>/runs/` or an
+absolute path. pagevow never sets `KEV_API_KEY`: a local server is open and bound to 127.0.0.1.
+
+Logs: `<os.UserCacheDir()>/pagevow/logs/<name>.log`, appended, mode 0600.
+
 GPU safety: before starting a local model, `start` reads free GPU memory (`nvidia-smi`, when present) and refuses when
 the model's known peak plus a 1.5 GiB margin does not fit, with the numbers in the message. Known peaks: `nf4` 5.6 GiB,
-`int8` 7.2 GiB, `bf16` 10.6 GiB, `08b` 6.4 GiB.
+`int8` 7.2 GiB, `bf16` 10.6 GiB, `default` (0.8B models) 6.4 GiB. The peaks of every model that `start` is about to
+launch are summed and the margin is added once; when the sum does not fit, nothing is launched.
+
+GPU guard: while a model runs, its supervisor samples the GPU once per second and stops the model when the
+temperature reaches `server.gpu_max_temp_c` or free memory falls to `server.gpu_min_free_mib`. It exits with code 99
+and leaves the reason in the log and in `<state dir>/<name>.tripped`, which `status` and `doctor` show. Five failed
+samples in a row end the watch and leave the model running.
 
 ## 10. Stop hook
 
@@ -249,7 +299,7 @@ verifier to make a test pass; report remaining failures plainly.
 | 0 | Scaffold: module, commands as stubs, container, config, ui, version, Makefile, lint, CI, NOTICE | `make check` passes; every command prints help |
 | 1 | `backend`, `texthelper`, `verify`, `trace`, `keys` with unit tests | request bodies and verifier results match the Python reference on recorded fixtures |
 | 2 | `browser`, `agent`, `runner` | demo suite (`~/browser-test-demo`, 10 tests) gives the same verdicts as the Python runner with backend `custom` |
-| 3 | `server` (Linux + NVIDIA), `start`, `stop`, `status`, `doctor` | `pagevow use local && pagevow start && pagevow run` works from a clean state |
+| 3 | `server` (Linux + NVIDIA), `start`, `stop`, `status`, `doctor`, GPU guard | `pagevow use local && pagevow start && pagevow run` works from a clean state |
 | 4 | `hook`, `plugin` | a real Claude Code session is blocked by a failing test and released after the fix |
 | 5 | `install --browser` on three systems, `update`, goreleaser, CI matrix | release archives for Linux, macOS, Windows |
 | 6 | macOS local model through MLX | same suite passes on Apple Silicon |
@@ -332,10 +382,27 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | History | an action that ends in `ErrOutcomeUnknown` or `ErrSelectInterrupted` stays in the history with `outcome_unknown: true` |
 | Blocked reason | after three refusals: `Target refused 3 times: <label>: ` followed by the browser's own text with no prefix |
 
+### Decisions of phase 3
+
+| Topic | Decision |
+|---|---|
+| Watchdog | the GPU guard is part of pagevow (the supervisor); no outside watchdog script is needed |
+| Mode `default` | allowed for 0.8B models only; with a larger model CUDA graphs need more GPU memory than is safe |
+| Preflight | every refusal happens before anything is launched: port in use, GPU memory, missing run directory, mode not allowed, missing program |
+| Port in use without a record | `start` refuses and says that pagevow did not start that process |
+| Failed start | what the call started for that process is stopped; the last 20 log lines and the log path are printed |
+| `run` and the managed browser | `run` attaches to the browser of `pagevow start` when its record is alive and its endpoint answers, and leaves it running |
+| Cascade keys | `primary_key` and `verifier_key` are key references; a remote leg counts for the paid notice and is never started |
+| Local text helper | `llama-server` under the supervisor, off by default, not part of the GPU memory sum |
+| `doctor` before the first `start` | a loopback destination that does not answer is a warning with the fix `pagevow start`; a remote one is a failure |
+| Other systems | macOS and Windows refuse a local model with a message that names `jev` and `custom`; the browser still starts |
+| Spec files | a spec with an environment entry whose name ends in `_KEY`, `_TOKEN` or `_SECRET` is rejected |
+| Agent skills | `.claude/skills/` and `CLAUDE.md` guide coding agents and reviews; they are not part of the binary or of release archives |
+
 ## 17. Open questions
 
 1. TypeSafe terms on training models from API output decide whether the local checkpoints may be distributed.
    Until checked, pagevow ships no model and `install --model` takes a path or a private Hugging Face repository.
 2. Windows local model serving is not planned; Windows uses `jev` or `custom`.
-3. The cascade configuration has no key fields, so a remote cascade endpoint cannot be recognised as a paid service. Add key references for primary and verifier in phase 3.
+3. Cascade on local models has not run through `pagevow start` on a real GPU; only backend `local` with `nf4` has.
 4. Windows and macOS code paths compile but have not run on those systems.

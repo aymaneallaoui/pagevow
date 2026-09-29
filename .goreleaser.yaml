@@ -4,7 +4,7 @@ project_name: pagevow
 
 before:
   hooks:
-    - go mod tidy
+    - go mod verify
 
 builds:
   - id: pagevow
@@ -25,7 +25,7 @@ builds:
       - -s -w
       - -X github.com/aymaneallaoui/pagevow/internal/version.version={{ .Version }}
       - -X github.com/aymaneallaoui/pagevow/internal/version.commit={{ .Commit }}
-      - -X github.com/aymaneallaoui/pagevow/internal/version.date={{ .Date }}
+      - -X github.com/aymaneallaoui/pagevow/internal/version.date={{ .CommitDate }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
@@ -38,6 +38,7 @@ archives:
           - zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
+      - LICENSE
       - NOTICE
       - README.md
 

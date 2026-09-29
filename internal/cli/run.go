@@ -32,7 +32,7 @@ func (a *app) newRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run the browser tests",
-		Long: "Run the tests of a tests file: a decision model drives a private headless browser step by step,\n" +
+		Long: "Run the tests of a tests file: a decision model drives a private browser step by step (headless unless browser.headless is false or --headed is given),\n" +
 			"the verifier of each test checks the final page, and every test leaves screenshots in\n" +
 			"<out>/<timestamp>/.\n\nExit codes: 0 every test passed, 1 a test failed or has no verifier, 2 the run could not start.",
 		Args: cobra.NoArgs,
@@ -45,6 +45,7 @@ func (a *app) newRunCmd() *cobra.Command {
 	flags.String("screenshots", "", "screenshot policy: final, failed or all (default: run.screenshots)")
 	flags.Int("retries", 0, "fresh reruns of a failed test (default: run.retries)")
 	flags.Int("timeout", 0, "seconds per test attempt (default: run.timeout_seconds)")
+	flags.Bool("headed", false, "show the browser window (default: browser.headless)")
 	flags.Bool("full-page", false, "capture final.png beyond the viewport")
 	flags.Bool("json", false, "print the report as JSON on stdout")
 	return cmd
@@ -80,7 +81,11 @@ func (a *app) runTests(cmd *cobra.Command) error {
 	for _, warning := range plan.warnings {
 		notes.Status(ui.Warn, "%s", warning)
 	}
-	if services := paidServices(plan.cfg); len(services) > 0 {
+	resolver, err := a.resolver()
+	if err != nil {
+		return err
+	}
+	if services := paidServices(plan.cfg, resolver); len(services) > 0 {
 		notes.Status(ui.Warn, "this run uses a paid service: %s; it may bill per request", strings.Join(services, " and "))
 	}
 	if err := notes.Err(); err != nil {
@@ -88,10 +93,6 @@ func (a *app) runTests(cmd *cobra.Command) error {
 	}
 
 	launcher, err := service[BrowserLauncher](a)
-	if err != nil {
-		return err
-	}
-	resolver, err := a.resolver()
 	if err != nil {
 		return err
 	}
@@ -116,7 +117,7 @@ func (a *app) runTests(cmd *cobra.Command) error {
 	}
 	defer stopWatching()
 
-	handle, err := launcher.Launch(ctx, BrowserSpec{ExecPath: execPath, Viewport: plan.cfg.Browser.Viewport})
+	handle, err := launcher.Launch(ctx, BrowserSpec{ExecPath: execPath, Viewport: plan.cfg.Browser.Viewport, Headless: plan.cfg.Browser.Headless})
 	if err != nil {
 		return infrastructure(fmt.Errorf("start browser: %w", err))
 	}
@@ -204,6 +205,9 @@ func (a *app) renderReport(cmd *cobra.Command, report runner.Report, asJSON bool
 		if missing := test.MissingLine(); missing != "" {
 			out.Line("%s", missing)
 		}
+		for _, warning := range test.WarningLines() {
+			out.Line("%s", warning)
+		}
 	}
 	out.Blank()
 	out.Line("%s", report.TotalsText())
@@ -240,6 +244,13 @@ func (a *app) planRun(cmd *cobra.Command) (runPlan, error) {
 	}
 	if plan.fullPage, err = flags.GetBool("full-page"); err != nil {
 		return runPlan{}, fmt.Errorf("read --full-page: %w", err)
+	}
+	headed, err := flags.GetBool("headed")
+	if err != nil {
+		return runPlan{}, fmt.Errorf("read --headed: %w", err)
+	}
+	if headed {
+		plan.cfg.Browser.Headless = false
 	}
 	if plan.testsPath, err = testsPathOf(cmd); err != nil {
 		return runPlan{}, err

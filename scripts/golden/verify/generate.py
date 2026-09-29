@@ -190,6 +190,15 @@ def page_cases():
         ("echo url list", state("https://httpbin.org/post", "ok"), {"url": [r"httpbin", r"/get$"], "values": "ok"}),
     ):
         add(name, "echo", final, args)
+    subscribe = state("https://x.test/", "", [
+        act("Subscribe", "fill", role="textbox", node=1, value="yes"), box("Newsletter", 2, "true"), act("Count", "fill", role="textbox", node=3, value="12"),
+    ])
+    add("page explicit str tag keeps yes a string", "page", subscribe, "fields: {Subscribe: !!str yes}\n")
+    add("page plain yes is a boolean and fails on a text field", "page", subscribe, "fields: {Subscribe: yes}\n")
+    add("page explicit bool tag", "page", subscribe, "fields: {Newsletter: !!bool yes}\n")
+    add("page explicit int tag in values", "page", subscribe, "values: [!!int '12', !!str 12]\n")
+    add("page explicit str tag on a number", "page", subscribe, "fields: {Count: !!str 12}\n")
+    add("page explicit float tag", "page", subscribe, "fields: {Count: !!float 12}\n")
 
 
 def hn_front():
@@ -527,14 +536,124 @@ def repr_fixtures():
     snippets = ["hello", '"quoted"', "'single'", "42", "-7", "+5", "0", "007", "0o17", "0x1F", "0b101", "1_000", "12:30", "1:02:03", "1.50", "1.0", ".5", "1e3", "1.5e+3",
                 "1.5e3", ".inf", "-.inf", ".nan", "yes", "No", "TRUE", "off", "on", "y", "n", "~", "null", "Null", "", "'null'", '"1"', "08", "09.5", "1,000", '"0x1F"', "12345678901234567890",
                 "1__0", "-0", "0.", "+.5", "-1.5e-7", "1:30:00.5", "True", "tRUE", "yes please", "0_", "0b", "1e+400", "0.1", "3.14159", "100.0", "1e-3", "1.e+5", "10:00"]
+    snippets += ["!!str yes", "!!str 42", "!!str null", "!!str ~", '!!str "x y"', "!!str", "!!int 12", '!!int "12"', "!!int 0x1F", "!!int 1_000", "!!int 1:30",
+                 "!!int abc", "!!int 1.5", "!!float 1", "!!float 1e3", "!!float .inf", "!!float 1:30.5", "!!float abc", "!!bool yes", "!!bool Off", "!!bool TRUE",
+                 "!!bool maybe", "!!null x", "!!null", '!!null ""', "!!binary aGk=", "!!timestamp 2026-09-28", "!custom value", "!!seq [a]", "!!map {a: b}",
+                 "!<tag:yaml.org,2002:str> yes"]
     rows = []
     for snippet in snippets:
-        value = yaml.safe_load("v: " + snippet)["v"]
+        try:
+            value = yaml.safe_load("v: " + snippet)["v"]
+        except Exception as error:
+            rows.append({"yaml": snippet, "kind": "error", "str": "", "repr": "", "error": type(error).__name__})
+            continue
         kind = {str: "string", bool: "bool", int: "int", float: "float", type(None): "null"}.get(type(value))
         if kind is None:
+            rows.append({"yaml": snippet, "kind": "other", "str": "", "repr": "", "error": type(value).__name__})
             continue
-        rows.append({"yaml": snippet, "kind": kind, "str": str(value), "repr": repr(value)})
+        rows.append({"yaml": snippet, "kind": kind, "str": str(value), "repr": repr(value), "error": ""})
     write("scalars.json", rows)
+
+
+def regex_fixtures():
+    def at(path):
+        return "https://x.test" + path
+
+    base = r"^https://x\.test"
+    pairs = [
+        # \d
+        (r"/order/\d+$", at("/order/%D9%A3")), (r"/order/\d+$", at("/order/12")), (r"/order/\d$", at("/order/%D9%A3")),
+        (r"/order/\d{2}$", at("/order/%D9%A1%D9%A2")), (r"/o/\d$", at("/o/%EF%BC%91")), (r"/o/\d$", at("/o/%DB%B1")),
+        (r"/o/\d$", at("/o/%E2%91%A0")), (r"/o/\d$", at("/o/%C2%B2")), (r"/o/\d$", at("/o/%E2%85%A7")), (r"/o/\d$", at("/o/x")),
+        (r"/o/\d$", at("/o/%E0%A5%A9")), (r"\d{4}-\d{2}", at("/d/2026-09")), (r"\d{4}-\d{2}", at("/d/%DB%B2%DB%B0%DB%B2%DB%B6-%DB%B0%DB%B9")),
+        # \D
+        (r"^https://x\.test/\D+$", at("/abc")), (r"^https://x\.test/\D$", at("/%D9%A3")), (r"^https://x\.test/\D$", at("/%E2%91%A0")),
+        (r"/id/\D\d", at("/id/a1")), (r"/id/\D\d", at("/id/%C3%A91")), (r"^https://x\.test/\D*$", at("/")),
+        # \w
+        (r"/caf\w$", at("/caf%C3%A9")), (r"/caf\w$", at("/caf-")), (r"/caf\w$", at("/caf%0A")), (base + r"/\w+$", at("/r%C3%A9sum%C3%A9")),
+        (base + r"/\w+$", at("/a-b")), (base + r"/\w+$", at("/a_b")), (r"/\w$", at("/%E2%91%A0")), (base + r"/\w+$", at("/e%CC%81")),
+        (base + r"/\w{2}$", at("/%E6%97%A5%E6%9C%AC")), (base + r"/\w+$", at("/%CE%B1%CE%B2%CE%B3")), (base + r"/\w+$", at("/%D8%B3%D9%84%D8%A7%D9%85")),
+        (base + r"/\w$", at("/%F0%9F%98%80")), (base + r"/\w$", at("/%E2%80%94")), (base + r"/\w+$", at("/%E0%A4%A8%E0%A4%AE%E0%A4%B8%E0%A5%8D%E0%A4%A4%E0%A5%87")),
+        (base + r"/\w+$", at("/%C2%AA")), (base + r"/\w$", at("/%C2%B5")), (base + r"/\w$", at("/%CA%B0")), (r"^\w+://", at("/")),
+        # \W
+        (r"/a\W$", at("/a%C3%A9")), (r"/a\W$", at("/a-")), (r"/a\W$", at("/a%C2%A0")), (r"/a\W", at("/a%E2%80%94")), (r"/a\W$", at("/a_")),
+        (r"/a\W$", at("/a%F0%9F%98%80")), (r"/\W\W$", at("/--")),
+        # \s
+        (r"a\sb", at("/a%C2%A0b")), (r"a\sb", at("/a%E3%80%80b")), (r"a\sb", at("/a%E2%80%8Bb")), (r"a\sb", at("/a%0Bb")), (r"a\sb", at("/a%1Cb")),
+        (r"a\sb", at("/a+b")), (r"a\sb", at("/a%C2%85b")), (r"a\sb", at("/a%E1%A0%8Eb")), (r"a\sb", at("/a%E2%80%A8b")), (r"a\sb", at("/a%EF%BB%BFb")),
+        (r"a\sb", at("/a%E2%80%AFb")), (r"a\sb", at("/ab")), (r"a\s+b", at("/a%20%C2%A0%20b")), (r"a\sb", at("/a%1Fb")), (r"a\sb", at("/a%1Bb")),
+        # \S
+        (r"^https://x\.test/a\Sb$", at("/a+b")), (r"^https://x\.test/a\Sb$", at("/a%C2%A0b")), (r"^https://x\.test/a\Sb$", at("/a-b")),
+        (r"^https://x\.test/a\Sb$", at("/a%E2%80%8Bb")), (r"^https://x\.test/\S+$", at("/abc")),
+        # character classes
+        (r"/o/[\d]$", at("/o/%D9%A3")), (r"/o/[^\d]$", at("/o/%D9%A3")), (r"/o/[^\d]$", at("/o/x")), (r"/o/[\w-]+$", at("/o/caf%C3%A9-x")),
+        (r"/o/[\W]$", at("/o/%C3%A9")), (r"/o/[\W]$", at("/o/-")), (r"/o/[\S]$", at("/o/%C2%A0")), (r"/o/[\S]$", at("/o/x")),
+        (r"/o/[\D\s]$", at("/o/%D9%A3")), (r"/o/[\D\s]$", at("/o/+")), (r"/o/[a\W]$", at("/o/a")), (r"/o/[a\W]$", at("/o/%C3%A9")),
+        (r"/o/[a\W]$", at("/o/-")), (r"/o/[\w\s]+$", at("/o/a%C2%A0%C3%A9")), (r"/o/[^\W]$", at("/o/%C3%A9")), (r"/o/[^\W]$", at("/o/-")),
+        (r"/o/[^\S]$", at("/o/%C2%A0")), (r"/o/[^\s]$", at("/o/%C2%A0")), (r"a[\b]b", at("/a%08b")), (r"a[\b]b", at("/ab")), (r"[\w.]+@", at("/x.y@z")),
+        (r"[]a]+$", at("/a]")), (r"[^]a]+$", at("/a]")), (r"[^]a]$", at("/b")), (r"/o/[$]", at("/o/$")), (r"/o/[\]]", at("/o/]")), (r"/o/[\\]", at("/o/%5C")),
+        (r"x[[:alpha:]]", at("/xb]")), (r"x[[:alpha:]]", at("/x:]")), (r"/o/[[]", at("/o/[")), (r"/o/[a-c\d]+$", at("/o/a%D9%A3c")),
+        # $ and \Z
+        (r"done$", at("/done%0A")), (r"done$", at("/done")), (r"done$", at("/done%0A%0A")), (r"done\Z", at("/done%0A")), (r"done\Z", at("/done")),
+        (r"done$", at("/done%0Ax")), (r"(a|done$)", at("/done%0A")), (r"^https://x\.test/(done|ok)$", at("/ok%0A")), (r"done$|nope", at("/done%0A")),
+        (r"a$b", at("/a%0Ab")), (r"done$$", at("/done%0A")), (r"[$]", at("/a$b")), (r"a\$", at("/a$")), (r"a\$$", at("/a$%0A")), (r"a\\$", at("/a%5C%0A")),
+        (r"(?m)b$", at("/a%0Ab%0Ac")), (r"(?m)^b$", at("/a%0Ab%0Ac")), (r"b$", at("/a%0Ab%0Ac")), (r"(?m:b$)", at("/a%0Ab%0Ac")), (r"(?m)c$", at("/a%0Ab%0Ac")),
+        (r"(?i)DONE$", at("/done%0A")), (r"(?ms)b.$", at("/b%0A")), (r"(?-m:b$)", at("/a%0Ab%0Ac")), (r"(?im)^B$", at("/a%0Ab%0Ac")), (r"(?s)a.b$", at("/a%0Ab%0A")),
+        (r"(x(?m:b$)y)", at("/xb%0Ay")), (r"(?:done$)", at("/done%0A")), (r"^$", "https://x.test"), (r"$", at("/x")),
+        # \A, ^, flags
+        (r"\Ahttps", at("/")), (r"x\Ahttps", at("/")), (r"^https://x\.test/a$", at("/a")), (r"^https://x\.test/a$", at("/a%0A")), (r"(?s)a.b", at("/a%0Ab")),
+        (r"a.b", at("/a%0Ab")), (r"a.b", at("/a%20b")), (r"a[^x]b", at("/a%0Ab")),
+        # {,n}
+        (r"^https://x\.test/a{,2}$", at("/aa")), (r"^https://x\.test/a{,2}$", at("/aaa")), (r"^https://x\.test/a{,2}$", at("/a{,2}")),
+        (r"^https://x\.test/a{,}$", at("/aaaa")), (r"^https://x\.test/a{,}$", at("/a{,}")), (r"^https://x\.test/\d{,3}$", at("/%D9%A1%D9%A2")),
+        (r"^https://x\.test/a{,0}$", at("/")), (r"^https://x\.test/a{2,}$", at("/aaa")), (r"^https://x\.test/a{2}$", at("/aa")),
+        (r"^https://x\.test/a{}$", at("/a{}")), (r"^https://x\.test/a{x}$", at("/a{x}")), (r"^https://x\.test/a{1,x}$", at("/a{1,x}")),
+        (r"^https://x\.test/a{ 1}$", at("/a{ 1}")), (r"^https://x\.test/(ab){,2}c$", at("/ababc")), (r"^https://x\.test/(ab){,2}c$", at("/abababc")),
+        (r"^https://x\.test/[ab]{,2}$", at("/ba")), (r"^https://x\.test/\w{,3}$", at("/%C3%A9%C3%A9")),
+        # case, plain constructs, alternation, groups, escapes
+        (r"/ÉTÉ$", at("/%C3%A9t%C3%A9")), (r"/été$", at("/%C3%89T%C3%89")), (r"k", at("/%E2%84%AA")), (r"s", at("/%C5%BF")),
+        (r"ss", at("/%C3%9F")), (r"/\w+\.html$", at("/caf%C3%A9.html")), (r"^https://x\.test/(a|b)+$", at("/abba")), (r"(?:a|b)c", at("/bc")),
+        (r"/(?P<n>ab)\.", at("/ab.")), (r"a.c", at("/abc")), (r"a\.c", at("/abc")), (r"a\\b", at("/a%5Cb")), (r"\(x\)", at("/(x)")), (r"a\x2fb", at("/a/b")),
+        (r"a\tb", at("/a%09b")), (r"a\nb", at("/a%0Ab")), (r"colou?r", at("/color")), (r"a+?b", at("/aab")), (r"a*$", at("/aaa")), (r"^https", at("/")), (r"$^", at("/")),
+        (r"(", at("/")), (r"a{1", at("/a{1")), (r"a**", at("/a")), (r"[z-a]", at("/a")),
+        (r"(?u)caf\w$", at("/caf%C3%A9")), (r"(?s:a.b)$", at("/a%0Ab")),
+    ]
+    boundary = [
+        (r"\bsum", at("/r%C3%A9sum%C3%A9")), (r"\bsum", at("/sum")), (r"cart\b", at("/cart")), (r"cart\b", at("/carte")), (r"\Bx", at("/ax")), (r"(\bfoo|bar\b)", at("/foo")),
+        (r"a[\b]b\b", at("/a%08b")), (r"\b\d+\b", at("/12")), (r"\bcaf\b", at("/caf%C3%A9")), (r"(?i)\bABC\b", at("/abc")),
+    ]
+    rows = []
+    for pattern, url, rejected in [(p, u, False) for p, u in pairs] + [(p, u, True) for p, u in boundary]:
+        row = {"pattern": pattern, "url": url, "boundary": rejected}
+        try:
+            row.update(matches=V.page(state(url), url=pattern)["passed"], error=None)
+        except re.error as error:
+            row.update(matches=None, error=f"re.error: {error}")
+        rows.append(row)
+    write("regex.json", rows)
+
+    def ranges(test):
+        found, start = [], None
+        for code in range(0x110000):
+            hit = not 0xD800 <= code <= 0xDFFF and test(chr(code))
+            if hit and start is None:
+                start = code
+            elif not hit and start is not None:
+                found.append([start, code - 1])
+                start = None
+        if start is not None:
+            found.append([start, 0x10FFFF])
+        return found
+
+    classes = {
+        "unicode": unicodedata.unidata_version,
+        "word": ranges(lambda c: re.match(r"\w", c) is not None),
+        "digit": ranges(lambda c: re.match(r"\d", c) is not None),
+        "space": ranges(lambda c: re.match(r"\s", c) is not None),
+        "assigned": ranges(lambda c: unicodedata.category(c) != "Cn"),
+    }
+    (OUT / "regex_classes.json").write_text(json.dumps(classes) + "\n", encoding="utf-8")
+    print(f"regex_classes.json: {len(classes['word'])} word ranges")
 
 
 if __name__ == "__main__":
@@ -549,3 +668,4 @@ if __name__ == "__main__":
     base64_fixtures()
     date_fixtures()
     repr_fixtures()
+    regex_fixtures()

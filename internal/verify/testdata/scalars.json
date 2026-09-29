@@ -3,354 +3,630 @@
   "yaml": "hello",
   "kind": "string",
   "str": "hello",
-  "repr": "'hello'"
+  "repr": "'hello'",
+  "error": ""
  },
  {
   "yaml": "\"quoted\"",
   "kind": "string",
   "str": "quoted",
-  "repr": "'quoted'"
+  "repr": "'quoted'",
+  "error": ""
  },
  {
   "yaml": "'single'",
   "kind": "string",
   "str": "single",
-  "repr": "'single'"
+  "repr": "'single'",
+  "error": ""
  },
  {
   "yaml": "42",
   "kind": "int",
   "str": "42",
-  "repr": "42"
+  "repr": "42",
+  "error": ""
  },
  {
   "yaml": "-7",
   "kind": "int",
   "str": "-7",
-  "repr": "-7"
+  "repr": "-7",
+  "error": ""
  },
  {
   "yaml": "+5",
   "kind": "int",
   "str": "5",
-  "repr": "5"
+  "repr": "5",
+  "error": ""
  },
  {
   "yaml": "0",
   "kind": "int",
   "str": "0",
-  "repr": "0"
+  "repr": "0",
+  "error": ""
  },
  {
   "yaml": "007",
   "kind": "int",
   "str": "7",
-  "repr": "7"
+  "repr": "7",
+  "error": ""
  },
  {
   "yaml": "0o17",
   "kind": "string",
   "str": "0o17",
-  "repr": "'0o17'"
+  "repr": "'0o17'",
+  "error": ""
  },
  {
   "yaml": "0x1F",
   "kind": "int",
   "str": "31",
-  "repr": "31"
+  "repr": "31",
+  "error": ""
  },
  {
   "yaml": "0b101",
   "kind": "int",
   "str": "5",
-  "repr": "5"
+  "repr": "5",
+  "error": ""
  },
  {
   "yaml": "1_000",
   "kind": "int",
   "str": "1000",
-  "repr": "1000"
+  "repr": "1000",
+  "error": ""
  },
  {
   "yaml": "12:30",
   "kind": "int",
   "str": "750",
-  "repr": "750"
+  "repr": "750",
+  "error": ""
  },
  {
   "yaml": "1:02:03",
   "kind": "int",
   "str": "3723",
-  "repr": "3723"
+  "repr": "3723",
+  "error": ""
  },
  {
   "yaml": "1.50",
   "kind": "float",
   "str": "1.5",
-  "repr": "1.5"
+  "repr": "1.5",
+  "error": ""
  },
  {
   "yaml": "1.0",
   "kind": "float",
   "str": "1.0",
-  "repr": "1.0"
+  "repr": "1.0",
+  "error": ""
  },
  {
   "yaml": ".5",
   "kind": "float",
   "str": "0.5",
-  "repr": "0.5"
+  "repr": "0.5",
+  "error": ""
  },
  {
   "yaml": "1e3",
   "kind": "string",
   "str": "1e3",
-  "repr": "'1e3'"
+  "repr": "'1e3'",
+  "error": ""
  },
  {
   "yaml": "1.5e+3",
   "kind": "float",
   "str": "1500.0",
-  "repr": "1500.0"
+  "repr": "1500.0",
+  "error": ""
  },
  {
   "yaml": "1.5e3",
   "kind": "string",
   "str": "1.5e3",
-  "repr": "'1.5e3'"
+  "repr": "'1.5e3'",
+  "error": ""
  },
  {
   "yaml": ".inf",
   "kind": "float",
   "str": "inf",
-  "repr": "inf"
+  "repr": "inf",
+  "error": ""
  },
  {
   "yaml": "-.inf",
   "kind": "float",
   "str": "-inf",
-  "repr": "-inf"
+  "repr": "-inf",
+  "error": ""
  },
  {
   "yaml": ".nan",
   "kind": "float",
   "str": "nan",
-  "repr": "nan"
+  "repr": "nan",
+  "error": ""
  },
  {
   "yaml": "yes",
   "kind": "bool",
   "str": "True",
-  "repr": "True"
+  "repr": "True",
+  "error": ""
  },
  {
   "yaml": "No",
   "kind": "bool",
   "str": "False",
-  "repr": "False"
+  "repr": "False",
+  "error": ""
  },
  {
   "yaml": "TRUE",
   "kind": "bool",
   "str": "True",
-  "repr": "True"
+  "repr": "True",
+  "error": ""
  },
  {
   "yaml": "off",
   "kind": "bool",
   "str": "False",
-  "repr": "False"
+  "repr": "False",
+  "error": ""
  },
  {
   "yaml": "on",
   "kind": "bool",
   "str": "True",
-  "repr": "True"
+  "repr": "True",
+  "error": ""
  },
  {
   "yaml": "y",
   "kind": "string",
   "str": "y",
-  "repr": "'y'"
+  "repr": "'y'",
+  "error": ""
  },
  {
   "yaml": "n",
   "kind": "string",
   "str": "n",
-  "repr": "'n'"
+  "repr": "'n'",
+  "error": ""
  },
  {
   "yaml": "~",
   "kind": "null",
   "str": "None",
-  "repr": "None"
+  "repr": "None",
+  "error": ""
  },
  {
   "yaml": "null",
   "kind": "null",
   "str": "None",
-  "repr": "None"
+  "repr": "None",
+  "error": ""
  },
  {
   "yaml": "Null",
   "kind": "null",
   "str": "None",
-  "repr": "None"
+  "repr": "None",
+  "error": ""
  },
  {
   "yaml": "",
   "kind": "null",
   "str": "None",
-  "repr": "None"
+  "repr": "None",
+  "error": ""
  },
  {
   "yaml": "'null'",
   "kind": "string",
   "str": "null",
-  "repr": "'null'"
+  "repr": "'null'",
+  "error": ""
  },
  {
   "yaml": "\"1\"",
   "kind": "string",
   "str": "1",
-  "repr": "'1'"
+  "repr": "'1'",
+  "error": ""
  },
  {
   "yaml": "08",
   "kind": "string",
   "str": "08",
-  "repr": "'08'"
+  "repr": "'08'",
+  "error": ""
  },
  {
   "yaml": "09.5",
   "kind": "float",
   "str": "9.5",
-  "repr": "9.5"
+  "repr": "9.5",
+  "error": ""
  },
  {
   "yaml": "1,000",
   "kind": "string",
   "str": "1,000",
-  "repr": "'1,000'"
+  "repr": "'1,000'",
+  "error": ""
  },
  {
   "yaml": "\"0x1F\"",
   "kind": "string",
   "str": "0x1F",
-  "repr": "'0x1F'"
+  "repr": "'0x1F'",
+  "error": ""
  },
  {
   "yaml": "12345678901234567890",
   "kind": "int",
   "str": "12345678901234567890",
-  "repr": "12345678901234567890"
+  "repr": "12345678901234567890",
+  "error": ""
  },
  {
   "yaml": "1__0",
   "kind": "int",
   "str": "10",
-  "repr": "10"
+  "repr": "10",
+  "error": ""
  },
  {
   "yaml": "-0",
   "kind": "int",
   "str": "0",
-  "repr": "0"
+  "repr": "0",
+  "error": ""
  },
  {
   "yaml": "0.",
   "kind": "float",
   "str": "0.0",
-  "repr": "0.0"
+  "repr": "0.0",
+  "error": ""
  },
  {
   "yaml": "+.5",
   "kind": "string",
   "str": "+.5",
-  "repr": "'+.5'"
+  "repr": "'+.5'",
+  "error": ""
  },
  {
   "yaml": "-1.5e-7",
   "kind": "float",
   "str": "-1.5e-07",
-  "repr": "-1.5e-07"
+  "repr": "-1.5e-07",
+  "error": ""
  },
  {
   "yaml": "1:30:00.5",
   "kind": "float",
   "str": "5400.5",
-  "repr": "5400.5"
+  "repr": "5400.5",
+  "error": ""
  },
  {
   "yaml": "True",
   "kind": "bool",
   "str": "True",
-  "repr": "True"
+  "repr": "True",
+  "error": ""
  },
  {
   "yaml": "tRUE",
   "kind": "string",
   "str": "tRUE",
-  "repr": "'tRUE'"
+  "repr": "'tRUE'",
+  "error": ""
  },
  {
   "yaml": "yes please",
   "kind": "string",
   "str": "yes please",
-  "repr": "'yes please'"
+  "repr": "'yes please'",
+  "error": ""
  },
  {
   "yaml": "0_",
   "kind": "int",
   "str": "0",
-  "repr": "0"
+  "repr": "0",
+  "error": ""
  },
  {
   "yaml": "0b",
   "kind": "string",
   "str": "0b",
-  "repr": "'0b'"
+  "repr": "'0b'",
+  "error": ""
  },
  {
   "yaml": "1e+400",
   "kind": "string",
   "str": "1e+400",
-  "repr": "'1e+400'"
+  "repr": "'1e+400'",
+  "error": ""
  },
  {
   "yaml": "0.1",
   "kind": "float",
   "str": "0.1",
-  "repr": "0.1"
+  "repr": "0.1",
+  "error": ""
  },
  {
   "yaml": "3.14159",
   "kind": "float",
   "str": "3.14159",
-  "repr": "3.14159"
+  "repr": "3.14159",
+  "error": ""
  },
  {
   "yaml": "100.0",
   "kind": "float",
   "str": "100.0",
-  "repr": "100.0"
+  "repr": "100.0",
+  "error": ""
  },
  {
   "yaml": "1e-3",
   "kind": "string",
   "str": "1e-3",
-  "repr": "'1e-3'"
+  "repr": "'1e-3'",
+  "error": ""
  },
  {
   "yaml": "1.e+5",
   "kind": "float",
   "str": "100000.0",
-  "repr": "100000.0"
+  "repr": "100000.0",
+  "error": ""
  },
  {
   "yaml": "10:00",
   "kind": "int",
   "str": "600",
-  "repr": "600"
+  "repr": "600",
+  "error": ""
+ },
+ {
+  "yaml": "!!str yes",
+  "kind": "string",
+  "str": "yes",
+  "repr": "'yes'",
+  "error": ""
+ },
+ {
+  "yaml": "!!str 42",
+  "kind": "string",
+  "str": "42",
+  "repr": "'42'",
+  "error": ""
+ },
+ {
+  "yaml": "!!str null",
+  "kind": "string",
+  "str": "null",
+  "repr": "'null'",
+  "error": ""
+ },
+ {
+  "yaml": "!!str ~",
+  "kind": "string",
+  "str": "~",
+  "repr": "'~'",
+  "error": ""
+ },
+ {
+  "yaml": "!!str \"x y\"",
+  "kind": "string",
+  "str": "x y",
+  "repr": "'x y'",
+  "error": ""
+ },
+ {
+  "yaml": "!!str",
+  "kind": "string",
+  "str": "",
+  "repr": "''",
+  "error": ""
+ },
+ {
+  "yaml": "!!int 12",
+  "kind": "int",
+  "str": "12",
+  "repr": "12",
+  "error": ""
+ },
+ {
+  "yaml": "!!int \"12\"",
+  "kind": "int",
+  "str": "12",
+  "repr": "12",
+  "error": ""
+ },
+ {
+  "yaml": "!!int 0x1F",
+  "kind": "int",
+  "str": "31",
+  "repr": "31",
+  "error": ""
+ },
+ {
+  "yaml": "!!int 1_000",
+  "kind": "int",
+  "str": "1000",
+  "repr": "1000",
+  "error": ""
+ },
+ {
+  "yaml": "!!int 1:30",
+  "kind": "int",
+  "str": "90",
+  "repr": "90",
+  "error": ""
+ },
+ {
+  "yaml": "!!int abc",
+  "kind": "error",
+  "str": "",
+  "repr": "",
+  "error": "ValueError"
+ },
+ {
+  "yaml": "!!int 1.5",
+  "kind": "error",
+  "str": "",
+  "repr": "",
+  "error": "ValueError"
+ },
+ {
+  "yaml": "!!float 1",
+  "kind": "float",
+  "str": "1.0",
+  "repr": "1.0",
+  "error": ""
+ },
+ {
+  "yaml": "!!float 1e3",
+  "kind": "float",
+  "str": "1000.0",
+  "repr": "1000.0",
+  "error": ""
+ },
+ {
+  "yaml": "!!float .inf",
+  "kind": "float",
+  "str": "inf",
+  "repr": "inf",
+  "error": ""
+ },
+ {
+  "yaml": "!!float 1:30.5",
+  "kind": "float",
+  "str": "90.5",
+  "repr": "90.5",
+  "error": ""
+ },
+ {
+  "yaml": "!!float abc",
+  "kind": "error",
+  "str": "",
+  "repr": "",
+  "error": "ValueError"
+ },
+ {
+  "yaml": "!!bool yes",
+  "kind": "bool",
+  "str": "True",
+  "repr": "True",
+  "error": ""
+ },
+ {
+  "yaml": "!!bool Off",
+  "kind": "bool",
+  "str": "False",
+  "repr": "False",
+  "error": ""
+ },
+ {
+  "yaml": "!!bool TRUE",
+  "kind": "bool",
+  "str": "True",
+  "repr": "True",
+  "error": ""
+ },
+ {
+  "yaml": "!!bool maybe",
+  "kind": "error",
+  "str": "",
+  "repr": "",
+  "error": "KeyError"
+ },
+ {
+  "yaml": "!!null x",
+  "kind": "null",
+  "str": "None",
+  "repr": "None",
+  "error": ""
+ },
+ {
+  "yaml": "!!null",
+  "kind": "null",
+  "str": "None",
+  "repr": "None",
+  "error": ""
+ },
+ {
+  "yaml": "!!null \"\"",
+  "kind": "null",
+  "str": "None",
+  "repr": "None",
+  "error": ""
+ },
+ {
+  "yaml": "!!binary aGk=",
+  "kind": "other",
+  "str": "",
+  "repr": "",
+  "error": "bytes"
+ },
+ {
+  "yaml": "!!timestamp 2026-09-28",
+  "kind": "other",
+  "str": "",
+  "repr": "",
+  "error": "date"
+ },
+ {
+  "yaml": "!custom value",
+  "kind": "error",
+  "str": "",
+  "repr": "",
+  "error": "ConstructorError"
+ },
+ {
+  "yaml": "!!seq [a]",
+  "kind": "other",
+  "str": "",
+  "repr": "",
+  "error": "list"
+ },
+ {
+  "yaml": "!!map {a: b}",
+  "kind": "other",
+  "str": "",
+  "repr": "",
+  "error": "dict"
+ },
+ {
+  "yaml": "!<tag:yaml.org,2002:str> yes",
+  "kind": "string",
+  "str": "yes",
+  "repr": "'yes'",
+  "error": ""
  }
 ]

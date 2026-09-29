@@ -79,6 +79,8 @@ type FlightsArgs struct {
 // Args is the typed argument set of one verifier.
 type Args interface {
 	verifierName() string
+	// Empty reports whether the arguments ask for no check at all, so the verifier would pass on any page.
+	Empty() bool
 }
 
 func (PageArgs) verifierName() string    { return "page" }
@@ -86,13 +88,36 @@ func (EchoArgs) verifierName() string    { return "echo" }
 func (HNStoryArgs) verifierName() string { return "hn_story" }
 func (FlightsArgs) verifierName() string { return "flights" }
 
+// Empty implements Args.
+func (a PageArgs) Empty() bool {
+	return len(a.URL)+len(a.Text)+len(a.Fields)+len(a.Values)+len(a.Checked) == 0
+}
+
+// Empty implements Args.
+func (a EchoArgs) Empty() bool { return len(a.URL)+len(a.Values) == 0 }
+
+// Empty implements Args.
+func (HNStoryArgs) Empty() bool { return false }
+
+// Empty implements Args.
+func (FlightsArgs) Empty() bool { return false }
+
 func (a FlightsArgs) oneWay() bool { return a.OneWay == nil || *a.OneWay }
 
 const patternHint = "lookaround and backreferences are not supported"
 
+// compilePattern compiles a Python-style pattern as case-insensitive RE2 after translating it, so a match means what
+// re.search(pattern, text, re.I) means in the Python runner.
 func compilePattern(pattern string) (*regexp.Regexp, error) {
-	compiled, err := regexp.Compile("(?i)" + pattern)
+	translated, err := translatePattern(pattern)
 	if err != nil {
+		return nil, argError("url", "pattern '%s' %v", pattern, err)
+	}
+	compiled, err := regexp.Compile("(?i)" + translated)
+	if err != nil {
+		if _, direct := regexp.Compile("(?i)" + pattern); direct != nil {
+			err = direct
+		}
 		return nil, argError("url", "pattern '%s' is not a valid RE2 regular expression (%s): %v", pattern, patternHint, err)
 	}
 	return compiled, nil

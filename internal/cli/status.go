@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aymaneallaoui/pagevow/internal/config"
+	"github.com/aymaneallaoui/pagevow/internal/keys"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 )
 
@@ -40,8 +41,12 @@ func (a *app) newStatusCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			resolver, err := a.resolver()
+			if err != nil {
+				return err
+			}
 			_, statErr := os.Stat(path)
-			report := buildStatus(cfg, path, statErr == nil)
+			report := buildStatus(cfg, path, statErr == nil, resolver)
 			if asJSON {
 				return writeJSON(cmd, report)
 			}
@@ -49,7 +54,7 @@ func (a *app) newStatusCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			renderStatus(out, cfg, report)
+			renderStatus(out, cfg, report, resolver)
 			return out.Err()
 		},
 	}
@@ -66,11 +71,11 @@ func writeJSON(cmd *cobra.Command, value any) error {
 	return nil
 }
 
-func buildStatus(cfg config.Config, path string, exists bool) statusReport {
+func buildStatus(cfg config.Config, path string, exists bool, resolver *keys.Resolver) statusReport {
 	return statusReport{
 		ConfigFile:       path,
 		ConfigFileExists: exists,
-		PaidAPI:          len(paidServices(cfg)) > 0,
+		PaidAPI:          len(paidServices(cfg, resolver)) > 0,
 		Backend:          toMap(append([]field{{"name", cfg.Backend}}, activeFields(cfg)...)),
 		URLs: toMap([]field{
 			{"local", cfg.Backends.Local.URL},
@@ -91,15 +96,48 @@ func buildStatus(cfg config.Config, path string, exists bool) statusReport {
 	}
 }
 
-func paidServices(cfg config.Config) []string {
-	var services []string
-	if cfg.Backend == config.BackendJev {
-		services = append(services, fmt.Sprintf("the jev decision backend at %s", cfg.Backends.Jev.URL))
+type destination struct {
+	label  string
+	url    string
+	keyRef string
+}
+
+// destinations lists where a run would send page data: the active backend and the text helper.
+func destinations(cfg config.Config) []destination {
+	var out []destination
+	switch cfg.Backend {
+	case config.BackendLocal:
+		out = append(out, destination{"the local decision backend", cfg.Backends.Local.URL, ""})
+	case config.BackendJev:
+		out = append(out, destination{"the jev decision backend", cfg.Backends.Jev.URL, cfg.Backends.Jev.Key})
+	case config.BackendCustom:
+		out = append(out, destination{"the custom decision backend", cfg.Backends.Custom.URL, cfg.Backends.Custom.Key})
+	case config.BackendCascade:
+		out = append(out,
+			destination{"the cascade primary model", cfg.Backends.Cascade.Primary, ""},
+			destination{"the cascade verifier model", cfg.Backends.Cascade.Verifier, ""})
 	}
-	if helper := cfg.TextHelper.URL; helper != "" && !config.IsLoopbackURL(helper) {
-		services = append(services, fmt.Sprintf("the text helper at %s", helper))
+	return append(out, destination{"the text helper", cfg.TextHelper.URL, cfg.TextHelper.Key})
+}
+
+// paidServices names the destinations that are not on this machine and would be called with a real API key.
+func paidServices(cfg config.Config, resolver *keys.Resolver) []string {
+	var services []string
+	for _, d := range destinations(cfg) {
+		if d.url == "" || config.IsLoopbackURL(d.url) || !hasRealKey(resolver, d.keyRef) {
+			continue
+		}
+		services = append(services, fmt.Sprintf("%s at %s", d.label, d.url))
 	}
 	return services
+}
+
+func hasRealKey(resolver *keys.Resolver, ref string) bool {
+	if resolver == nil || ref == "" {
+		return false
+	}
+	value, err := resolver.Resolve(ref)
+	return err == nil && value != "" && value != placeholderKey
 }
 
 func activeFields(cfg config.Config) []field {
@@ -145,10 +183,10 @@ func display(value any) string {
 	return fmt.Sprint(value)
 }
 
-func renderStatus(out *ui.Printer, cfg config.Config, report statusReport) {
+func renderStatus(out *ui.Printer, cfg config.Config, report statusReport, resolver *keys.Resolver) {
 	renderBackend(out, cfg)
 	out.Blank()
-	renderPaid(out, cfg, report.PaidAPI)
+	renderPaid(out, cfg, report.PaidAPI, resolver)
 	out.Blank()
 	out.Heading("URLs")
 	out.Pairs([]ui.Pair{
@@ -187,14 +225,14 @@ func renderBackend(out *ui.Printer, cfg config.Config) {
 	}
 }
 
-func renderPaid(out *ui.Printer, cfg config.Config, paid bool) {
+func renderPaid(out *ui.Printer, cfg config.Config, paid bool, resolver *keys.Resolver) {
 	out.Heading("Paid services")
 	out.Pairs([]ui.Pair{{Key: "paid_api", Value: fmt.Sprint(paid)}})
 	if !paid {
-		out.Status(ui.OK, "run would use no paid service: the backend and the text helper are local or not set")
+		out.Status(ui.OK, "run would use no paid service: no remote endpoint has an API key configured")
 		return
 	}
-	for _, service := range paidServices(cfg) {
+	for _, service := range paidServices(cfg, resolver) {
 		out.Status(ui.Warn, "run would call %s, which may bill per request", service)
 	}
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aymaneallaoui/pagevow/internal/browser"
 	"github.com/aymaneallaoui/pagevow/internal/cli"
 	"github.com/aymaneallaoui/pagevow/internal/page"
 	"github.com/aymaneallaoui/pagevow/internal/runner"
@@ -90,6 +91,8 @@ func (s *fakeSession) Capture(context.Context, string, bool) ([]byte, error) {
 
 func (s *fakeSession) Close(context.Context) error { return nil }
 
+func (s *fakeSession) Popups() []browser.PopupEvent { return s.launcher.popups }
+
 type fakeLauncher struct {
 	mu        sync.Mutex
 	findErr   error
@@ -98,6 +101,7 @@ type fakeLauncher struct {
 	browsers  []*fakeBrowser
 	sessions  int
 	onObserve func(ctx context.Context) error
+	popups    []browser.PopupEvent
 }
 
 func (l *fakeLauncher) Find() (string, error) {
@@ -364,8 +368,39 @@ func TestRunPreflightFailsWhenTheBackendDoesNotAnswer(t *testing.T) {
 	assert.Contains(t, stderr, "Preflight failed; no test was run.")
 	assert.Contains(t, stderr, "The decision model at http://127.0.0.1:1 does not answer.")
 	assert.Contains(t, stderr, "`pagevow start` arrives in phase 3")
+	assert.Contains(t, stderr, "Cause: ")
+	assert.Contains(t, stderr, "connection refused")
 	assert.Empty(t, e.launcher.specs)
 	assert.NoDirExists(t, filepath.Join(e.dir, ".pagevow"))
+}
+
+func TestRunShowsWarningsUnderAPassingTestWithoutChangingTheExit(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	e.launcher.popups = []browser.PopupEvent{{URL: "https://app.test/help"}}
+
+	stdout, stderr, err := e.runCmd("--retries", "0")
+
+	require.NoError(t, err, stderr)
+	assert.Contains(t, stdout, "\n  warning: the page opened a new tab (https://app.test/help); the agent stayed on the original tab\n")
+	assert.Contains(t, stdout, "1 with warnings.")
+	assert.Contains(t, stdout, "1/1 passed.")
+}
+
+func TestRunPreflightShowsTheTransportCauseWithoutTheKey(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	e.env["TYPESAFE_API_KEY"] = "sk-live-secret-value"
+	e.mustRun("use", "custom", "--url", "http://127.0.0.1:1", "--key", "env:TYPESAFE_API_KEY")
+
+	stdout, stderr, err := e.runCmd()
+
+	require.Error(t, err)
+	assert.Equal(t, 2, cli.ExitCode(err))
+	assert.Contains(t, stderr, "The custom decision backend at http://127.0.0.1:1 does not answer.")
+	assert.Contains(t, stderr, "\n  Cause: ")
+	assert.Contains(t, stderr, "connection refused")
+	assert.NotContains(t, stdout+stderr+err.Error(), "sk-live-secret-value")
 }
 
 func TestRunPreflightNamesAMissingBrowser(t *testing.T) {
@@ -428,24 +463,37 @@ func TestRunPreflightNamesAMissingKeyWithoutRevealingAnything(t *testing.T) {
 func TestRunNoticeNamesPaidServicesAndNeverPrintsKeys(t *testing.T) {
 	e := newRunEnv(t)
 	e.writeTests("pagevow.yaml", passingTests)
+	e.env["TEXT_MODEL_BASE_URL"] = "https://helper.example.test/v1"
+	e.storeKey("text-helper")
+
+	stdout, stderr, err := e.runCmd("--retries", "0")
+
+	require.NoError(t, err, stderr)
+	assert.Contains(t, stderr, "this run uses a paid service: the text helper at https://helper.example.test/v1")
+	assert.Contains(t, stderr, "may bill per request")
+	report, err := os.ReadFile(filepath.Join(e.latestRunDir(), "report.json"))
+	require.NoError(t, err)
+	assert.NotContains(t, stdout+stderr+string(report), "sk-test-text-helper-value")
+	traces, err := filepath.Glob(filepath.Join(e.latestRunDir(), "home", "*"))
+	require.NoError(t, err)
+	for _, path := range traces {
+		data, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.NotContains(t, string(data), "sk-test-text-helper-value", path)
+	}
+}
+
+func TestRunNoticeIsDecidedByDestinationNotByBackendName(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
 	e.env["TYPESAFE_API_KEY"] = "sk-live-secret-value"
 	e.mustRun("use", "jev", "--url", e.server.URL, "--key", "env:TYPESAFE_API_KEY")
 
 	stdout, stderr, err := e.runCmd("--retries", "0")
 
 	require.NoError(t, err, stderr)
-	assert.Contains(t, stderr, "this run uses a paid service: the jev decision backend at "+e.server.URL)
-	assert.Contains(t, stderr, "may bill per request")
-	report, err := os.ReadFile(filepath.Join(e.latestRunDir(), "report.json"))
-	require.NoError(t, err)
-	assert.NotContains(t, stdout+stderr+string(report), "sk-live-secret-value")
-	traces, err := filepath.Glob(filepath.Join(e.latestRunDir(), "home", "*"))
-	require.NoError(t, err)
-	for _, path := range traces {
-		data, err := os.ReadFile(path)
-		require.NoError(t, err)
-		assert.NotContains(t, string(data), "sk-live-secret-value", path)
-	}
+	assert.NotContains(t, stderr, "paid service")
+	assert.NotContains(t, stdout+stderr, "sk-live-secret-value")
 }
 
 func TestRunNoNoticeWhenNoPaidServiceIsUsed(t *testing.T) {
@@ -582,4 +630,55 @@ func TestSecondInterruptKillsTheBrowserAndExitsAtOnce(t *testing.T) {
 func TestRunHelpMentionsExitCodes(t *testing.T) {
 	out := newHarness(t).mustRun("run", "--help")
 	assert.Contains(t, out, "Exit codes")
+}
+
+func TestRunLaunchesAHeadlessBrowserByDefault(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+
+	_, _, err := e.runCmd("--retries", "0")
+
+	require.NoError(t, err)
+	require.Len(t, e.launcher.specs, 1)
+	assert.True(t, e.launcher.specs[0].Headless)
+}
+
+func TestRunHonoursTheHeadlessSettingOfTheConfig(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	t.Setenv("PAGEVOW_BROWSER_HEADLESS", "false")
+
+	_, _, err := e.runCmd("--retries", "0")
+
+	require.NoError(t, err)
+	require.Len(t, e.launcher.specs, 1)
+	assert.False(t, e.launcher.specs[0].Headless)
+	var report struct {
+		Browser map[string]any `json:"browser"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(e.mustRun("status", "--json")), &report))
+	assert.Equal(t, false, report.Browser["headless"], "status shows what run used")
+}
+
+func TestRunHeadedShowsTheBrowserWindow(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+
+	_, _, err := e.runCmd("--retries", "0", "--headed")
+
+	require.NoError(t, err)
+	require.Len(t, e.launcher.specs, 1)
+	assert.False(t, e.launcher.specs[0].Headless)
+}
+
+func TestRunHeadedOverridesAConfigThatSaysHeadless(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	t.Setenv("PAGEVOW_BROWSER_HEADLESS", "true")
+
+	_, _, err := e.runCmd("--retries", "0", "--headed")
+
+	require.NoError(t, err)
+	require.Len(t, e.launcher.specs, 1)
+	assert.False(t, e.launcher.specs[0].Headless)
 }

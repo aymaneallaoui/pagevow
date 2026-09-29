@@ -101,6 +101,8 @@ type HistoryEntry struct {
 	Usage         json.RawMessage `json:"usage"`
 	ExecutedMS    int             `json:"executed_ms"`
 	ElapsedMS     int             `json:"elapsed_ms"`
+	// OutcomeUnknown marks an action that was sent to the page but whose result could not be confirmed.
+	OutcomeUnknown bool `json:"outcome_unknown,omitempty"`
 }
 
 // Outcome is the state of a run: final while Status is terminal.
@@ -305,6 +307,8 @@ func (a *Agent) fail(ctx context.Context, err error) (Status, error) {
 		a.finish(StatusTimeout, fmt.Errorf("run stopped before it finished: %w", ctx.Err()), "")
 	case errors.As(err, &budget):
 		a.finish(StatusMaxSteps, err, "")
+	case endsRun(err):
+		a.finish(StatusError, err, err.Error())
 	default:
 		a.finish(StatusError, err, "")
 	}
@@ -346,6 +350,18 @@ func isStale(err error) bool {
 	return errors.Is(err, page.ErrStalePage) || errors.Is(err, page.ErrTargetRefused)
 }
 
+func endsRun(err error) bool {
+	if errors.Is(err, page.ErrOutcomeUnknown) || errors.Is(err, page.ErrTargetCrashed) {
+		return true
+	}
+	var timeout interface{ Timeout() bool }
+	return errors.As(err, &timeout) && timeout.Timeout()
+}
+
+func outcomeUnknown(err error) bool {
+	return errors.Is(err, page.ErrOutcomeUnknown) || errors.Is(err, page.ErrSelectInterrupted)
+}
+
 func (a *Agent) tick(ctx context.Context) error {
 	err := a.predict(ctx)
 	if err == nil {
@@ -354,7 +370,7 @@ func (a *Agent) tick(ctx context.Context) error {
 	if err == nil {
 		return nil
 	}
-	if ctx.Err() != nil || !isStale(err) {
+	if ctx.Err() != nil || endsRun(err) || !isStale(err) {
 		return err
 	}
 	a.decision = nil

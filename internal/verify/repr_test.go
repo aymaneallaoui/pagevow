@@ -3,6 +3,7 @@ package verify
 import (
 	"math"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,19 +33,28 @@ func TestReprFloatMatchesPython(t *testing.T) {
 }
 
 func TestScalarsMatchPyYAML(t *testing.T) {
-	var rows []struct{ YAML, Kind, Str, Repr string }
+	var rows []struct{ YAML, Kind, Str, Repr, Error string }
 	loadFixture(t, "scalars.json", &rows)
-	require.Greater(t, len(rows), 40)
+	require.Greater(t, len(rows), 80)
 	kinds := map[string]ScalarKind{"string": KindString, "bool": KindBool, "int": KindInt, "float": KindFloat, "null": KindNull}
+	tagged := 0
 	for _, row := range rows {
 		var doc yaml.Node
 		require.NoError(t, yaml.Unmarshal([]byte("v: "+row.YAML), &doc), row.YAML)
 		got, err := scalarOf(doc.Content[0].Content[1])
+		if row.Kind == "error" || row.Kind == "other" {
+			assert.Error(t, err, "python fails on %q (%s)", row.YAML, row.Error)
+			continue
+		}
 		require.NoError(t, err, row.YAML)
+		if strings.HasPrefix(row.YAML, "!") {
+			tagged++
+		}
 		assert.Equal(t, kinds[row.Kind], got.Kind(), "yaml %q", row.YAML)
 		assert.Equal(t, row.Str, got.String(), "yaml %q", row.YAML)
 		assert.Equal(t, row.Repr, got.Repr(), "yaml %q", row.YAML)
 	}
+	assert.GreaterOrEqual(t, tagged, 15)
 }
 
 func TestScalarConstructors(t *testing.T) {

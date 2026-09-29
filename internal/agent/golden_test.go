@@ -22,8 +22,6 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/trace"
 )
 
-const masked = "<error>"
-
 type scenario struct {
 	Name   string `json:"name"`
 	Goal   string `json:"goal"`
@@ -36,7 +34,6 @@ type scenario struct {
 		Verifier       bool    `json:"verifier"`
 		VetoCache      bool    `json:"veto_cache"`
 		TargetConf     float64 `json:"target_conf"`
-		MaskErrors     bool    `json:"mask_errors"`
 		TextHelper     bool    `json:"text_helper"`
 	} `json:"config"`
 	Observations []json.RawMessage `json:"observations"`
@@ -293,24 +290,7 @@ func stripKeys(entry map[string]any, keys ...string) map[string]any {
 	return entry
 }
 
-func maskLine(line map[string]any, maskFinal bool) map[string]any {
-	if retries, ok := line["retries"].([]any); ok {
-		for _, retry := range retries {
-			retry.(map[string]any)["error"] = masked
-		}
-	}
-	if cascade, ok := line["cascade"].(map[string]any); ok {
-		if verifier, ok := cascade["verifier"].(map[string]any); ok && verifier["error"] != nil {
-			verifier["error"] = masked
-		}
-	}
-	if _, ok := line["error"]; ok && maskFinal {
-		line["error"] = masked
-	}
-	return line
-}
-
-func traceLines(t *testing.T, rec *trace.Recorder, maskFinal bool) []map[string]any {
+func traceLines(t *testing.T, rec *trace.Recorder) []map[string]any {
 	t.Helper()
 	data, err := os.ReadFile(rec.TracePath())
 	if errors.Is(err, os.ErrNotExist) {
@@ -327,15 +307,7 @@ func traceLines(t *testing.T, rec *trace.Recorder, maskFinal bool) []map[string]
 				delete(retry.(map[string]any), "after_ms")
 			}
 		}
-		lines = append(lines, maskLine(line, maskFinal))
-	}
-	return lines
-}
-
-func expectedLines(sc *scenario) []map[string]any {
-	lines := make([]map[string]any, 0, len(sc.Expected.Trace))
-	for _, line := range sc.Expected.Trace {
-		lines = append(lines, maskLine(line, sc.Config.MaskErrors))
+		lines = append(lines, line)
 	}
 	return lines
 }
@@ -361,7 +333,7 @@ func TestScenariosMatchPython(t *testing.T) {
 				assert.Equal(t, want.History[i], entry, "history entry %d", i)
 			}
 			assert.Equal(t, generic(t, want.BrowserCalls), generic(t, got.calls))
-			assert.Equal(t, expectedLines(&sc), traceLines(t, got.rec, sc.Config.MaskErrors))
+			assert.Equal(t, want.Trace, traceLines(t, got.rec))
 			assert.Equal(t, want.ModelCalls, map[string]int{
 				"primary": got.served["primary"], "verifier": got.served["verifier"], "text": got.served["text"],
 			})
@@ -372,16 +344,13 @@ func TestScenariosMatchPython(t *testing.T) {
 
 func assertOutcomeError(t *testing.T, sc *scenario, got replayResult) {
 	t.Helper()
-	switch {
-	case sc.Expected.Error == nil:
+	if sc.Expected.Error == nil {
 		assert.NoError(t, got.err)
 		assert.NoError(t, got.outcome.Err)
-	case sc.Config.MaskErrors:
-		assert.Error(t, got.err)
-	default:
-		require.Error(t, got.err)
-		assert.Equal(t, *sc.Expected.Error, got.err.Error())
+		return
 	}
+	require.Error(t, got.err)
+	assert.Equal(t, *sc.Expected.Error, got.err.Error())
 }
 
 func assertMeta(t *testing.T, sc *scenario, got replayResult) {
@@ -391,9 +360,5 @@ func assertMeta(t *testing.T, sc *scenario, got replayResult) {
 	var meta map[string]any
 	require.NoError(t, json.Unmarshal(data, &meta))
 	delete(meta, "elapsed_ms")
-	want := sc.Expected.Meta
-	if sc.Config.MaskErrors {
-		meta["error"], want["error"] = masked, masked
-	}
-	assert.Equal(t, want, meta)
+	assert.Equal(t, sc.Expected.Meta, meta)
 }

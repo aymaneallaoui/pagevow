@@ -61,7 +61,7 @@ func (a *app) newUseCmd() *cobra.Command {
 	flags.String("key", "", "API key reference: keychain:NAME or env:NAME (jev, custom)")
 	flags.String("primary", "", "primary model URL (cascade)")
 	flags.String("verifier", "", "verifier model URL (cascade)")
-	flags.Float64("target-conf", 0, "confidence below which the verifier is asked, 0 to 1 (cascade)")
+	flags.Float64("target-conf", 0, "confidence below which the verifier is asked, at most 1; 0 means 0.5, a negative value never asks on confidence (cascade)")
 	flags.Bool("veto-cache", true, "reuse a verifier override on the same page (cascade)")
 	return cmd
 }

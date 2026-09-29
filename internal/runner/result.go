@@ -47,6 +47,7 @@ type Result struct {
 	FinalTitle           *string           `json:"final_title"`
 	FailedChecks         []string          `json:"failed_checks"`
 	Error                *string           `json:"error"`
+	ErrorCause           string            `json:"error_cause,omitempty"`
 	Reason               *string           `json:"reason"`
 	Attempt              int               `json:"attempt"`
 	Screenshots          Screenshots       `json:"screenshots"`
@@ -54,8 +55,18 @@ type Result struct {
 	Directory            string            `json:"directory"`
 	ScreenshotErrors     []ScreenshotError `json:"screenshot_errors"`
 	ScreenshotsAttempted int               `json:"screenshots_attempted"`
+	Warnings             []string          `json:"warnings"`
 	FinalFromStep        string            `json:"final_from_step,omitempty"`
 	Outcome              string            `json:"outcome"`
+}
+
+// MarshalJSON writes an unset warning list as an empty list, so result.json always has a list.
+func (r Result) MarshalJSON() ([]byte, error) {
+	type plain Result
+	if r.Warnings == nil {
+		r.Warnings = []string{}
+	}
+	return marshalCompact(plain(r))
 }
 
 // TestReport is one test with every attempt made for it; Outcome and Passed are those of the last attempt.
@@ -73,6 +84,7 @@ type Totals struct {
 	Failed             int `json:"failed"`
 	Unverified         int `json:"unverified"`
 	MissingScreenshots int `json:"missing_screenshots"`
+	TestsWithWarnings  int `json:"tests_with_warnings"`
 }
 
 // Report is the report.json of a run; Interrupted is set when the run was stopped before every test finished.
@@ -99,6 +111,9 @@ func (r *Report) finalize() {
 		}
 		if test.MissingScreenshots() > 0 {
 			totals.MissingScreenshots++
+		}
+		if len(test.Last().Warnings) > 0 {
+			totals.TestsWithWarnings++
 		}
 	}
 	r.Totals = totals
@@ -130,6 +145,16 @@ func marshalIndented(v any) ([]byte, error) {
 	encoder := json.NewEncoder(&out)
 	encoder.SetEscapeHTML(false)
 	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(v); err != nil {
+		return nil, fmt.Errorf("encode json: %w", err)
+	}
+	return bytes.TrimSuffix(out.Bytes(), []byte("\n")), nil
+}
+
+func marshalCompact(v any) ([]byte, error) {
+	var out bytes.Buffer
+	encoder := json.NewEncoder(&out)
+	encoder.SetEscapeHTML(false)
 	if err := encoder.Encode(v); err != nil {
 		return nil, fmt.Errorf("encode json: %w", err)
 	}

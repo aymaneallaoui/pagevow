@@ -44,8 +44,8 @@ func Validate(c Config) error {
 	if c.TextHelper.Reasoning != "" && c.TextHelper.Reasoning != "none" {
 		errs = append(errs, fmt.Errorf("text_helper.reasoning: %q is not empty or none", c.TextHelper.Reasoning))
 	}
-	if c.Backends.Cascade.TargetConf < 0 || c.Backends.Cascade.TargetConf > 1 {
-		errs = append(errs, errors.New("backends.cascade.target_conf: must be between 0 and 1"))
+	if c.Backends.Cascade.TargetConf > 1 {
+		errs = append(errs, errors.New("backends.cascade.target_conf: must be at most 1 (0 means the default 0.5, a negative value never asks the verifier on target confidence)"))
 	}
 	if err := errors.Join(errs...); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)

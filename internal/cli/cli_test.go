@@ -221,6 +221,11 @@ func TestStatusJSON(t *testing.T) {
 	assert.Equal(t, true, report.Browser["headless"])
 }
 
+func (h *harness) storeKey(name string) {
+	h.t.Helper()
+	require.NoError(h.t, h.store.Set(name, "sk-test-"+name+"-value"))
+}
+
 func TestStatusPaidAPI(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -229,15 +234,50 @@ func TestStatusPaidAPI(t *testing.T) {
 		text  string
 	}{
 		{"local backend, no helper", func(*harness) {}, false, "no paid service"},
-		{"jev backend", func(h *harness) { h.mustRun("use", "jev") }, true, "jev decision backend at https://api.typesafe.ai"},
-		{"custom backend at a public host", func(h *harness) {
+		{"jev backend with its key", func(h *harness) { h.mustRun("use", "jev"); h.storeKey("typesafe") }, true, "jev decision backend at https://api.typesafe.ai"},
+		{"jev backend without a stored key", func(h *harness) { h.mustRun("use", "jev") }, false, "no paid service"},
+		{"custom backend at the hosted api with a key", func(h *harness) {
+			h.mustRun("use", "custom", "--url", "https://api.typesafe.ai", "--key", "env:MY_KEY")
+			h.env["MY_KEY"] = "sk-real-looking-value"
+		}, true, "custom decision backend at https://api.typesafe.ai"},
+		{"custom backend at the hosted api, key variable unset", func(h *harness) {
+			h.mustRun("use", "custom", "--url", "https://api.typesafe.ai", "--key", "env:MY_KEY")
+		}, false, "no paid service"},
+		{"custom backend at the hosted api, placeholder key", func(h *harness) {
+			h.mustRun("use", "custom", "--url", "https://api.typesafe.ai", "--key", "env:MY_KEY")
+			h.env["MY_KEY"] = "local"
+		}, false, "no paid service"},
+		{"custom backend at a public host, no key", func(h *harness) {
 			h.mustRun("use", "custom", "--url", "https://models.example.test")
 		}, false, "no paid service"},
-		{"loopback helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://127.0.0.1:8081/v1" }, false, "no paid service"},
-		{"localhost helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://localhost:8081/v1" }, false, "no paid service"},
-		{"ipv6 loopback helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://[::1]:8081/v1" }, false, "no paid service"},
-		{"lan helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://192.168.1.20:8081/v1" }, true, "text helper at http://192.168.1.20:8081/v1"},
-		{"public helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "https://api.example.test/v1" }, true, "text helper at https://api.example.test/v1"},
+		{"custom backend on loopback with a key", func(h *harness) {
+			h.mustRun("use", "custom", "--url", "http://127.0.0.1:8080", "--key", "env:MY_KEY")
+			h.env["MY_KEY"] = "sk-real-looking-value"
+		}, false, "no paid service"},
+		{"jev backend on loopback with a key", func(h *harness) {
+			h.mustRun("use", "jev", "--url", "http://localhost:8080")
+			h.storeKey("typesafe")
+		}, false, "no paid service"},
+		{"custom backend on a localhost subdomain with a key", func(h *harness) {
+			h.mustRun("use", "custom", "--url", "http://api.localhost:8080", "--key", "env:MY_KEY")
+			h.env["MY_KEY"] = "sk-real-looking-value"
+		}, true, "custom decision backend at http://api.localhost:8080"},
+		{"local backend at a public url", func(h *harness) { h.mustRun("use", "local", "--url", "https://gpu.example.test") }, false, "no paid service"},
+		{"cascade at public urls", func(h *harness) {
+			h.mustRun("use", "cascade", "--primary", "https://a.example.test", "--verifier", "https://b.example.test")
+		}, false, "no paid service"},
+		{"loopback helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://127.0.0.1:8081/v1"; h.storeKey("text-helper") }, false, "no paid service"},
+		{"localhost helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://localhost:8081/v1"; h.storeKey("text-helper") }, false, "no paid service"},
+		{"ipv6 loopback helper", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "http://[::1]:8081/v1"; h.storeKey("text-helper") }, false, "no paid service"},
+		{"lan helper with a key", func(h *harness) {
+			h.env["TEXT_MODEL_BASE_URL"] = "http://192.168.1.20:8081/v1"
+			h.storeKey("text-helper")
+		}, true, "text helper at http://192.168.1.20:8081/v1"},
+		{"public helper with a key", func(h *harness) {
+			h.env["TEXT_MODEL_BASE_URL"] = "https://api.example.test/v1"
+			h.storeKey("text-helper")
+		}, true, "text helper at https://api.example.test/v1"},
+		{"public helper without a key", func(h *harness) { h.env["TEXT_MODEL_BASE_URL"] = "https://api.example.test/v1" }, false, "no paid service"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -616,4 +656,18 @@ func TestConfigFlagOverridesDefaultPath(t *testing.T) {
 	h.mustRun("--config", other, "use", "local", "--model", "custom-model")
 	assert.FileExists(t, other)
 	assert.NoFileExists(t, h.configPath)
+}
+
+func TestUseCascadeAcceptsANegativeTargetConf(t *testing.T) {
+	for _, args := range [][]string{{"--target-conf", "-1"}, {"--target-conf=-0.5"}} {
+		h := newHarness(t)
+		h.mustRun(append([]string{"use", "cascade"}, args...)...)
+		assert.Less(t, h.loadConfig().Backends.Cascade.TargetConf, 0.0, args)
+		assert.Contains(t, h.mustRun("status"), "target_conf")
+	}
+	h := newHarness(t)
+	h.mustRun("use", "cascade", "--target-conf", "1")
+	assert.InDelta(t, 1.0, h.loadConfig().Backends.Cascade.TargetConf, 1e-9)
+	_, err := h.run("use", "cascade", "--target-conf", "1.5")
+	assert.ErrorContains(t, err, "target_conf")
 }

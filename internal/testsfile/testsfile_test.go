@@ -227,6 +227,12 @@ func TestParseReportsEveryValidationError(t *testing.T) {
 		{"flights round trip", "- {id: a, url: u, goal: g, verify: flights, verify_args: {origin: A, destination: B, date: 2026-10-12, one_way: false}}\n", "a", "verify_args.return_date", "required when one_way is false"},
 		{"flights date placeholder", "- {id: a, url: u, goal: g, verify: flights, verify_args: {origin: A, destination: B, date: '{date+1:%c}'}}\n", "a", "verify_args.date", "unsupported strftime directive"},
 		{"not a mapping", "- just text\n", "", "", "must be a mapping"},
+		{"page without args", "- {id: a, url: u, goal: g, verify: page}\n", "a", "verify_args", "would run no checks"},
+		{"page null args", "- {id: a, url: u, goal: g, verify: page, verify_args: }\n", "a", "verify_args", "would run no checks"},
+		{"page empty mapping", "- {id: a, url: u, goal: g, verify: page, verify_args: {}}\n", "a", "verify_args", "would run no checks"},
+		{"page empty lists", "- {id: a, url: u, goal: g, verify: page, verify_args: {url: [], text: [], fields: {}, values: [], checked: {}}}\n", "a", "verify_args", "would run no checks"},
+		{"echo empty lists", "- {id: a, url: u, goal: g, verify: echo, verify_args: {url: [], values: []}}\n", "a", "verify_args", "would run no checks"},
+		{"word boundary pattern", "- {id: a, url: u, goal: g, verify: page, verify_args: {url: '\\bsum'}}\n", "a", "verify_args.url", `pattern '\bsum'`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -361,4 +367,24 @@ func TestLoadReturnsWarnings(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, tests, 1)
 	assert.Len(t, warnings, 1)
+}
+
+func TestAnExplicitStrTagKeepsYesAString(t *testing.T) {
+	text := "- id: a\n  url: u\n  goal: g\n  verify: page\n  verify_args:\n    fields: {Subscribe: !!str yes, Agree: yes}\n"
+	tests, _, err := Parse([]byte(text), today)
+	require.NoError(t, err)
+	args, ok := tests[0].Args.(verify.PageArgs)
+	require.True(t, ok)
+	require.Len(t, args.Fields, 2)
+	assert.Equal(t, verify.KindString, args.Fields[0].Want.Kind())
+	assert.Equal(t, "yes", args.Fields[0].Want.String())
+	assert.Equal(t, verify.KindBool, args.Fields[1].Want.Kind())
+}
+
+func TestAPartlyEmptyVerifierStillLoads(t *testing.T) {
+	for _, args := range []string{"{text: [hello]}", "{url: x}", "{fields: {A: b}}", "{values: [1]}", "{checked: {A: 1}}"} {
+		text := "- {id: a, url: u, goal: g, verify: page, verify_args: " + args + "}\n"
+		_, _, err := Parse([]byte(text), today)
+		assert.NoError(t, err, args)
+	}
 }

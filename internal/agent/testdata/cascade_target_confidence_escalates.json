@@ -10,7 +10,6 @@
   "verifier": true,
   "veto_cache": true,
   "target_conf": 0.0,
-  "mask_errors": false,
   "text_helper": true
  },
  "observations": [

@@ -130,7 +130,8 @@ func TestJSONReportKeepsThePythonFieldNamesAndOrder(t *testing.T) {
     "passed": 0,
     "failed": 0,
     "unverified": 1,
-    "missing_screenshots": 0
+    "missing_screenshots": 0,
+    "tests_with_warnings": 0
   },
   "tests": [
     {
@@ -169,6 +170,7 @@ func TestJSONReportKeepsThePythonFieldNamesAndOrder(t *testing.T) {
             }
           ],
           "screenshots_attempted": 2,
+          "warnings": [],
           "final_from_step": "step-0000.png",
           "outcome": "UNVERIFIED"
         }

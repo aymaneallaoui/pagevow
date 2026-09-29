@@ -250,7 +250,7 @@ def strip_trace(line):
 def run(sc):
     Clock.now = 0.0
     config = {"loop_guard": False, "done_min_conf": 0.0, "blocked_min_conf": 0.0, "max_steps": 60,
-              "verifier": False, "veto_cache": True, "target_conf": 0.0, "mask_errors": False, "text_helper": True,
+              "verifier": False, "veto_cache": True, "target_conf": 0.0, "text_helper": True,
               **sc.get("config", {})}
     for key in ENV_KEYS:
         os.environ.pop(key, None)
@@ -355,11 +355,9 @@ scenario("blocked_by_the_model", [P0], primary=[blocked()])
 scenario("transient_model_error_then_success", [P0, P1], primary=[invalid(), click(), done()])
 scenario("connection_error_then_success", [P0, P1], primary=[CONNECTION_ERROR, click(), done()])
 scenario("invalid_response_retry_keeps_the_raw_reply", [P0, P1], primary=[invalid(3000), click(), done()])
-scenario("two_connection_errors", [P0], primary=[CONNECTION_ERROR, CONNECTION_ERROR],
-         config={"mask_errors": True})
-scenario("two_invalid_responses_keep_raw_in_meta", [P0], primary=[invalid(3000), invalid(3000)],
-         config={"mask_errors": True})
-scenario("http_error_is_not_retried", [P0], primary=[http_error(500)], config={"mask_errors": True})
+scenario("two_connection_errors", [P0], primary=[CONNECTION_ERROR, CONNECTION_ERROR])
+scenario("two_invalid_responses_keep_raw_in_meta", [P0], primary=[invalid(3000), invalid(3000)])
+scenario("http_error_is_not_retried", [P0], primary=[http_error(500)])
 scenario("done_on_a_changed_page_is_asked_again", [P0, P1], primary=[done(), done()],
          fresh=[True, False, True, True])
 scenario("action_budget_exhausted", [P0, P1, P2], primary=[click()] * 3, config={"max_steps": 2})

@@ -12,6 +12,7 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/backend"
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
+	"github.com/aymaneallaoui/pagevow/internal/secret"
 	"github.com/aymaneallaoui/pagevow/internal/texthelper"
 )
 
@@ -102,8 +103,8 @@ func (c *collaborators) cascade(cfg config.Cascade) {
 	}
 	c.checks = append(c.checks, check{
 		run: verifier.Ping,
-		fail: func(error) string {
-			return fmt.Sprintf("The cascade verifier at %s does not answer.\n  Start it, or choose another backend with `pagevow use`.", cfg.Verifier)
+		fail: func(err error) string {
+			return c.describe(err, fmt.Sprintf("The cascade verifier at %s does not answer.\n  Start it, or choose another backend with `pagevow use`.", cfg.Verifier))
 		},
 	})
 }
@@ -126,8 +127,31 @@ func (c *collaborators) pingPrimary(message string) check {
 			}
 			return reachable(client.Ping(ctx))
 		},
-		fail: func(err error) string { return describeFailure(err, message) },
+		fail: func(err error) string { return c.describe(err, message) },
 	}
+}
+
+// describe is describeFailure plus the transport cause of the failed call, with keys removed.
+func (c *collaborators) describe(err error, message string) string {
+	text := describeFailure(err, message)
+	var status *backend.HTTPStatusError
+	if errors.As(err, &status) {
+		return text
+	}
+	if cause := rootCause(err); cause != "" {
+		text += "\n  Cause: " + secret.New(c.secrets...).Text(cause)
+	}
+	return text
+}
+
+func rootCause(err error) string {
+	if err == nil {
+		return ""
+	}
+	for next := errors.Unwrap(err); next != nil; next = errors.Unwrap(err) {
+		err = next
+	}
+	return err.Error()
 }
 
 func describeFailure(err error, message string) string {
@@ -212,8 +236,8 @@ func (c *collaborators) textHelper(cfg config.TextHelper, resolver *keys.Resolve
 	if loopback {
 		c.checks = append(c.checks, check{
 			run: helper.Ping,
-			fail: func(error) string {
-				return fmt.Sprintf("The local text helper at %s does not answer.\n  Start it, or clear text_helper.url.", cfg.URL)
+			fail: func(err error) string {
+				return c.describe(err, fmt.Sprintf("The local text helper at %s does not answer.\n  Start it, or clear text_helper.url.", cfg.URL))
 			},
 		})
 	}

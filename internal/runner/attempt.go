@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/agent"
 	"github.com/aymaneallaoui/pagevow/internal/backend"
 	"github.com/aymaneallaoui/pagevow/internal/page"
+	"github.com/aymaneallaoui/pagevow/internal/secret"
 	"github.com/aymaneallaoui/pagevow/internal/testsfile"
 	"github.com/aymaneallaoui/pagevow/internal/trace"
 	"github.com/aymaneallaoui/pagevow/internal/verify"
@@ -35,8 +37,8 @@ type attempt struct {
 }
 
 func (r *Runner) runAttempt(ctx context.Context, dir string, test testsfile.Test, number int) (Result, error) {
-	if err := os.MkdirAll(dir, dirMode); err != nil {
-		return Result{}, fmt.Errorf("create attempt directory: %w", err)
+	if err := os.Mkdir(dir, dirMode); err != nil {
+		return directoryFailure(dir, test, number, err), nil
 	}
 	goal := strings.TrimSpace(test.Goal)
 	recorder, err := trace.New(trace.Options{
@@ -58,7 +60,7 @@ func (r *Runner) runAttempt(ctx context.Context, dir string, test testsfile.Test
 		res: Result{
 			ID: test.ID, URL: test.URL, Goal: test.Goal, Status: string(agent.StatusError), Attempt: number,
 			FailedChecks: []string{}, Directory: dir, ScreenshotErrors: []ScreenshotError{},
-			Screenshots: Screenshots{Steps: []string{}},
+			Screenshots: Screenshots{Steps: []string{}}, Warnings: []string{},
 		},
 	}
 	outcome := a.execute(ctx)
@@ -71,16 +73,16 @@ func (r *Runner) runAttempt(ctx context.Context, dir string, test testsfile.Test
 
 func (a *attempt) execute(ctx context.Context) agent.Outcome {
 	r := a.runner
-	session, err := r.deps.Sessions.NewSession(ctx, a.test.URL)
-	if err != nil {
-		return a.failed(fmt.Errorf("open session: %w", err))
-	}
-	a.session = session
 	attemptCtx, cancel := context.WithTimeout(ctx, r.opts.Timeout)
 	defer cancel()
+	session, err := r.deps.Sessions.NewSession(attemptCtx, a.test.URL)
+	if err != nil {
+		return a.failed(attemptCtx, fmt.Errorf("open session: %w", err))
+	}
+	a.session = session
 	initial, err := session.Observe(attemptCtx)
 	if err != nil {
-		return a.failed(fmt.Errorf("observe start page: %w", err))
+		return a.failed(attemptCtx, fmt.Errorf("observe start page: %w", err))
 	}
 	a.initial = &initial
 	var veto *backend.VetoCache
@@ -103,15 +105,35 @@ func (a *attempt) execute(ctx context.Context) agent.Outcome {
 		OnDecision:     func(int, page.State, backend.Decision) { a.captureStep(attemptCtx) },
 	})
 	if err != nil {
-		return a.failed(fmt.Errorf("start agent: %w", err))
+		return a.failed(attemptCtx, fmt.Errorf("start agent: %w", err))
 	}
 	outcome, _ := loop.Run(attemptCtx)
 	return outcome
 }
 
-func (a *attempt) failed(err error) agent.Outcome {
-	a.rec.Finish(string(agent.StatusError), a.wallMS(), trace.WithError(err))
-	return agent.Outcome{Status: agent.StatusError, Err: err}
+func (a *attempt) failed(attemptCtx context.Context, err error) agent.Outcome {
+	status := agent.StatusError
+	if errors.Is(attemptCtx.Err(), context.DeadlineExceeded) {
+		status = agent.StatusTimeout
+	}
+	a.rec.Finish(string(status), a.wallMS(), trace.WithError(err))
+	return agent.Outcome{Status: status, Err: err}
+}
+
+// directoryFailure is the result of an attempt whose directory could not be created; nothing was run or written.
+func directoryFailure(dir string, test testsfile.Test, number int, cause error) Result {
+	message := fmt.Sprintf("create attempt directory: %v", cause)
+	checks := []string{fmt.Sprintf("status: expected DONE, actual %s", agent.StatusError)}
+	outcome := OutcomeFail
+	if !test.Verified() {
+		checks = append(checks, NoVerifier)
+		outcome = OutcomeUnverified
+	}
+	return Result{
+		ID: test.ID, URL: test.URL, Goal: test.Goal, Status: string(agent.StatusError), Attempt: number,
+		FailedChecks: checks, Error: &message, Directory: dir, ScreenshotErrors: []ScreenshotError{},
+		Screenshots: Screenshots{Steps: []string{}}, Warnings: []string{}, Outcome: outcome,
+	}
 }
 
 func (a *attempt) wallMS() int {
@@ -150,6 +172,13 @@ func (a *attempt) conclude(ctx context.Context, outcome agent.Outcome) {
 			res.Screenshots.Final = &path
 		}
 	}
+	if a.session != nil {
+		last := final
+		if last == nil && outcome.Final.URL != "" {
+			last = &outcome.Final
+		}
+		res.Warnings = sessionWarnings(a.session, last)
+	}
 	closeErr := a.closeSession(ctx)
 
 	if !a.rec.Finished() {
@@ -173,6 +202,7 @@ func (a *attempt) conclude(ctx context.Context, outcome agent.Outcome) {
 	switch {
 	case outcome.Err != nil:
 		res.Error = optionalText(outcome.Err.Error())
+		res.ErrorCause = hiddenCause(outcome.Err, secret.New(a.runner.opts.Secrets...))
 	case closeErr != nil:
 		res.Error = optionalText(closeErr.Error())
 	}
@@ -195,6 +225,19 @@ func (a *attempt) conclude(ctx context.Context, outcome agent.Outcome) {
 		path := a.rec.TracePath()
 		res.Trace = &path
 	}
+}
+
+// hiddenCause returns the innermost cause of err when its text is not already part of err's message, as with model connection errors.
+func hiddenCause(err error, redactor *secret.Redactor) string {
+	root := err
+	for next := errors.Unwrap(root); next != nil; next = errors.Unwrap(root) {
+		root = next
+	}
+	cause := root.Error()
+	if strings.Contains(err.Error(), cause) {
+		return ""
+	}
+	return redactor.Text(cause)
 }
 
 func (a *attempt) observeFinal(ctx context.Context, outcome agent.Outcome, interrupted bool) *page.State {

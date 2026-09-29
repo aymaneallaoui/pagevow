@@ -91,6 +91,7 @@ type world struct {
 	onDecide     func(ctx context.Context, in backend.Input) (d backend.Decision, handled bool, err error)
 	caches       []*backend.VetoCache
 	decisions    int
+	decorate     func(*fakeSession) runner.Session
 }
 
 func newWorld(t *testing.T) *world {
@@ -120,6 +121,9 @@ func (w *world) NewSession(_ context.Context, url string) (runner.Session, error
 	w.built[url]++
 	s := &fakeSession{world: w, sc: list[index]}
 	w.sessions = append(w.sessions, s)
+	if w.decorate != nil {
+		return w.decorate(s), nil
+	}
 	return s, nil
 }
 

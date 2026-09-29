@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aymaneallaoui/pagevow/internal/agent"
@@ -34,7 +33,7 @@ type Session interface {
 	Close(ctx context.Context) error
 }
 
-// SessionFactory opens a session on a start URL; every attempt gets a fresh one.
+// SessionFactory opens a session on a start URL; every attempt gets a fresh one. NewSession must return when ctx ends.
 type SessionFactory interface {
 	NewSession(ctx context.Context, url string) (Session, error)
 }
@@ -84,7 +83,7 @@ type Options struct {
 	Screenshots ScreenshotPolicy
 	// Retries is the number of fresh reruns of a failed, verified test.
 	Retries int
-	// Timeout bounds one attempt; zero means DefaultTimeout.
+	// Timeout bounds one attempt, from opening its session to the last step; zero means DefaultTimeout.
 	Timeout  time.Duration
 	FullPage bool
 	// MaxSteps bounds the actions of one attempt; zero means agent.DefaultMaxSteps.
@@ -150,13 +149,13 @@ func (r *Runner) Run(ctx context.Context, tests []testsfile.Test) (Report, error
 	}
 	report := Report{RunDir: runDir, TestsFile: r.opts.TestsFile, Tests: []TestReport{}}
 	var runErr error
-	names := directoryNames(tests)
+	plans := planDirectories(tests, r.opts.Retries)
 	for i, test := range tests {
 		if ctx.Err() != nil {
 			report.Interrupted = true
 			break
 		}
-		tr, err := r.runTest(ctx, runDir, names[i], test)
+		tr, err := r.runTest(ctx, runDir, plans[i], test)
 		if len(tr.Attempts) > 0 {
 			report.Tests = append(report.Tests, tr)
 		}
@@ -203,14 +202,10 @@ func (r *Runner) createRunDir() (string, error) {
 	return "", fmt.Errorf("too many runs in %s at %s", parent, stamp)
 }
 
-func (r *Runner) runTest(ctx context.Context, runDir, base string, test testsfile.Test) (TestReport, error) {
+func (r *Runner) runTest(ctx context.Context, runDir string, names []string, test testsfile.Test) (TestReport, error) {
 	tr := TestReport{ID: test.ID}
 	for attempt := 0; attempt <= r.opts.Retries; attempt++ {
-		name := base
-		if attempt > 0 {
-			name += ".retry" + strconv.Itoa(attempt)
-		}
-		result, err := r.runAttempt(ctx, filepath.Join(runDir, name), test, attempt)
+		result, err := r.runAttempt(ctx, filepath.Join(runDir, names[attempt]), test, attempt)
 		if err != nil {
 			return tr, fmt.Errorf("test %q attempt %d: %w", test.ID, attempt+1, err)
 		}
@@ -221,34 +216,4 @@ func (r *Runner) runTest(ctx context.Context, runDir, base string, test testsfil
 		}
 	}
 	return tr, nil
-}
-
-// directoryNames maps every test to a directory name that is safe on every OS and unique within the run.
-func directoryNames(tests []testsfile.Test) []string {
-	names := make([]string, len(tests))
-	taken := make(map[string]bool, len(tests))
-	for i, test := range tests {
-		base := safeName(test.ID)
-		name := base
-		for n := 2; taken[name]; n++ {
-			name = base + "-" + strconv.Itoa(n)
-		}
-		taken[name] = true
-		names[i] = name
-	}
-	return names
-}
-
-func safeName(id string) string {
-	name := strings.Map(func(r rune) rune {
-		switch {
-		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '.', r == '_', r == '-':
-			return r
-		}
-		return '_'
-	}, id)
-	if strings.Trim(name, ".") == "" {
-		return "_" + name
-	}
-	return name
 }

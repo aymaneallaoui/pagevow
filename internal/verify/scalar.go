@@ -86,10 +86,44 @@ func scalarOf(node *yaml.Node) (Scalar, error) {
 	if node.Kind != yaml.ScalarNode {
 		return Scalar{}, fmt.Errorf("must be a single value")
 	}
+	if node.Style&yaml.TaggedStyle != 0 {
+		return taggedScalar(node)
+	}
 	if node.Style&quotedStyles != 0 {
 		return NewString(node.Value), nil
 	}
 	return resolvePlain(node.Value), nil
+}
+
+var yamlPlainFloat = regexp.MustCompile(`^[-+]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][-+]?[0-9]+)?$`)
+
+// taggedScalar builds the value PyYAML's safe loader builds for an explicit core tag.
+func taggedScalar(node *yaml.Node) (Scalar, error) {
+	value := node.Value
+	switch node.Tag {
+	case "!!str":
+		return NewString(value), nil
+	case "!!null":
+		return Scalar{kind: KindNull, text: "None"}, nil
+	case "!!bool":
+		switch strings.ToLower(value) {
+		case "yes", "true", "on":
+			return NewBool(true), nil
+		case "no", "false", "off":
+			return NewBool(false), nil
+		}
+	case "!!int":
+		if yamlInt.MatchString(value) {
+			return Scalar{kind: KindInt, text: pyInt(value)}, nil
+		}
+	case "!!float":
+		if yamlFloat.MatchString(value) || yamlPlainFloat.MatchString(strings.ReplaceAll(value, "_", "")) {
+			return Scalar{kind: KindFloat, text: reprFloat(pyFloat(value))}, nil
+		}
+	default:
+		return Scalar{}, fmt.Errorf("the tag %s is not supported; use !!str, !!int, !!float, !!bool or !!null, or drop the tag", node.Tag)
+	}
+	return Scalar{}, fmt.Errorf("%q is not a valid value for the tag %s", value, node.Tag)
 }
 
 func resolvePlain(value string) Scalar {

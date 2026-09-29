@@ -3778,6 +3778,340 @@
   ]
  },
  {
+  "name": "page explicit str tag keeps yes a string",
+  "verifier": "page",
+  "final": {
+   "url": "https://x.test/",
+   "title": "",
+   "w": 1280,
+   "h": 800,
+   "text": "",
+   "scroll": {
+    "y": 0,
+    "height": 800
+   },
+   "actions": [
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Subscribe",
+     "role": "textbox",
+     "node": 1,
+     "value": "yes"
+    },
+    {
+     "id": "e0",
+     "kind": "click",
+     "label": "Newsletter",
+     "role": "checkbox",
+     "node": 2,
+     "checked": "true"
+    },
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Count",
+     "role": "textbox",
+     "node": 3,
+     "value": "12"
+    }
+   ],
+   "guards": {}
+  },
+  "initial": null,
+  "args_yaml": "fields: {Subscribe: !!str yes}\n",
+  "error": null,
+  "result": {
+   "passed": true,
+   "checks": [
+    [
+     "field:Subscribe",
+     true
+    ]
+   ]
+  },
+  "explain": []
+ },
+ {
+  "name": "page plain yes is a boolean and fails on a text field",
+  "verifier": "page",
+  "final": {
+   "url": "https://x.test/",
+   "title": "",
+   "w": 1280,
+   "h": 800,
+   "text": "",
+   "scroll": {
+    "y": 0,
+    "height": 800
+   },
+   "actions": [
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Subscribe",
+     "role": "textbox",
+     "node": 1,
+     "value": "yes"
+    },
+    {
+     "id": "e0",
+     "kind": "click",
+     "label": "Newsletter",
+     "role": "checkbox",
+     "node": 2,
+     "checked": "true"
+    },
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Count",
+     "role": "textbox",
+     "node": 3,
+     "value": "12"
+    }
+   ],
+   "guards": {}
+  },
+  "initial": null,
+  "args_yaml": "fields: {Subscribe: yes}\n",
+  "error": null,
+  "result": {
+   "passed": false,
+   "checks": [
+    [
+     "field:Subscribe",
+     false
+    ]
+   ]
+  },
+  "explain": [
+   "field 'Subscribe': expected True, actual None"
+  ]
+ },
+ {
+  "name": "page explicit bool tag",
+  "verifier": "page",
+  "final": {
+   "url": "https://x.test/",
+   "title": "",
+   "w": 1280,
+   "h": 800,
+   "text": "",
+   "scroll": {
+    "y": 0,
+    "height": 800
+   },
+   "actions": [
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Subscribe",
+     "role": "textbox",
+     "node": 1,
+     "value": "yes"
+    },
+    {
+     "id": "e0",
+     "kind": "click",
+     "label": "Newsletter",
+     "role": "checkbox",
+     "node": 2,
+     "checked": "true"
+    },
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Count",
+     "role": "textbox",
+     "node": 3,
+     "value": "12"
+    }
+   ],
+   "guards": {}
+  },
+  "initial": null,
+  "args_yaml": "fields: {Newsletter: !!bool yes}\n",
+  "error": null,
+  "result": {
+   "passed": true,
+   "checks": [
+    [
+     "field:Newsletter",
+     true
+    ]
+   ]
+  },
+  "explain": []
+ },
+ {
+  "name": "page explicit int tag in values",
+  "verifier": "page",
+  "final": {
+   "url": "https://x.test/",
+   "title": "",
+   "w": 1280,
+   "h": 800,
+   "text": "",
+   "scroll": {
+    "y": 0,
+    "height": 800
+   },
+   "actions": [
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Subscribe",
+     "role": "textbox",
+     "node": 1,
+     "value": "yes"
+    },
+    {
+     "id": "e0",
+     "kind": "click",
+     "label": "Newsletter",
+     "role": "checkbox",
+     "node": 2,
+     "checked": "true"
+    },
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Count",
+     "role": "textbox",
+     "node": 3,
+     "value": "12"
+    }
+   ],
+   "guards": {}
+  },
+  "initial": null,
+  "args_yaml": "values: [!!int '12', !!str 12]\n",
+  "error": null,
+  "result": {
+   "passed": true,
+   "checks": [
+    [
+     "value:12",
+     true
+    ]
+   ]
+  },
+  "explain": []
+ },
+ {
+  "name": "page explicit str tag on a number",
+  "verifier": "page",
+  "final": {
+   "url": "https://x.test/",
+   "title": "",
+   "w": 1280,
+   "h": 800,
+   "text": "",
+   "scroll": {
+    "y": 0,
+    "height": 800
+   },
+   "actions": [
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Subscribe",
+     "role": "textbox",
+     "node": 1,
+     "value": "yes"
+    },
+    {
+     "id": "e0",
+     "kind": "click",
+     "label": "Newsletter",
+     "role": "checkbox",
+     "node": 2,
+     "checked": "true"
+    },
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Count",
+     "role": "textbox",
+     "node": 3,
+     "value": "12"
+    }
+   ],
+   "guards": {}
+  },
+  "initial": null,
+  "args_yaml": "fields: {Count: !!str 12}\n",
+  "error": null,
+  "result": {
+   "passed": true,
+   "checks": [
+    [
+     "field:Count",
+     true
+    ]
+   ]
+  },
+  "explain": []
+ },
+ {
+  "name": "page explicit float tag",
+  "verifier": "page",
+  "final": {
+   "url": "https://x.test/",
+   "title": "",
+   "w": 1280,
+   "h": 800,
+   "text": "",
+   "scroll": {
+    "y": 0,
+    "height": 800
+   },
+   "actions": [
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Subscribe",
+     "role": "textbox",
+     "node": 1,
+     "value": "yes"
+    },
+    {
+     "id": "e0",
+     "kind": "click",
+     "label": "Newsletter",
+     "role": "checkbox",
+     "node": 2,
+     "checked": "true"
+    },
+    {
+     "id": "e0",
+     "kind": "fill",
+     "label": "Count",
+     "role": "textbox",
+     "node": 3,
+     "value": "12"
+    }
+   ],
+   "guards": {}
+  },
+  "initial": null,
+  "args_yaml": "fields: {Count: !!float 12}\n",
+  "error": null,
+  "result": {
+   "passed": false,
+   "checks": [
+    [
+     "field:Count",
+     false
+    ]
+   ]
+  },
+  "explain": [
+   "field 'Count': expected 12.0, actual '12'"
+  ]
+ },
+ {
   "name": "hn rank 1 link",
   "verifier": "hn_story",
   "final": {

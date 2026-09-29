@@ -19,6 +19,7 @@ import (
 type BrowserSpec struct {
 	ExecPath string
 	Viewport config.Viewport
+	Headless bool
 }
 
 // RunBrowser is a launched browser that opens one session per test attempt.
@@ -27,7 +28,7 @@ type RunBrowser interface {
 	Stop(ctx context.Context) error
 }
 
-// BrowserLauncher finds the browser executable and launches a private headless browser.
+// BrowserLauncher finds the browser executable and launches a private browser, headless or with a window.
 type BrowserLauncher interface {
 	Find() (string, error)
 	Launch(ctx context.Context, spec BrowserSpec) (RunBrowser, error)
@@ -71,7 +72,7 @@ func (l systemLauncher) Launch(ctx context.Context, spec BrowserSpec) (RunBrowse
 		extra = append(extra, "--no-sandbox")
 	}
 	process, err := browser.Launch(ctx, browser.LaunchOptions{
-		ExecPath: spec.ExecPath, Headless: true, ProfileDir: profile, Viewport: viewport, ExtraArgs: extra,
+		ExecPath: spec.ExecPath, Headless: spec.Headless, ProfileDir: profile, Viewport: viewport, ExtraArgs: extra,
 	})
 	if err != nil {
 		_ = os.RemoveAll(profile)

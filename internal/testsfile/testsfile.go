@@ -244,6 +244,9 @@ func parseVerifier(test *Test, fields map[string]*yaml.Node, today time.Time, fa
 		}
 		return []error{fail(field, "%v", err)}
 	}
+	if args.Empty() {
+		return []error{fail("verify_args", "verifier %q would run no checks and pass on any page; list at least one expectation (page needs url, text, fields, values or checked; echo needs url and values)", test.Verify)}
+	}
 	test.Args = args
 	return nil
 }

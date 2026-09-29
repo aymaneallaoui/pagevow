@@ -258,3 +258,22 @@ func TestTextHelperReasoningAcceptsOnlyEmptyOrNone(t *testing.T) {
 	assert.ErrorContains(t, config.Validate(cfg), "text_helper.reasoning")
 	assert.Contains(t, config.Keys(), "text_helper.reasoning")
 }
+
+func TestValidateTargetConfAllowsNegativeAndRejectsAboveOne(t *testing.T) {
+	cfg := config.Defaults()
+	for _, value := range []float64{-1, -0.001, 0, 0.5, 1} {
+		cfg.Backends.Cascade.TargetConf = value
+		assert.NoError(t, config.Validate(cfg), "%v", value)
+	}
+	cfg.Backends.Cascade.TargetConf = 1.001
+	assert.ErrorContains(t, config.Validate(cfg), "backends.cascade.target_conf")
+}
+
+func TestSaveStoresANegativeTargetConf(t *testing.T) {
+	isolateEnv(t)
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, config.Save(path, map[string]any{"backends.cascade.target_conf": -1.0}))
+	cfg, err := config.Load(config.Options{File: path, LookupEnv: noEnv})
+	require.NoError(t, err)
+	assert.InDelta(t, -1.0, cfg.Backends.Cascade.TargetConf, 1e-9)
+}

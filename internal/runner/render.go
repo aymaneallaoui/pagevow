@@ -55,6 +55,15 @@ func (t TestReport) MissingLine() string {
 	return fmt.Sprintf("  screenshots: %d of %d could not be captured (%s)", missing, last.ScreenshotsAttempted, first)
 }
 
+// WarningLines returns one indented line for each warning of the last attempt.
+func (t TestReport) WarningLines() []string {
+	var lines []string
+	for _, warning := range t.Last().Warnings {
+		lines = append(lines, "  warning: "+warning)
+	}
+	return lines
+}
+
 // FailureBlock describes a failed or unverified test: goal, final URL, failed checks, reason, error and paths.
 func (t TestReport) FailureBlock() string {
 	last := t.Last()
@@ -72,6 +81,9 @@ func (t TestReport) FailureBlock() string {
 	}
 	if last.Error != nil {
 		lines = append(lines, "  error: "+*last.Error)
+	}
+	if last.ErrorCause != "" {
+		lines = append(lines, "  cause: "+last.ErrorCause)
 	}
 	lines = append(lines, "  final.png: "+orNone(last.Screenshots.Final, "not captured"), "  directory: "+last.Directory)
 	return strings.Join(lines, "\n")
@@ -101,6 +113,9 @@ func (r Report) TotalsText() string {
 	if r.Totals.MissingScreenshots > 0 {
 		lines = append(lines, fmt.Sprintf("%d with missing screenshots.", r.Totals.MissingScreenshots))
 	}
+	if r.Totals.TestsWithWarnings > 0 {
+		lines = append(lines, fmt.Sprintf("%d with warnings.", r.Totals.TestsWithWarnings))
+	}
 	if r.Interrupted {
 		lines = append(lines, "Interrupted: the run was stopped before every test finished.")
 	}
@@ -119,6 +134,7 @@ func (r Report) Text() string {
 		if missing := test.MissingLine(); missing != "" {
 			lines = append(lines, missing)
 		}
+		lines = append(lines, test.WarningLines()...)
 	}
 	lines = append(lines, "", r.TotalsText())
 	if failures := r.Failures(); failures != "" {

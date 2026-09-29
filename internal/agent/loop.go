@@ -109,7 +109,7 @@ func (a *Agent) record(d backend.Decision, retries []trace.Retry) {
 		Goal:         a.goal,
 		Request:      d.Request,
 		Answers:      d.RawAnswers,
-		Usage:        d.Usage,
+		Usage:        d.ServerUsage,
 		LatencyMS:    int(d.LatencyMS),
 		AwaitingText: d.Operation == operationTypeText,
 		Retries:      retries,
@@ -177,10 +177,16 @@ func (a *Agent) execute(ctx context.Context) error {
 	err := a.rec.Timed(trace.PhaseExecute, func() error {
 		actErr := a.opts.Browser.Act(ctx, action, state, deref(text))
 		if errors.Is(actErr, page.ErrTargetRefused) {
-			a.refused(action, actErr)
+			a.refused(action)
 		}
 		return actErr
 	})
+	if outcomeUnknown(err) {
+		a.pending = nil
+		entry := a.entry(*d, action, state, text, helper)
+		entry.OutcomeUnknown = true
+		a.history = append(a.history, entry)
+	}
 	if err != nil {
 		return err
 	}
@@ -289,7 +295,7 @@ type refusalTarget struct {
 	label string
 }
 
-func (a *Agent) refused(action page.Action, err error) {
+func (a *Agent) refused(action page.Action) {
 	target := refusalTarget{label: action.Label}
 	if action.Node != 0 {
 		target = refusalTarget{node: action.Node}
@@ -305,7 +311,7 @@ func (a *Agent) refused(action page.Action, err error) {
 		}
 	}
 	a.halt = StatusBlocked
-	a.blockedReason = fmt.Sprintf("Target refused %d times: %s: %s", refusalLimit, action.Label, err)
+	a.blockedReason = fmt.Sprintf("Target refused %d times: %s: %s", refusalLimit, action.Label, page.ErrTargetRefused)
 }
 
 func (a *Agent) observe(ctx context.Context, previous page.State) (page.State, error) {

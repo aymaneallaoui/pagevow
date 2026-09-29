@@ -18,6 +18,8 @@ func Validate(c Config) error {
 	for _, field := range []struct{ key, value string }{
 		{"backends.jev.key", c.Backends.Jev.Key},
 		{"backends.custom.key", c.Backends.Custom.Key},
+		{"backends.cascade.primary_key", c.Backends.Cascade.PrimaryKey},
+		{"backends.cascade.verifier_key", c.Backends.Cascade.VerifierKey},
 		{"text_helper.key", c.TextHelper.Key},
 	} {
 		if err := validateKeyReference(field.key, field.value); err != nil {
@@ -46,6 +48,30 @@ func Validate(c Config) error {
 	}
 	if c.Backends.Cascade.TargetConf > 1 {
 		errs = append(errs, errors.New("backends.cascade.target_conf: must be at most 1 (0 means the default 0.5, a negative value never asks the verifier on target confidence)"))
+	}
+	for _, field := range []struct{ key, value string }{
+		{"backends.local.mode", c.Backends.Local.Mode},
+		{"backends.cascade.primary_mode", c.Backends.Cascade.PrimaryMode},
+		{"backends.cascade.verifier_mode", c.Backends.Cascade.VerifierMode},
+	} {
+		if !slices.Contains(ModeNames(), field.value) {
+			errs = append(errs, fmt.Errorf("%s: %q is not one of %s", field.key, field.value, strings.Join(ModeNames(), ", ")))
+		}
+	}
+	for _, field := range []struct {
+		key      string
+		value    int
+		min, max int
+	}{
+		{"server.start_timeout_seconds", c.Server.StartTimeoutSeconds, 1, 3600},
+		{"server.gpu_max_temp_c", c.Server.GPUMaxTempC, 40, 100},
+		{"server.gpu_min_free_mib", c.Server.GPUMinFreeMiB, 0, 65536},
+		{"text_helper.local.start_timeout_seconds", c.TextHelper.Local.StartTimeoutSeconds, 1, 3600},
+		{"text_helper.local.gpu_layers", c.TextHelper.Local.GPULayers, 0, 999},
+	} {
+		if field.value < field.min || field.value > field.max {
+			errs = append(errs, fmt.Errorf("%s: %d is not between %d and %d", field.key, field.value, field.min, field.max))
+		}
 	}
 	if err := errors.Join(errs...); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)

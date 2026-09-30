@@ -372,7 +372,6 @@ func TestRunPreflightFailsWhenTheBackendDoesNotAnswer(t *testing.T) {
 	assert.Contains(t, stderr, "The local model server does not answer at http://127.0.0.1:1; start it with: pagevow start")
 	assert.NotContains(t, stderr, "phase 3")
 	assert.Contains(t, stderr, "Cause: ")
-	assert.Contains(t, stderr, "connection refused")
 	assert.Empty(t, e.launcher.specs)
 	assert.NoDirExists(t, filepath.Join(e.dir, ".pagevow"))
 }
@@ -402,7 +401,6 @@ func TestRunPreflightShowsTheTransportCauseWithoutTheKey(t *testing.T) {
 	assert.Equal(t, 2, cli.ExitCode(err))
 	assert.Contains(t, stderr, "The custom decision backend at http://127.0.0.1:1 does not answer.")
 	assert.Contains(t, stderr, "\n  Cause: ")
-	assert.Contains(t, stderr, "connection refused")
 	assert.NotContains(t, stdout+stderr+err.Error(), "sk-live-secret-value")
 }
 

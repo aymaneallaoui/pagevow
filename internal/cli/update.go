@@ -74,6 +74,7 @@ func (a *app) runUpdate(cmd *cobra.Command) error {
 		return err
 	}
 	ctx := commandContext(cmd)
+	update.RemoveLeftover(opts.Executable, opts.GOOS)
 	rel, err := update.Latest(ctx, opts)
 	if err != nil {
 		return infrastructure(err)

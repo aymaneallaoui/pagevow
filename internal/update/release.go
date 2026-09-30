@@ -23,6 +23,8 @@ const (
 	apiTimeout      = 30 * time.Second
 	maxReleaseBytes = 4 << 20
 	userAgent       = "pagevow-update"
+
+	defaultMaxRedirects = 10
 )
 
 var repoPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$`)
@@ -171,6 +173,33 @@ func (o Options) checkAssetURL(asset Asset) error {
 	return nil
 }
 
+func (o Options) httpClient() *http.Client {
+	base := o.Client
+	if base == nil {
+		base = http.DefaultClient
+	}
+	if o.Token == "" {
+		return base
+	}
+	guarded := *base
+	guarded.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if req.URL.Scheme != "https" && !isLoopback(req.URL.Hostname()) {
+			return errors.New("refusing to follow a redirect to plain HTTP with a token set")
+		}
+		if first := via[0].URL; req.URL.Scheme != first.Scheme || req.URL.Host != first.Host {
+			req.Header.Del("Authorization")
+		}
+		if base.CheckRedirect != nil {
+			return base.CheckRedirect(req, via)
+		}
+		if len(via) >= defaultMaxRedirects {
+			return fmt.Errorf("stopped after %d redirects", defaultMaxRedirects)
+		}
+		return nil
+	}
+	return &guarded
+}
+
 func (o Options) get(ctx context.Context, target, accept string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, http.NoBody)
 	if err != nil {
@@ -182,11 +211,7 @@ func (o Options) get(ctx context.Context, target, accept string) (*http.Response
 	if o.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+o.Token)
 	}
-	client := o.Client
-	if client == nil {
-		client = http.DefaultClient
-	}
-	resp, err := client.Do(req)
+	resp, err := o.httpClient().Do(req)
 	if err != nil {
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) {

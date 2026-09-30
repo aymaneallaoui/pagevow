@@ -2,9 +2,11 @@ package update
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -152,4 +154,117 @@ func TestLatestHonoursCancellation(t *testing.T) {
 	_, err := Latest(ctx, fake.options(""))
 	require.ErrorIs(t, err, context.Canceled)
 	assert.False(t, strings.Contains(err.Error(), fake.server.URL), "the error does not repeat the request URL")
+}
+
+func fetch(t *testing.T, opts Options, target string) error {
+	t.Helper()
+	resp, err := opts.get(context.Background(), target, "application/octet-stream")
+	if err == nil {
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+		_ = resp.Body.Close()
+	}
+	return err
+}
+
+func TestTokenIsNotSentToPlainHTTPAfterARedirect(t *testing.T) {
+	var plainAuth atomic.Value
+	plainAuth.Store("unset")
+	plain := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		plainAuth.Store(r.Header.Get("Authorization"))
+	}))
+	t.Cleanup(plain.Close)
+	secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "Bearer "+secretToken, r.Header.Get("Authorization"))
+		http.Redirect(w, r, plain.URL+"/object", http.StatusFound)
+	}))
+	t.Cleanup(secure.Close)
+
+	err := fetch(t, Options{Client: secure.Client(), Token: secretToken}, secure.URL+"/asset")
+
+	require.NoError(t, err)
+	assert.Empty(t, plainAuth.Load(), "the plain HTTP target receives no Authorization header")
+}
+
+func TestTokenIsDroppedWhenTheRedirectChangesHostOrPort(t *testing.T) {
+	var elsewhere atomic.Value
+	target := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		elsewhere.Store(r.Header.Get("Authorization"))
+	}))
+	t.Cleanup(target.Close)
+	tests := []struct {
+		name     string
+		location string
+	}{
+		{"same host, other port", target.URL + "/object"},
+		{"other host name", strings.Replace(target.URL, "127.0.0.1", "localhost", 1) + "/object"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			elsewhere.Store("unset")
+			origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "Bearer "+secretToken, r.Header.Get("Authorization"))
+				http.Redirect(w, r, tt.location, http.StatusFound)
+			}))
+			t.Cleanup(origin.Close)
+
+			require.NoError(t, fetch(t, Options{Client: origin.Client(), Token: secretToken}, origin.URL+"/asset"))
+
+			assert.Empty(t, elsewhere.Load())
+		})
+	}
+}
+
+func TestTokenIsKeptOnARedirectToTheSameOrigin(t *testing.T) {
+	var seen atomic.Value
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/asset" {
+			http.Redirect(w, r, "/object", http.StatusFound)
+			return
+		}
+		seen.Store(r.Header.Get("Authorization"))
+	}))
+	t.Cleanup(server.Close)
+
+	require.NoError(t, fetch(t, Options{Client: server.Client(), Token: secretToken}, server.URL+"/asset"))
+
+	assert.Equal(t, "Bearer "+secretToken, seen.Load())
+}
+
+func TestRedirectToARemotePlainHTTPHostIsRefusedWithAToken(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "http://objects.example.test/object", http.StatusFound)
+	}))
+	t.Cleanup(server.Close)
+
+	err := fetch(t, Options{Client: server.Client(), Token: secretToken}, server.URL+"/asset")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "plain HTTP")
+	assert.NotContains(t, err.Error(), secretToken)
+}
+
+func TestRedirectGuardKeepsTheClientRedirectPolicy(t *testing.T) {
+	loop := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/again", http.StatusFound)
+	}))
+	t.Cleanup(loop.Close)
+	t.Run("the client policy runs after the guard", func(t *testing.T) {
+		errStop := errors.New("client policy stop")
+		client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return errStop }}
+		err := fetch(t, Options{Client: client, Token: secretToken}, loop.URL+"/asset")
+		require.ErrorIs(t, err, errStop)
+	})
+	t.Run("a client without a policy stops after ten redirects", func(t *testing.T) {
+		err := fetch(t, Options{Client: loop.Client(), Token: secretToken}, loop.URL+"/asset")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "stopped after 10 redirects")
+	})
+}
+
+func TestHTTPClientIsLeftAloneWithoutAToken(t *testing.T) {
+	client := &http.Client{}
+	assert.Same(t, client, Options{Client: client}.httpClient())
+	assert.Same(t, http.DefaultClient, Options{}.httpClient())
+	assert.NotSame(t, client, Options{Client: client, Token: secretToken}.httpClient())
+	assert.Nil(t, client.CheckRedirect, "the shared client is not modified")
 }

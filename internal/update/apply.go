@@ -49,9 +49,7 @@ func Apply(ctx context.Context, opts Options, rel Release) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("resolve the executable %s: %w", opts.Executable, err)
 	}
-	if opts.GOOS == windows {
-		removeOld(exe)
-	}
+	RemoveLeftover(exe, opts.GOOS)
 	result := Result{From: opts.Current, To: rel.Version, Executable: exe}
 	newer, err := NewerThan(rel.Version, opts.Current)
 	if err != nil {
@@ -77,23 +75,84 @@ func Apply(ctx context.Context, opts Options, rel Release) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	kept := filepath.Join(staging.dir, "pagevow-"+rel.Version+binarySuffix(opts.GOOS))
 	if staging.cause != nil {
-		return stage(result, fresh, filepath.Join(staging.dir, "pagevow-"+rel.Version+binarySuffix(opts.GOOS)), staging.cause)
+		return stage(result, fresh, kept, staging.cause)
 	}
 	if err := replaceExecutable(opts.GOOS, exe, fresh); err != nil {
-		_ = os.Remove(fresh)
-		return Result{}, err
+		return keepAfterFailure(result, fresh, opts, rel.Version, err)
 	}
 	return result, nil
 }
 
 func stage(result Result, fresh, target string, cause error) (Result, error) {
-	if err := os.Rename(fresh, target); err != nil {
+	if err := moveFile(fresh, target); err != nil {
 		_ = os.Remove(fresh)
 		return Result{}, fmt.Errorf("keep the new binary at %s: %w", target, err)
 	}
 	result.Staged = target
-	return result, fmt.Errorf("replace %s: %w: %w", result.Executable, ErrNotReplaced, cause)
+	return result, fmt.Errorf("%w: %w", ErrNotReplaced, cause)
+}
+
+func keepAfterFailure(result Result, fresh string, opts Options, version string, cause error) (Result, error) {
+	if opts.FallbackDir == "" {
+		_ = os.Remove(fresh)
+		return Result{}, cause
+	}
+	if err := os.MkdirAll(opts.FallbackDir, fallbackDirMode); err != nil {
+		_ = os.Remove(fresh)
+		return Result{}, errors.Join(cause, fmt.Errorf("create the fallback directory %s: %w", opts.FallbackDir, err))
+	}
+	target := filepath.Join(opts.FallbackDir, "pagevow-"+version+binarySuffix(opts.GOOS))
+	staged, err := stage(result, fresh, target, cause)
+	if errors.Is(err, ErrNotReplaced) {
+		return staged, err
+	}
+	return Result{}, errors.Join(cause, err)
+}
+
+func moveFile(src, dst string) error {
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	}
+	return copyAndRemove(src, dst)
+}
+
+func copyAndRemove(src, dst string) error {
+	in, err := os.Open(src) //nolint:gosec // src is the verified file this package just wrote
+	if err != nil {
+		return fmt.Errorf("open %s: %w", src, err)
+	}
+	defer func() { _ = in.Close() }()
+	info, err := in.Stat()
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", src, err)
+	}
+	out, err := os.CreateTemp(filepath.Dir(dst), ".pagevow-keep-*")
+	if err != nil {
+		return fmt.Errorf("create a file next to %s: %w", dst, err)
+	}
+	tmp := out.Name()
+	_, copyErr := io.Copy(out, in)
+	var syncErr error
+	if copyErr == nil {
+		syncErr = out.Sync()
+	}
+	closeErr := out.Close()
+	if err := errors.Join(copyErr, syncErr, closeErr); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("copy %s: %w", src, err)
+	}
+	if err := os.Chmod(tmp, info.Mode().Perm()); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("make %s executable: %w", dst, err)
+	}
+	if err := os.Rename(tmp, dst); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("move the copy to %s: %w", dst, err)
+	}
+	_ = os.Remove(src)
+	return nil
 }
 
 func (o Options) pick(rel Release) (archive, sums Asset, err error) {
@@ -263,8 +322,14 @@ func (o Options) unpack(archivePath, dir string, mode os.FileMode) (string, erro
 	}
 	name := fresh.Name()
 	extractErr := extractBinary(archivePath, o.GOOS, fresh, o.binaryLimit())
+	var syncErr error
+	if extractErr == nil {
+		if err := fresh.Sync(); err != nil {
+			syncErr = fmt.Errorf("sync the new binary: %w", err)
+		}
+	}
 	closeErr := fresh.Close()
-	if err := errors.Join(extractErr, closeErr); err != nil {
+	if err := errors.Join(extractErr, syncErr, closeErr); err != nil {
 		_ = os.Remove(name)
 		return "", err
 	}
@@ -303,5 +368,5 @@ func chooseStaging(exe, fallback string) (staging, error) {
 	if mkErr := os.MkdirAll(fallback, fallbackDirMode); mkErr != nil {
 		return staging{}, fmt.Errorf("the directory of %s is not writable (%w) and the fallback directory failed: %w", exe, err, mkErr)
 	}
-	return staging{dir: fallback, cause: err}, nil
+	return staging{dir: fallback, cause: fmt.Errorf("the directory of %s is not writable: %w", exe, err)}, nil
 }

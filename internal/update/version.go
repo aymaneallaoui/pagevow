@@ -11,6 +11,8 @@ import (
 var versionPattern = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)` +
 	`(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$`)
 
+var describePattern = regexp.MustCompile(`(?:^|[.-])(?:[0-9]+-g[0-9a-f]{7,40}(?:-dirty)?|dirty)$`)
+
 type semver struct {
 	core [3]uint64
 	pre  []string
@@ -18,7 +20,7 @@ type semver struct {
 
 func parseVersion(text string) (semver, bool) {
 	match := versionPattern.FindStringSubmatch(strings.TrimPrefix(text, "v"))
-	if match == nil {
+	if match == nil || describePattern.MatchString(match[4]) {
 		return semver{}, false
 	}
 	var v semver
@@ -78,7 +80,7 @@ func isDigits(text string) bool {
 	return text != "" && strings.Trim(text, "0123456789") == ""
 }
 
-// Comparable reports whether a version is MAJOR.MINOR.PATCH with an optional leading v, pre-release and build part.
+// Comparable reports whether a version is MAJOR.MINOR.PATCH with an optional leading v, pre-release and build part, and not a git describe build.
 func Comparable(version string) bool {
 	_, ok := parseVersion(version)
 	return ok

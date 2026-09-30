@@ -245,6 +245,57 @@ func TestUpdateTreatsADevelopmentBuildAsOlder(t *testing.T) {
 	assert.Equal(t, "new binary", e.binary(t))
 }
 
+func TestUpdateTreatsAGitDescribeBuildAsNotARelease(t *testing.T) {
+	for _, current := range []string{"v1.3.0-5-gabc1234", "v1.3.0-dirty"} {
+		t.Run(current, func(t *testing.T) {
+			e := newUpdateEnv(t)
+			e.version = current
+			out, err := e.run("update", "--check")
+			require.Error(t, err)
+			assert.Equal(t, cli.ExitFailure, cli.ExitCode(err))
+			assert.Contains(t, out, "current "+current+", latest v1.3.0")
+			assert.Contains(t, out, current+" is not a release build")
+		})
+	}
+}
+
+func TestUpdateRemovesTheLeftoverBackupsOnWindowsEvenWhenCurrent(t *testing.T) {
+	tests := []struct {
+		name string
+		goos string
+		args []string
+		gone bool
+	}{
+		{"update on windows", "windows", []string{"update"}, true},
+		{"check on windows", "windows", []string{"update", "--check"}, true},
+		{"update on linux", "linux", []string{"update"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newUpdateEnv(t)
+			e.goos = tt.goos
+			e.version = "v1.3.0"
+			backups := []string{e.exe + ".old", e.exe + ".old-1a2b3c"}
+			for _, backup := range backups {
+				require.NoError(t, os.WriteFile(backup, []byte("leftover"), 0o600))
+			}
+
+			out := e.mustRun(tt.args...)
+
+			assert.Contains(t, out, "already up to date")
+			assert.Zero(t, e.release.Load(), "nothing is downloaded")
+			for _, backup := range backups {
+				if tt.gone {
+					assert.NoFileExists(t, backup)
+				} else {
+					assert.FileExists(t, backup)
+				}
+			}
+			assert.Equal(t, "old binary", e.binary(t))
+		})
+	}
+}
+
 func TestUpdateTokenSources(t *testing.T) {
 	tests := []struct {
 		name  string

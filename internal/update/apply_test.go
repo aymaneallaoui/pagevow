@@ -357,6 +357,101 @@ func TestApplyOnWindowsRemovesTheLeftoverOldFileWhenSkipping(t *testing.T) {
 	assert.NoFileExists(t, exe+".old")
 }
 
+func directoryExecutable(t *testing.T) string {
+	t.Helper()
+	exe := filepath.Join(t.TempDir(), "pagevow")
+	require.NoError(t, os.MkdirAll(exe, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(exe, "held"), []byte("x"), 0o600))
+	return exe
+}
+
+func TestApplyKeepsTheVerifiedBinaryWhenTheReplacementFails(t *testing.T) {
+	fake := newFakeRelease(t, "v1.3.0", releaseAssets(t, "linux", "amd64", "1.3.0", "new binary"))
+	exe := directoryExecutable(t)
+	fallback := filepath.Join(t.TempDir(), "cache", "update")
+	opts := fake.options(exe)
+	opts.FallbackDir = fallback
+
+	result, err := applyLatest(t, opts)
+
+	require.ErrorIs(t, err, ErrNotReplaced)
+	assert.Equal(t, filepath.Join(fallback, "pagevow-1.3.0"), result.Staged)
+	assert.Equal(t, "new binary", readFile(t, result.Staged))
+	info, statErr := os.Stat(result.Staged)
+	require.NoError(t, statErr)
+	assert.NotZero(t, info.Mode().Perm()&0o100, "the kept binary is executable")
+	assert.Equal(t, []string{"pagevow"}, dirNames(t, filepath.Dir(exe)), "no part or staging file is left")
+	assert.Equal(t, []string{"pagevow-1.3.0"}, dirNames(t, fallback))
+}
+
+func TestApplyDeletesTheNewBinaryWhenTheReplacementFailsWithoutAFallback(t *testing.T) {
+	fake := newFakeRelease(t, "v1.3.0", releaseAssets(t, "linux", "amd64", "1.3.0", "new binary"))
+	exe := directoryExecutable(t)
+
+	_, err := applyLatest(t, fake.options(exe))
+
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, ErrNotReplaced)
+	assert.Equal(t, []string{"pagevow"}, dirNames(t, filepath.Dir(exe)))
+}
+
+func TestCopyAndRemoveMovesTheFileWithItsMode(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src")
+	dst := filepath.Join(dir, "dst")
+	require.NoError(t, os.WriteFile(src, []byte("payload"), 0o700))
+	require.NoError(t, os.Chmod(src, 0o700))
+
+	require.NoError(t, copyAndRemove(src, dst))
+
+	assert.Equal(t, "payload", readFile(t, dst))
+	info, err := os.Stat(dst)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o700), info.Mode().Perm())
+	assert.Equal(t, []string{"dst"}, dirNames(t, dir))
+	require.Error(t, copyAndRemove(filepath.Join(dir, "missing"), filepath.Join(dir, "other")))
+}
+
+func TestApplyDownloadsThroughARedirectWithoutTheToken(t *testing.T) {
+	assets := releaseAssets(t, "linux", "amd64", "1.3.0", "new binary")
+	fake := newFakeRelease(t, "v1.3.0", assets)
+	fake.offload()
+	exe := writeExecutable(t, "pagevow", "old binary", 0o755)
+	opts := fake.options(exe)
+	opts.Token = secretToken
+
+	_, err := applyLatest(t, opts)
+
+	require.NoError(t, err)
+	assert.Equal(t, "new binary", readFile(t, exe))
+	for _, name := range []string{"pagevow_1.3.0_linux_amd64.tar.gz", "checksums.txt"} {
+		api := fake.seen("/assets/" + name)
+		require.Len(t, api, 1, name)
+		assert.Equal(t, "Bearer "+secretToken, api[0].auth)
+		blob := fake.offsiteSeen("/blob/" + name)
+		require.Len(t, blob, 1, name)
+		assert.Empty(t, blob[0].auth, "the object host gets no token")
+		assert.Equal(t, "application/octet-stream", blob[0].accept, "the redirect keeps Accept")
+	}
+}
+
+func TestApplyChecksTheSizeOfADownloadServedThroughARedirect(t *testing.T) {
+	fake := newFakeRelease(t, "v1.3.0", releaseAssets(t, "linux", "amd64", "1.3.0", "new binary"))
+	fake.offload()
+	fake.sizes["pagevow_1.3.0_linux_amd64.tar.gz"] = 5
+	exe := writeExecutable(t, "pagevow", "old binary", 0o755)
+	opts := fake.options(exe)
+	opts.Token = secretToken
+
+	_, err := applyLatest(t, opts)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "size mismatch")
+	assert.NotContains(t, err.Error(), secretToken)
+	assert.Equal(t, "old binary", readFile(t, exe))
+	assert.Equal(t, []string{"pagevow"}, dirNames(t, filepath.Dir(exe)))
+}
+
 func TestApplyRequiresTheTarget(t *testing.T) {
 	for _, opts := range []Options{{GOOS: "linux", GOARCH: "amd64"}, {Executable: "/x", GOARCH: "amd64"}, {Executable: "/x", GOOS: "linux"}} {
 		_, err := Apply(context.Background(), opts, Release{})

@@ -108,9 +108,11 @@ type fakeRelease struct {
 	sizes  map[string]int64
 	status int
 	stall  string
+	blobs  *httptest.Server
 
 	mu       sync.Mutex
 	requests []recordedRequest
+	offsite  []recordedRequest
 }
 
 func newFakeRelease(t *testing.T, tag string, assets map[string][]byte) *fakeRelease {
@@ -136,6 +138,34 @@ func (f *fakeRelease) handle(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+func (f *fakeRelease) offload() {
+	f.t.Helper()
+	f.blobs = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		f.offsite = append(f.offsite, recordedRequest{path: r.URL.Path, auth: r.Header.Get("Authorization"), accept: r.Header.Get("Accept")})
+		f.mu.Unlock()
+		data, ok := f.assets[strings.TrimPrefix(r.URL.Path, "/blob/")]
+		if !ok || r.Header.Get("Accept") != "application/octet-stream" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write(data)
+	}))
+	f.t.Cleanup(f.blobs.Close)
+}
+
+func (f *fakeRelease) offsiteSeen(path string) []recordedRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []recordedRequest
+	for _, req := range f.offsite {
+		if req.path == path {
+			out = append(out, req)
+		}
+	}
+	return out
 }
 
 func (f *fakeRelease) latest(w http.ResponseWriter) {
@@ -170,6 +200,10 @@ func (f *fakeRelease) asset(w http.ResponseWriter, r *http.Request, name string)
 	data, ok := f.assets[name]
 	if !ok || r.Header.Get("Accept") != "application/octet-stream" {
 		http.NotFound(w, r)
+		return
+	}
+	if f.blobs != nil {
+		http.Redirect(w, r, strings.Replace(f.blobs.URL, "127.0.0.1", "localhost", 1)+"/blob/"+name, http.StatusFound)
 		return
 	}
 	if name == f.stall {

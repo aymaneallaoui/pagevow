@@ -5,16 +5,18 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
-    name: release
+  check:
+    name: check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-go@v7
         with:
@@ -30,10 +32,26 @@ jobs:
       - name: make check
         run: make check
 
+  release:
+    name: release
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
       - name: goreleaser
         uses: goreleaser/goreleaser-action@v7
         with:
-          version: "~> v2"
+          version: v2.18.2
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

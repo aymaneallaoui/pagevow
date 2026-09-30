@@ -32,7 +32,9 @@ func TestNewerThan(t *testing.T) {
 		{"build metadata ignored", "1.2.3+b2", "1.2.3+b1", false},
 		{"dev build counts as older", "0.0.1", "dev", true},
 		{"empty current counts as older", "0.0.1", "", true},
-		{"git describe current parses as a prerelease", "1.2.3", "v1.2.3-4-gabcdef1-dirty", true},
+		{"git describe current counts as older", "1.2.3", "v1.2.3-4-gabcdef1-dirty", true},
+		{"git describe build of a newer tag counts as older", "1.2.3", "v1.2.4-5-gabc1234", true},
+		{"dirty tag build counts as older", "1.2.3", "v1.2.3-dirty", true},
 		{"pseudo version current", "0.1.0", "v0.0.0-20260930123456-abcdef123456", true},
 		{"two part current counts as older", "1.0.0", "1.0", true},
 	}
@@ -58,4 +60,30 @@ func TestComparable(t *testing.T) {
 	assert.False(t, Comparable("dev"))
 	assert.False(t, Comparable(""))
 	assert.False(t, Comparable("1.2"))
+}
+
+func TestComparableRejectsBuildsFromGitDescribe(t *testing.T) {
+	tests := []struct {
+		version string
+		want    bool
+	}{
+		{"v1.2.3-5-gabc1234", false},
+		{"1.2.3-5-gabc1234", false},
+		{"v1.2.3-4-gabcdef1-dirty", false},
+		{"v1.2.3-dirty", false},
+		{"v1.2.3-rc.1-dirty", false},
+		{"v1.2.3-rc.1-7-g0123456789ab", false},
+		{"v1.2.3-rc.1", true},
+		{"v1.2.3-rc.1+build.5", true},
+		{"v1.2.3-5", true},
+		{"v1.2.3-gabc1234", true},
+		{"v1.2.3-5-gabc12", true},
+		{"v1.2.3-dirtyish", true},
+		{"v1.2.3+dirty", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			assert.Equal(t, tt.want, Comparable(tt.version))
+		})
+	}
 }

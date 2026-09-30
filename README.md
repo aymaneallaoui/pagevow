@@ -4,10 +4,11 @@ pagevow runs browser tests written as goals. A decision model drives a real Chro
 verifier checks the final page, and every test leaves PNG screenshots. A Claude Code plugin runs the suite after a
 coding task and sends failures back to Claude.
 
-Status: phase 3. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
+Status: phase 4. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
 screenshots. `pagevow start`, `stop`, `status` and `doctor` manage the local model servers, the local text helper and a
-browser. The Stop hook, the plugin, `install` and `update` are not implemented yet; those commands print
-`not implemented yet (phase N)` and exit with code 2. The design is in [docs/SPEC.md](docs/SPEC.md).
+browser. `pagevow hook stop` and `pagevow plugin` provide the Claude Code Stop hook and plugin. `install` and `update`
+are not implemented yet; those commands print `not implemented yet (phase N)` and exit with code 2. The design is in
+[docs/SPEC.md](docs/SPEC.md).
 
 ## Install from source
 
@@ -37,8 +38,9 @@ make install    # installs into GOBIN
 | `pagevow keys set\|unset\|list` | works: keychain entries and a names-only index, values are never printed |
 | `pagevow init [DIR]` | works: writes a starter `pagevow.yaml`, refuses when a tests file already exists |
 | `pagevow run [--tests FILE] [--ids a,b] [--out DIR] [--screenshots final\|failed\|all] [--retries N] [--timeout SECONDS] [--full-page] [--headed] [--json]` | works: see below |
+| `pagevow hook stop` | works: the Claude Code Stop hook, see below |
+| `pagevow plugin install [--no-register]`, `plugin uninstall`, `plugin path [--json]` | works: manage the Claude Code plugin, see below |
 | `pagevow install`, `update` | phase 5 |
-| `pagevow hook stop`, `plugin install\|uninstall\|path` | phase 4 |
 
 ## Running tests
 
@@ -88,6 +90,27 @@ exit code.
 
 When a model request fails, the failure block also prints `cause:` with the network error behind the fixed message, for
 example `connection refused`; it never contains a key.
+
+## Claude Code plugin and Stop hook
+
+```
+pagevow plugin install      # writes the plugin and registers it with Claude Code
+pagevow plugin path         # where it is: pass it to claude --plugin-dir
+pagevow plugin uninstall
+```
+
+`plugin install` writes a small local marketplace to `<user config directory>/pagevow/claude-plugin/` and runs
+`claude plugin marketplace add` and `claude plugin install pagevow@pagevow --scope user`. Without the `claude` program on
+`PATH`, or with `--no-register`, it writes the files and prints the commands to run yourself. The plugin holds a skill,
+the slash commands `/pagevow-run` and `/pagevow-init`, and a Stop hook that runs `pagevow hook stop` by the absolute path of
+the binary. Run `pagevow plugin install` again after you upgrade or move pagevow.
+
+When Claude tries to stop, the hook runs the tests file of the project (`pagevow.yaml` and the other names) and blocks
+Claude while the tests fail, so Claude reads the `final.png` files and fixes the app or the test. It blocks at most
+`PAGEVOW_HOOK_MAX_BLOCKS` times in a row per session (default 2, `0` never blocks), then lets Claude stop with a note that
+the tests still fail. It skips the run when the project has not changed since the last pass, and `PAGEVOW_HOOK=0` turns
+it off. A backend or browser that is not reachable never blocks: the hook says what to start (`pagevow start`,
+`pagevow doctor`) and lets Claude stop. State lives in `.pagevow/` in the project; pagevow never edits `.gitignore`.
 
 ## Local servers and the browser
 

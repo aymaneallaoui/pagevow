@@ -27,25 +27,3 @@ func (a *app) newInstallCmd() *cobra.Command {
 func (a *app) newUpdateCmd() *cobra.Command {
 	return stub("update", "Replace the binary with the latest release", 5, nil)
 }
-
-func (a *app) newHookCmd() *cobra.Command {
-	hook := &cobra.Command{
-		Use:   "hook",
-		Short: "Claude Code hook entry points",
-	}
-	hook.AddCommand(stub("stop", "Stop hook: reads the Claude Code hook JSON on stdin", 4, nil))
-	return hook
-}
-
-func (a *app) newPluginCmd() *cobra.Command {
-	plugin := &cobra.Command{
-		Use:   "plugin",
-		Short: "Manage the Claude Code plugin",
-	}
-	plugin.AddCommand(
-		stub("install", "Install the Claude Code plugin", 4, nil),
-		stub("uninstall", "Remove the Claude Code plugin", 4, nil),
-		stub("path", "Print where the plugin is installed", 4, nil),
-	)
-	return plugin
-}

@@ -251,31 +251,68 @@ samples in a row end the watch and leave the model running.
 ## 10. Stop hook
 
 `pagevow hook stop` reads the Claude Code hook JSON on stdin and behaves as
-`integrations/claude-code/hooks/browser-tests-stop.sh` does:
+`integrations/claude-code/hooks/browser-tests-stop.sh` does. It never writes to stdout and never prompts; on a terminal
+it ignores stdin. The hook JSON supplies `session_id` and `cwd`; invalid or empty input is treated as empty.
 
 | Situation | Exit | Output |
 |---|---|---|
-| `PAGEVOW_HOOK=0`, or no tests file | 0 | none |
+| `PAGEVOW_HOOK=0` (exactly `0`), or no tests file | 0 | none |
 | Project fingerprint equals the last passing one | 0 | none |
 | Suite passes | 0 | none; fingerprint stored, block counter removed |
-| Suite fails, blocks so far < cap (default 2) | 2 | stderr: failure report, `final.png` paths, `block N of M` |
-| Suite fails, cap reached | 1 | stderr: tests still fail, Claude may stop, counter reset |
+| Suite fails, blocks so far < cap (default 2) | 2 | stderr: failure report, `final.png` paths, `Browser test block N of M.` |
+| Suite fails, cap reached | 1 | stderr: tests still fail after N blocked attempts, Claude may stop, counter reset |
 | Backend or browser not reachable | 1 | stderr: what is missing and the command to start it |
 
-The fingerprint covers HEAD, tracked changes, staged changes and untracked files by content (symlinks by target), and
-excludes `.pagevow/` and the plugin's own files. The hook never starts a local model by itself.
+Environment:
+
+| Variable | Meaning |
+|---|---|
+| `PAGEVOW_HOOK` | `0` turns the hook off; any other value leaves it on |
+| `PAGEVOW_HOOK_MAX_BLOCKS` | how many times in a row one session is blocked, default 2, base 10; `0` never blocks; a non-number or a negative value gives 2 |
+| `CLAUDE_PROJECT_DIR` | project directory; else `cwd` of the hook JSON; else the working directory |
+
+State files live in `<project>/.pagevow/` (directory mode 0750, files 0600): `.last-pass` holds the fingerprint of the
+last passing state and a newline, `.blocks-<session>` holds the block counter of one session. The session is
+`session_id` with every character outside `A-Z a-z 0-9 _ -` removed, `unknown` when nothing is left, so the name cannot
+leave the directory. pagevow never edits the project's `.gitignore`.
+
+The hook runs the suite as a subprocess of the same binary, `pagevow run --tests FILE --out <project>/.pagevow --json`
+in the project directory (plus `--config PATH` when the flag was given), and reads the report from its stdout. Exit 0
+and 1 of that run are a pass and a fail; any other code skips the tests. The hook never starts a local model by itself.
+
+The fingerprint is a SHA-256 over HEAD (`no-head` before the first commit), `git status --porcelain`, the diff and the
+staged diff, every untracked file by content (symlinks by target, unreadable files skipped) and the tests file, all
+with `.pagevow/` excluded. Without git, or outside a work tree, it is the newest modification time of the tests file
+and of every file under the project, skipping `.pagevow`, `.git`, `node_modules`, `.venv` and `__pycache__`.
 
 ## 11. Claude Code plugin
 
-Embedded in the binary, written by `pagevow plugin install`:
+Embedded in the binary. `pagevow plugin install` renders it into a local marketplace under
+`<UserConfigDir>/pagevow/claude-plugin/`:
 
 ```
-.claude-plugin/plugin.json
-skills/pagevow/SKILL.md
-hooks/hooks.json                  Stop -> "pagevow hook stop"
-commands/pagevow-run.md
-commands/pagevow-init.md
+.claude-plugin/marketplace.json      marketplace "pagevow", plugin source ./plugin
+plugin/.claude-plugin/plugin.json    name "pagevow", version of the binary
+plugin/skills/pagevow/SKILL.md
+plugin/hooks/hooks.json              Stop -> '<absolute path of pagevow>' hook stop, timeout 900
+plugin/commands/pagevow-run.md
+plugin/commands/pagevow-init.md
 ```
+
+The plugin id is `pagevow@pagevow`. The hook command carries the absolute path of the binary that ran `plugin install`,
+quoted for the shell, so the hook works when pagevow is not on the `PATH` of Claude Code. Run `plugin install` again
+after you upgrade or move the binary.
+
+| Command | Behaviour |
+|---|---|
+| `plugin install` | writes the tree (a new tree is swapped in whole, an identical one is left alone), then with `claude` on `PATH` runs `claude plugin marketplace add <root>` and `claude plugin install pagevow@pagevow --scope user`; it updates instead of installing when the plugin is already installed |
+| `plugin install --no-register` | writes the files and runs nothing |
+| `plugin install` without `claude` | writes the files, prints the two `claude` commands and `claude --plugin-dir <root>/plugin`, exits 0 |
+| `plugin uninstall` | with `claude` on `PATH` runs `claude plugin uninstall pagevow@pagevow` and `claude plugin marketplace remove pagevow` (a failure is a warning), then deletes the root; without `claude` it prints those commands |
+| `plugin path [--json]` | prints `<root>/plugin`; exit 1 with a note on stderr when the plugin is not installed; `--json` prints `installed`, `path`, `root` and `id` |
+
+`install` refuses a root directory that exists and does not hold the pagevow manifest, and never follows a symbolic
+link at the root. `uninstall` deletes the root only when `plugin/.claude-plugin/plugin.json` has the name `pagevow`.
 
 The skill text follows `integrations/claude-code/skills/browser-test/SKILL.md`, with commands changed to `pagevow`.
 It keeps these rules: Claude does not start a local model on its own initiative; no secrets in goals; never weaken a
@@ -399,6 +436,23 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Other systems | macOS and Windows refuse a local model with a message that names `jev` and `custom`; the browser still starts |
 | Spec files | a spec with an environment entry whose name ends in `_KEY`, `_TOKEN` or `_SECRET` is rejected |
 | Agent skills | `.claude/skills/` and `CLAUDE.md` guide coding agents and reviews; they are not part of the binary or of release archives |
+
+### Decisions of phase 4
+
+| Topic | Decision |
+|---|---|
+| Hook exit codes | 0 Claude may stop, 2 Claude is blocked, 1 the tests were skipped or the cap was reached; the hook prints its own stderr text and the process adds no `pagevow:` line (`ExitError.Silent`) |
+| Block cap | `PAGEVOW_HOOK_MAX_BLOCKS`, default 2; `0` never blocks; a value that is not a plain non-negative number gives 2 |
+| Disable switch | `PAGEVOW_HOOK=0`, compared as the exact string |
+| State files | `.pagevow/.last-pass` and `.pagevow/.blocks-<session>` in the project, modes 0750 and 0600, session names reduced to `A-Z a-z 0-9 _ -` |
+| Suite run | a subprocess of the same binary with `run --json`, so the hook and `pagevow run` cannot drift; the hook decodes the report from stdout |
+| Fingerprint | git based, without `.pagevow/`; modification times when git is missing or the directory is not a work tree |
+| `.gitignore` | pagevow never touches the project's `.gitignore` |
+| Plugin root | `<UserConfigDir>/pagevow/claude-plugin/` with a marketplace file and the plugin under `plugin/` |
+| Hook command | the absolute path of the running binary, shell quoted, followed by `hook stop`; install again after an upgrade |
+| Registration | through the `claude` CLI only; with no `claude` or with `--no-register` the commands are printed and the exit code is 0 |
+| Uninstall | unregisters first, failures are warnings, then removes the root only when it holds the pagevow manifest |
+| Stdin | read with a 1 MiB limit, ignored on a terminal, never prompts |
 
 ## 17. Open questions
 

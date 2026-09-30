@@ -4,9 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 // Exit codes returned by the binary.
@@ -51,12 +48,4 @@ func HandleError(w io.Writer, err error) int {
 		_, _ = fmt.Fprintf(w, "pagevow: %v\n", err)
 	}
 	return ExitCode(err)
-}
-
-func notImplemented(cmd *cobra.Command, phase int) error {
-	name := strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name()+" ")
-	return &ExitError{
-		Code: ExitInfrastructure,
-		Err:  fmt.Errorf("%s: not implemented yet (phase %d)", name, phase),
-	}
 }

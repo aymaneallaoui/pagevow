@@ -43,6 +43,12 @@ jobs:
       - name: go test
         run: go test -race -count=1 ./...
 
+      - name: goreleaser check
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: check
+
   cross-build:
     name: build (${{ matrix.goos }}/${{ matrix.goarch }})
     runs-on: ubuntu-latest

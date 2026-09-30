@@ -52,6 +52,9 @@ type ConfigPath string
 // BrowserBaseURL is where install --browser downloads Chrome for Testing; empty means the official storage.
 type BrowserBaseURL string
 
+// UpdateBaseURL is the GitHub API root that update reads releases from; empty means the official API.
+type UpdateBaseURL string
+
 type browserPinOverride struct{ pin *browser.Pin }
 
 // Options supplies the services the container registers; zero fields fall back to system defaults.
@@ -78,6 +81,8 @@ type Options struct {
 	HTTPClient       *http.Client
 	BrowserBaseURL   string
 	BrowserPin       *browser.Pin
+	UpdateBaseURL    string
+	Version          string
 	CommandRunner    CommandRunner
 	HookRunner       hook.Runner
 	HookGit          hook.Git
@@ -146,8 +151,9 @@ func NewContainer(opts Options) do.Injector {
 	do.ProvideValue(injector, opts.Arch)
 	do.ProvideValue(injector, opts.HTTPClient)
 	do.ProvideValue(injector, BrowserBaseURL(opts.BrowserBaseURL))
+	do.ProvideValue(injector, UpdateBaseURL(opts.UpdateBaseURL))
 	do.ProvideValue(injector, browserPinOverride{pin: opts.BrowserPin})
-	do.ProvideValue(injector, version.Get())
+	do.ProvideValue(injector, buildInfo(opts.Version))
 
 	do.Provide(injector, func(i do.Injector) (*keys.Resolver, error) {
 		store, err := do.Invoke[keys.Store](i)
@@ -191,6 +197,14 @@ func NewContainer(opts Options) do.Injector {
 		return ConfigPath(path), err
 	})
 	return injector
+}
+
+func buildInfo(override string) version.Info {
+	info := version.Get()
+	if override != "" {
+		info.Version = override
+	}
+	return info
 }
 
 func withDefaults(opts Options) Options {

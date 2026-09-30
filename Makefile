@@ -7,7 +7,7 @@ LDFLAGS  := -s -w \
 	-X $(MODULE)/internal/version.commit=$(COMMIT) \
 	-X $(MODULE)/internal/version.date=$(DATE)
 
-.PHONY: build test lint fmt fmt-check vet check install
+.PHONY: build test lint fmt fmt-check vet check install release-snapshot
 
 build:
 	go build -trimpath -ldflags "$(LDFLAGS)" -o bin/pagevow ./cmd/pagevow
@@ -31,3 +31,6 @@ check: fmt-check vet lint test
 
 install:
 	go install -trimpath -ldflags "$(LDFLAGS)" ./cmd/pagevow
+
+release-snapshot:
+	goreleaser release --snapshot --clean

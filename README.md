@@ -4,11 +4,12 @@ pagevow runs browser tests written as goals. A decision model drives a real Chro
 verifier checks the final page, and every test leaves PNG screenshots. A Claude Code plugin runs the suite after a
 coding task and sends failures back to Claude.
 
-Status: phase 5, in progress. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
+Status: phase 5, nearly done. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
 screenshots. `pagevow start`, `stop`, `status` and `doctor` manage the local model servers, the local text helper and a
 browser. `pagevow hook stop` and `pagevow plugin` provide the Claude Code Stop hook and plugin. `pagevow install --browser`
-downloads a pinned Chrome for Testing. `update` is not implemented yet; it prints `not implemented yet (phase 5)` and
-exits with code 2. The design is in [docs/SPEC.md](docs/SPEC.md).
+downloads a pinned Chrome for Testing, and `pagevow update` replaces the binary with the latest GitHub release. goreleaser
+builds the release archives on a version tag. The CI matrix that runs the tests on macOS and Windows is still open. The design is
+in [docs/SPEC.md](docs/SPEC.md).
 
 ## Install from source
 
@@ -40,6 +41,25 @@ archive against values that are pinned in the code (Google publishes none) and r
 build before any Chromium or Chrome on `PATH`. The command refuses while the browser of `pagevow start` runs: run
 `pagevow stop` first. `status` and `doctor` show the installed version.
 
+## Update
+
+```
+pagevow update            # replaces the binary with the latest GitHub release
+pagevow update --check    # prints the two versions, downloads nothing, exits 1 when a newer release exists
+pagevow update --force    # installs the latest release again
+pagevow update --json     # prints current, latest, update_available, updated and executable
+```
+
+The repository is private, so `update` needs a token that can read it: `GITHUB_TOKEN`, else `GH_TOKEN`, else the keychain
+entry `github` (`pagevow keys set github`). The token is sent to `api.github.com` only and is never printed. `update` downloads
+`pagevow_<version>_<os>_<arch>.tar.gz` (`.zip` on Windows) and `checksums.txt` from the release, checks the SHA-256 of
+the archive and replaces the running binary by renaming the new one over it. On Windows the running `pagevow.exe` is
+renamed to `pagevow.exe.old` first and that file is removed the next time you run `update`. When the directory of the
+binary is read-only, `update` keeps the verified binary in `<user cache directory>/pagevow/update/` and tells you where.
+`checksums.txt` is not signed, so it catches a damaged download, not a tampered release. A build that is not a release,
+such as `dev`, counts as older than every release. Run `pagevow plugin install` again after an update: the Stop hook
+stores the path of the binary.
+
 ## Commands
 
 | Command | State |
@@ -56,7 +76,7 @@ build before any Chromium or Chrome on `PATH`. The command refuses while the bro
 | `pagevow hook stop` | works: the Claude Code Stop hook, see below |
 | `pagevow plugin install [--no-register]`, `plugin uninstall`, `plugin path [--json]` | works: manage the Claude Code plugin, see below |
 | `pagevow install --browser [--force] [--json]` | works: downloads and verifies the pinned Chrome for Testing; `--model` is not implemented yet |
-| `pagevow update` | phase 5 |
+| `pagevow update [--check] [--force] [--json]` | works: replaces the binary with the latest GitHub release after checking its SHA-256, see below |
 
 ## Running tests
 
@@ -270,8 +290,13 @@ differ from a plain Go or Python reading:
 ## Development
 
 ```
-make check      # gofmt check, go vet, golangci-lint, go test -race
+make check             # gofmt check, go vet, golangci-lint, go test -race
+make release-snapshot  # builds every release archive into dist/ without publishing, needs goreleaser
 ```
+
+Pushing a tag such as `v1.2.3` runs `.github/workflows/release.yml`: `make check`, then goreleaser builds Linux, macOS and
+Windows archives (Windows on arm64 is left out, Chrome for Testing has no build for it) and publishes the GitHub release
+with `checksums.txt`. CI runs `goreleaser check` on every change.
 
 Install the linter with `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0`.
 

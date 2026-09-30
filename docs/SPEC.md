@@ -52,7 +52,7 @@ behaviour is the Python source in `~/jev-ultrafast` at branch `browser-tests`:
 | Terminal output | `charmbracelet/lipgloss`, `charmbracelet/huh` for prompts |
 | Keys | `zalando/go-keyring` |
 | Tests | stdlib `testing` + `stretchr/testify` |
-| Release | `goreleaser`: Linux, macOS, Windows; amd64 and arm64 |
+| Release | `goreleaser`: Linux, macOS, Windows; amd64 and arm64, except Windows arm64 |
 | Self update | `pagevow update` from GitHub releases, checksum verified |
 | Logging | stdlib `log/slog` to stderr |
 | Repository | private: `aymaneallaoui/pagevow` |
@@ -75,7 +75,7 @@ pagevow run [--tests FILE] [--ids a,b] [--out DIR] [--screenshots final|failed|a
 pagevow hook stop                            Claude Code Stop hook entry: reads hook JSON on stdin
 pagevow plugin install|uninstall|path        manage the Claude Code plugin
 pagevow keys set|unset|list NAME             keychain entries (values are never printed)
-pagevow update                               replace the binary with the latest release
+pagevow update [--check] [--force] [--json]   replace the binary with the latest release
 pagevow version
 ```
 
@@ -83,6 +83,8 @@ Exit codes of `run`: 0 all passed; 1 at least one test failed or is unverified; 
 browser not reachable, invalid tests file). `hook stop` follows section 10.
 
 Exit codes of `install`: 0 installed or already installed; 2 nothing was installed, including a missing flag.
+Exit codes of `update`: 0 updated or already current; 1 with `--check` when a newer release exists; 2 nothing was
+replaced, including a network, token or verification failure.
 Exit codes of `start` and `stop`: 0 everything requested runs or is stopped; 2 otherwise. `status` exits 0 also when
 something is down. `doctor` exits 1 when a check fails; warnings do not change its exit code.
 
@@ -518,6 +520,25 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | `doctor` | `browser:installed` reports the recorded build, warns when it differs from the pin or cannot be used, and warns when there is neither a record nor a system browser; the missing browser fix names `pagevow install --browser` |
 | `status` | the Browser section shows `installed` with the version and path, or `no (pagevow install --browser)` |
 | HTTP client | 15 minute overall timeout, at most 3 redirects; the address of the archives can be replaced by the container for tests only |
+
+### Decisions of phase 5, part 2
+
+| Topic | Decision |
+|---|---|
+| Release source | `GET /repos/aymaneallaoui/pagevow/releases/latest` on `api.github.com`, with `Accept: application/vnd.github+json` and `X-GitHub-Api-Version: 2022-11-28`; that endpoint never returns drafts or prereleases |
+| Token | `GITHUB_TOKEN`, then `GH_TOKEN`, then the keychain entry `github`; sent as `Authorization: Bearer` to the API host only, never printed, logged, put in an error or in JSON; a missing or unreadable keychain entry means no token; a 404 without a token says the repository may be private and names `GITHUB_TOKEN` and `pagevow keys set github` |
+| Asset names | `pagevow_<version>_<os>_<arch>.tar.gz`, `.zip` on Windows, and `checksums.txt`; the version is the tag without its `v` |
+| Download | through the asset API URL with `Accept: application/octet-stream`, which works for a private repository; the asset URL must be on the API host; at most 200 MiB for the archive and 200 MiB for the extracted binary; same HTTP client as the browser download |
+| Verification | SHA-256 of the archive against its line in `checksums.txt`; a mismatch, a missing line or a size that differs from the release listing deletes the download and stops; the file is unsigned and comes from the same release, so it catches damage, not a compromised release |
+| Extraction | only the regular file `pagevow` (`pagevow.exe`) at the archive root is read; nothing else is written to disk |
+| Replacement | the new binary is written next to the running one with the mode of the old file, then renamed over it; a symbolic link is followed and its target replaced |
+| Windows | a running `.exe` cannot be overwritten, so it is renamed to `<exe>.old` and the new file is renamed in, the old file is put back when that fails, and `.old` is removed best effort at the start of the next `update` |
+| Read-only install directory | nothing is replaced; the verified binary is kept at `<cache>/pagevow/update/pagevow-<version>`, the message names it, exit 2 |
+| Version compare | semantic version precedence on `MAJOR.MINOR.PATCH[-pre]` with an optional `v`; a current version that does not parse, such as `dev`, counts as older and the command says so; `--force` installs the latest release even when it is not newer |
+| `--check` | prints both versions and downloads nothing; exit 0 when current, 1 when a newer release exists, 2 on an error |
+| Output | `[info] current v1.2.3, latest v1.3.0`, `[ok] updated to v1.3.0 at <path>`, and `[info] run pagevow plugin install again ...` when the plugin is installed; `--json` prints `current`, `latest`, `update_available`, `updated`, `executable`, and `staged` when the binary was kept aside |
+| Release targets | Linux, macOS and Windows on amd64 and arm64, except Windows arm64 because Chrome for Testing has no build for it; goreleaser creates the GitHub release, marked as a prerelease when the tag has a pre-release part |
+| Release workflow | `.github/workflows/release.yml` runs `make check`, then goreleaser, on a `v*` tag with `contents: write`; CI runs `goreleaser check` on every change; `make release-snapshot` builds the archives locally without publishing |
 
 ## 17. Open questions
 

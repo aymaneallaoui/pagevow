@@ -81,6 +81,10 @@ type harness struct {
 	httpClient     *http.Client
 	browserBaseURL string
 	browserPin     *browser.Pin
+
+	executable    string
+	updateBaseURL string
+	version       string
 }
 
 func newHarness(t *testing.T) *harness {
@@ -122,8 +126,13 @@ func (h *harness) options() cli.Options {
 		Processes:        h.procs,
 		ManagedBrowsers:  h.managed,
 		GPU:              h.gpu,
-		Executable:       func() (string, error) { return "/usr/local/bin/pagevow", nil },
-		CacheDir:         func() (string, error) { return h.cacheDir, nil },
+		Executable: func() (string, error) {
+			if h.executable != "" {
+				return h.executable, nil
+			}
+			return "/usr/local/bin/pagevow", nil
+		},
+		CacheDir: func() (string, error) { return h.cacheDir, nil },
 		UserConfigDir: func() (string, error) {
 			if h.configDirFails {
 				return "", errors.New("no config directory")
@@ -149,6 +158,8 @@ func (h *harness) options() cli.Options {
 		HTTPClient:     h.httpClient,
 		BrowserBaseURL: h.browserBaseURL,
 		BrowserPin:     h.browserPin,
+		UpdateBaseURL:  h.updateBaseURL,
+		Version:        h.version,
 		Now:            func() time.Time { return h.now },
 	}
 }
@@ -221,22 +232,6 @@ func TestRunFlagsExist(t *testing.T) {
 	out := newHarness(t).mustRun("run", "--help")
 	for _, flag := range []string{"--tests", "--ids", "--out", "--screenshots", "--retries", "--timeout", "--full-page", "--json"} {
 		assert.Contains(t, out, flag)
-	}
-}
-
-func TestStubCommandsExitWithCode2(t *testing.T) {
-	cases := []struct {
-		args  []string
-		phase string
-	}{
-		{[]string{"update"}, "phase 5"},
-	}
-	h := newHarness(t)
-	for _, tc := range cases {
-		_, err := h.run(tc.args...)
-		require.Error(t, err, tc.args)
-		assert.Equal(t, 2, cli.ExitCode(err), tc.args)
-		assert.Contains(t, err.Error(), "not implemented yet ("+tc.phase+")", tc.args)
 	}
 }
 

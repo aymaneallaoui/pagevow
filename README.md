@@ -50,15 +50,18 @@ pagevow update --force    # installs the latest release again
 pagevow update --json     # prints current, latest, update_available, updated and executable
 ```
 
-The repository is private, so `update` needs a token that can read it: `GITHUB_TOKEN`, else `GH_TOKEN`, else the keychain
-entry `github` (`pagevow keys set github`). The token is sent to `api.github.com` only and is never printed. `update` downloads
-`pagevow_<version>_<os>_<arch>.tar.gz` (`.zip` on Windows) and `checksums.txt` from the release, checks the SHA-256 of
-the archive and replaces the running binary by renaming the new one over it. On Windows the running `pagevow.exe` is
-renamed to `pagevow.exe.old` first and that file is removed the next time you run `update`. When the directory of the
-binary is read-only, `update` keeps the verified binary in `<user cache directory>/pagevow/update/` and tells you where.
-`checksums.txt` is not signed, so it catches a damaged download, not a tampered release. A build that is not a release,
-such as `dev`, counts as older than every release. Run `pagevow plugin install` again after an update: the Stop hook
-stores the path of the binary.
+The repository is private, so `update` needs a token that can read it: `GITHUB_TOKEN`, else `GH_TOKEN`, else the
+keychain entry `github` (`pagevow keys set github`). The token is sent to `api.github.com` only, is dropped on a
+redirect to another host or port, and is never printed. `update` downloads `pagevow_<version>_<os>_<arch>.tar.gz`
+(`.zip` on Windows) and `checksums.txt` from the release, checks the SHA-256 of the archive and replaces the running
+binary by renaming the new one over it. On Windows the running `pagevow.exe` is renamed to `pagevow.exe.old` first and
+that file is removed the next time you run `update`, even when nothing is newer; if a process still runs from it, the
+next update uses a `pagevow.exe.old-<random>` name instead, and `pagevow stop` ends a model server or browser you
+started. When the directory of the binary is read-only, or the final rename fails, `update` keeps the verified binary in
+`<user cache directory>/pagevow/update/` and tells you where. `checksums.txt` is not signed, so it catches a damaged
+download, not a tampered release. A build that is not a release, such as `dev` or a `git describe` build like
+`v1.2.3-5-gabc1234`, counts as older than every release. Run `pagevow plugin install` again after an update: the Stop
+hook stores the path of the binary.
 
 ## Commands
 

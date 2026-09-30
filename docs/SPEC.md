@@ -281,8 +281,9 @@ in the project directory (plus `--config PATH` when the flag was given), and rea
 and 1 of that run are a pass and a fail; any other code skips the tests. The hook never starts a local model by itself.
 
 The fingerprint is a SHA-256 over HEAD (`no-head` before the first commit), `git status --porcelain`, the diff and the
-staged diff, every untracked file by content (symlinks by target, unreadable files skipped) and the tests file, all
-with `.pagevow/` excluded. Without git, or outside a work tree, it is the newest modification time of the tests file
+staged diff, every untracked file that git does not ignore by content (symlinks by target, unreadable files skipped) and
+the tests file, all with `.pagevow/` excluded. Git-ignored files such as build output and local config do not change
+the fingerprint, so a change only in them does not trigger the hook. Without git, or outside a work tree, it is the newest modification time of the tests file
 and of every file under the project, skipping `.pagevow`, `.git`, `node_modules`, `.venv` and `__pycache__`.
 
 ## 11. Claude Code plugin
@@ -446,7 +447,7 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Disable switch | `PAGEVOW_HOOK=0`, compared as the exact string |
 | State files | `.pagevow/.last-pass` and `.pagevow/.blocks-<session>` in the project, modes 0750 and 0600, session names reduced to `A-Z a-z 0-9 _ -` |
 | Suite run | a subprocess of the same binary with `run --json`, so the hook and `pagevow run` cannot drift; the hook decodes the report from stdout |
-| Fingerprint | git based, without `.pagevow/`; modification times when git is missing or the directory is not a work tree |
+| Fingerprint | git based, without `.pagevow/`; untracked files that git does not ignore are hashed by content, ignored files do not count; modification times when git is missing or the directory is not a work tree |
 | `.gitignore` | pagevow never touches the project's `.gitignore` |
 | Plugin root | `<UserConfigDir>/pagevow/claude-plugin/` with a marketplace file and the plugin under `plugin/` |
 | Hook command | the absolute path of the running binary, shell quoted, followed by `hook stop`; install again after an upgrade |

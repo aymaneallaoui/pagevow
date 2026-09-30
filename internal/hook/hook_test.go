@@ -457,6 +457,52 @@ func TestStopBlockCounterNotSavedDoesNotBlock(t *testing.T) {
 	assert.Contains(t, h.stderr.String(), "block counter could not be saved")
 }
 
+func plantSymlink(t *testing.T, h *harness, name string) (target string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on windows")
+	}
+	outDir := filepath.Join(h.dir, hook.OutDirName)
+	require.NoError(t, os.MkdirAll(outDir, 0o750))
+	target = filepath.Join(h.root, "victim")
+	require.NoError(t, os.WriteFile(target, []byte("keep\n"), 0o600))
+	require.NoError(t, os.Symlink(target, filepath.Join(outDir, name)))
+	return target
+}
+
+func TestStopSymlinkedLastPassIsNotWrittenThrough(t *testing.T) {
+	h := newHarness(t)
+	target := plantSymlink(t, h, ".last-pass")
+	h.queuePass()
+	assert.Equal(t, 0, h.stop("s"))
+	assert.Contains(t, h.stderr.String(), "could not save hook state")
+	data, err := os.ReadFile(target)
+	require.NoError(t, err)
+	assert.Equal(t, "keep\n", string(data))
+}
+
+func TestStopSymlinkedCounterIsNotWrittenThrough(t *testing.T) {
+	h := newHarness(t)
+	target := plantSymlink(t, h, ".blocks-s")
+	h.queueFail()
+	assert.Equal(t, 1, h.stop("s"))
+	assert.Contains(t, h.stderr.String(), "block counter could not be saved")
+	data, err := os.ReadFile(target)
+	require.NoError(t, err)
+	assert.Equal(t, "keep\n", string(data))
+}
+
+func TestStopPassRemovesSymlinkedCounterWithoutFollowing(t *testing.T) {
+	h := newHarness(t)
+	target := plantSymlink(t, h, ".blocks-s")
+	h.queuePass()
+	assert.Equal(t, 0, h.stop("s"))
+	h.noState(".blocks-s")
+	data, err := os.ReadFile(target)
+	require.NoError(t, err)
+	assert.Equal(t, "keep\n", string(data))
+}
+
 func TestProjectDir(t *testing.T) {
 	getwd := func() (string, error) { return "/wd", nil }
 	failing := func() (string, error) { return "", errors.New("no wd") }

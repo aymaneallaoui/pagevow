@@ -177,19 +177,19 @@ type state struct {
 }
 
 func (s state) readLastPass() string {
-	data, err := os.ReadFile(s.lastPass) //nolint:gosec // the path is inside the project's own state directory
-	if err != nil {
+	data, ok := readState(s.lastPass)
+	if !ok {
 		return ""
 	}
-	return strings.TrimSpace(string(data))
+	return strings.TrimSpace(data)
 }
 
 func (s state) readBlocks() int {
-	data, err := os.ReadFile(s.blocks) //nolint:gosec // the path is inside the project's own state directory
-	if err != nil {
+	data, ok := readState(s.blocks)
+	if !ok {
 		return 0
 	}
-	count, ok := parseCount(strings.TrimSpace(string(data)))
+	count, ok := parseCount(strings.TrimSpace(data))
 	if !ok {
 		return 0
 	}
@@ -197,7 +197,7 @@ func (s state) readBlocks() int {
 }
 
 func (s state) passed(stderr io.Writer) int {
-	if err := os.Remove(s.blocks); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := removeState(s.blocks); err != nil {
 		warnState(stderr, err)
 	}
 	if err := writeState(s.lastPass, s.fingerprint+"\n"); err != nil {
@@ -231,8 +231,58 @@ func (s state) failed(cfg Config, res RunResult) int {
 	return exitBlock
 }
 
+func readState(path string) (string, bool) {
+	info, err := os.Lstat(path)
+	if err != nil || !info.Mode().IsRegular() {
+		return "", false
+	}
+	data, err := os.ReadFile(path) //nolint:gosec // the path is inside the project's own state directory
+	if err != nil {
+		return "", false
+	}
+	return string(data), true
+}
+
+// removeState deletes a state file; a symlink is removed without being followed.
+func removeState(path string) error {
+	info, err := os.Lstat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("remove hook state: %w", err)
+	}
+	if !info.Mode().IsRegular() && info.Mode()&fs.ModeSymlink == 0 {
+		return fmt.Errorf("remove hook state: %s is not a regular file", path)
+	}
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("remove hook state: %w", err)
+	}
+	return nil
+}
+
+// writeState replaces the state file atomically and refuses a target that is not a regular file, so a planted symlink is never written through.
 func writeState(path, content string) error {
-	if err := os.WriteFile(path, []byte(content), fileMode); err != nil {
+	if info, err := os.Lstat(path); err == nil {
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("write hook state: %s is not a regular file", path)
+		}
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("write hook state: %w", err)
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("write hook state: %w", err)
+	}
+	tmpName := tmp.Name()
+	_, werr := tmp.WriteString(content)
+	cerr := tmp.Close()
+	if err := errors.Join(werr, cerr); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("write hook state: %w", err)
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		_ = os.Remove(tmpName)
 		return fmt.Errorf("write hook state: %w", err)
 	}
 	return nil

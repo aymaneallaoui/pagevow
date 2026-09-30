@@ -108,7 +108,7 @@ the binary. Run `pagevow plugin install` again after you upgrade or move pagevow
 When Claude tries to stop, the hook runs the tests file of the project (`pagevow.yaml` and the other names) and blocks
 Claude while the tests fail, so Claude reads the `final.png` files and fixes the app or the test. It blocks at most
 `PAGEVOW_HOOK_MAX_BLOCKS` times in a row per session (default 2, `0` never blocks), then lets Claude stop with a note that
-the tests still fail. It skips the run when the project has not changed since the last pass, and `PAGEVOW_HOOK=0` turns
+the tests still fail. It skips the run when the project has not changed since the last pass (files that git ignores do not count), and `PAGEVOW_HOOK=0` turns
 it off. A backend or browser that is not reachable never blocks: the hook says what to start (`pagevow start`,
 `pagevow doctor`) and lets Claude stop. State lives in `.pagevow/` in the project; pagevow never edits `.gitignore`.
 

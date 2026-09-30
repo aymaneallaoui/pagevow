@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
@@ -11,12 +12,18 @@ import (
 
 	"github.com/samber/do/v2"
 
+	"github.com/aymaneallaoui/pagevow/internal/browser"
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/hook"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
 	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 	"github.com/aymaneallaoui/pagevow/internal/version"
+)
+
+const (
+	downloadTimeout = 15 * time.Minute
+	maxRedirects    = 3
 )
 
 // LookupEnv reads one environment variable.
@@ -42,6 +49,11 @@ type Exit func(code int)
 // ConfigPath is the default config file location.
 type ConfigPath string
 
+// BrowserBaseURL is where install --browser downloads Chrome for Testing; empty means the official storage.
+type BrowserBaseURL string
+
+type browserPinOverride struct{ pin *browser.Pin }
+
 // Options supplies the services the container registers; zero fields fall back to system defaults.
 type Options struct {
 	LookupEnv        LookupEnv
@@ -62,6 +74,10 @@ type Options struct {
 	HomeDir          HomeDir
 	LookPath         LookPath
 	OS               GOOS
+	Arch             GOARCH
+	HTTPClient       *http.Client
+	BrowserBaseURL   string
+	BrowserPin       *browser.Pin
 	CommandRunner    CommandRunner
 	HookRunner       hook.Runner
 	HookGit          hook.Git
@@ -86,7 +102,21 @@ func SystemOptions() Options {
 		HomeDir:          os.UserHomeDir,
 		LookPath:         exec.LookPath,
 		OS:               GOOS(runtime.GOOS),
+		Arch:             GOARCH(runtime.GOARCH),
+		HTTPClient:       downloadClient(),
 		CommandRunner:    execCommandRunner{},
+	}
+}
+
+func downloadClient() *http.Client {
+	return &http.Client{
+		Timeout: downloadTimeout,
+		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
+			if len(via) > maxRedirects {
+				return fmt.Errorf("stopped after %d redirects", maxRedirects)
+			}
+			return nil
+		},
 	}
 }
 
@@ -113,6 +143,10 @@ func NewContainer(opts Options) do.Injector {
 	do.ProvideValue(injector, opts.HomeDir)
 	do.ProvideValue(injector, opts.LookPath)
 	do.ProvideValue(injector, opts.OS)
+	do.ProvideValue(injector, opts.Arch)
+	do.ProvideValue(injector, opts.HTTPClient)
+	do.ProvideValue(injector, BrowserBaseURL(opts.BrowserBaseURL))
+	do.ProvideValue(injector, browserPinOverride{pin: opts.BrowserPin})
 	do.ProvideValue(injector, version.Get())
 
 	do.Provide(injector, func(i do.Injector) (*keys.Resolver, error) {
@@ -211,6 +245,12 @@ func withDefaults(opts Options) Options {
 	}
 	if opts.OS == "" {
 		opts.OS = system.OS
+	}
+	if opts.Arch == "" {
+		opts.Arch = system.Arch
+	}
+	if opts.HTTPClient == nil {
+		opts.HTTPClient = system.HTTPClient
 	}
 	return opts
 }

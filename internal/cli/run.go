@@ -28,7 +28,7 @@ const (
 	outDirName        = ".pagevow"
 )
 
-const browserMissing = "No Chromium or Google Chrome was found.\n  Install one of them and make sure it is on your PATH (Linux: chromium or google-chrome, macOS: Google Chrome in /Applications)."
+const browserMissing = "No Chromium or Google Chrome was found.\n  Install one with: pagevow install --browser, or put Chromium or Google Chrome on your PATH."
 
 func (a *app) newRunCmd() *cobra.Command {
 	cmd := &cobra.Command{

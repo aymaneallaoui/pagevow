@@ -28,7 +28,7 @@ import (
 const doneAnswerWithWait = `{"model":"m","answers":{"operation":{"choice":"DONE","confidence":1,"probabilities":{"DONE":1,"BLOCKED":0,"WAIT":0}}},"usage":{}}`
 
 func TestRunDrivesARealBrowserAndLeavesNoProcessBehind(t *testing.T) {
-	if _, err := browser.FindExecutable(); err != nil {
+	if _, err := browser.FindExecutable(""); err != nil {
 		t.Skipf("no Chromium or Chrome executable found: %v", err)
 	}
 	cache := t.TempDir()

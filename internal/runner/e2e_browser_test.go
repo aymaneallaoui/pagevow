@@ -92,7 +92,7 @@ func (s realSessions) NewSession(ctx context.Context, url string) (runner.Sessio
 }
 
 func TestEndToEndAgainstARealBrowser(t *testing.T) {
-	execPath, err := browser.FindExecutable()
+	execPath, err := browser.FindExecutable("")
 	if err != nil {
 		t.Skipf("no Chromium or Chrome executable found: %v", err)
 	}

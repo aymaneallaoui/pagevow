@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
 
+	"github.com/aymaneallaoui/pagevow/internal/browser"
 	"github.com/aymaneallaoui/pagevow/internal/cli"
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/hook"
@@ -74,6 +76,11 @@ type harness struct {
 	configDirFails bool
 	commands       *fakeCommands
 	hookRunner     hook.Runner
+
+	arch           string
+	httpClient     *http.Client
+	browserBaseURL string
+	browserPin     *browser.Pin
 }
 
 func newHarness(t *testing.T) *harness {
@@ -96,6 +103,7 @@ func newHarness(t *testing.T) *harness {
 		launcher:   &fakeLauncher{},
 		missing:    map[string]bool{},
 		goos:       "linux",
+		arch:       "amd64",
 		now:        time.Date(2026, 9, 30, 9, 0, 0, 0, time.UTC),
 
 		userConfigDir: t.TempDir(),
@@ -136,8 +144,12 @@ func (h *harness) options() cli.Options {
 			}
 			return "/usr/bin/" + name, nil
 		},
-		OS:  cli.GOOS(h.goos),
-		Now: func() time.Time { return h.now },
+		OS:             cli.GOOS(h.goos),
+		Arch:           cli.GOARCH(h.arch),
+		HTTPClient:     h.httpClient,
+		BrowserBaseURL: h.browserBaseURL,
+		BrowserPin:     h.browserPin,
+		Now:            func() time.Time { return h.now },
 	}
 }
 
@@ -217,7 +229,6 @@ func TestStubCommandsExitWithCode2(t *testing.T) {
 		args  []string
 		phase string
 	}{
-		{[]string{"install", "--browser"}, "phase 5"},
 		{[]string{"update"}, "phase 5"},
 	}
 	h := newHarness(t)

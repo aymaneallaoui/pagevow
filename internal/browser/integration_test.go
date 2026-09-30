@@ -45,7 +45,7 @@ func cleanupContext() (context.Context, context.CancelFunc) {
 
 func startTestBrowser(t *testing.T) *testBrowser {
 	t.Helper()
-	execPath, err := FindExecutable()
+	execPath, err := FindExecutable("")
 	if err != nil {
 		t.Skipf("no Chromium or Chrome executable found, skipping browser integration test: %v", err)
 	}

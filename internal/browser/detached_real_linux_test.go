@@ -36,7 +36,7 @@ func killLeftovers(t *testing.T, pid int, profile string) {
 }
 
 func TestRealDetachedBrowserSurvivesAKilledLauncherAndStopsByPID(t *testing.T) {
-	execPath, err := FindExecutable()
+	execPath, err := FindExecutable("")
 	if err != nil {
 		t.Skipf("no Chromium or Chrome executable found: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestRealDetachedBrowserSurvivesAKilledLauncherAndStopsByPID(t *testing.T) {
 }
 
 func TestRealDetachedLaunchWritesItsLogAndStops(t *testing.T) {
-	execPath, err := FindExecutable()
+	execPath, err := FindExecutable("")
 	if err != nil {
 		t.Skipf("no Chromium or Chrome executable found: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestRealDetachedLaunchWritesItsLogAndStops(t *testing.T) {
 }
 
 func TestRealLaunchOnAFixedPortBecomesReadyAndStops(t *testing.T) {
-	execPath, err := FindExecutable()
+	execPath, err := FindExecutable("")
 	if err != nil {
 		t.Skipf("no Chromium or Chrome executable found: %v", err)
 	}

@@ -32,7 +32,7 @@ func freePort(t *testing.T) int {
 }
 
 func TestStartKeepsARealBrowserRunningRunAttachesToItAndStopEndsIt(t *testing.T) {
-	if _, err := browser.FindExecutable(); err != nil {
+	if _, err := browser.FindExecutable(""); err != nil {
 		t.Skipf("no Chromium or Chrome executable found: %v", err)
 	}
 	h := newHarness(t)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/aymaneallaoui/pagevow/internal/browser"
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
 	"github.com/aymaneallaoui/pagevow/internal/server"
@@ -21,6 +22,8 @@ const (
 	levelWarn = "warn"
 	levelFail = "fail"
 )
+
+const browserInstallFix = "install one with: pagevow install --browser, or put Chromium or Google Chrome on your PATH"
 
 type doctorCheck struct {
 	ID      string `json:"id"`
@@ -383,10 +386,11 @@ func (d *doctor) gpuChecks(peaks []float64) {
 func (d *doctor) browserChecks(haveConfig bool) {
 	path, err := d.launcher.Find()
 	if err != nil {
-		d.add("browser:executable", levelFail, "install Chromium or Google Chrome and make sure it is on your PATH", "no Chromium or Google Chrome was found")
+		d.add("browser:executable", levelFail, browserInstallFix, "no Chromium or Google Chrome was found")
 	} else {
 		d.add("browser:executable", levelOK, "", "browser executable found: %s", path)
 	}
+	d.installedBrowserCheck(err != nil)
 	if !haveConfig {
 		return
 	}
@@ -399,6 +403,24 @@ func (d *doctor) browserChecks(haveConfig bool) {
 		d.add("browser:port", levelFail, "stop that process, or set browser.port to a free port", "port %d is in use by a process that pagevow did not start", port)
 	default:
 		d.add("browser:port", levelOK, "", "browser port %d is free", port)
+	}
+}
+
+func (d *doctor) installedBrowserCheck(noSystemBrowser bool) {
+	dir, err := config.BrowserDir(d.cache)
+	if err != nil {
+		return
+	}
+	rec, err := browser.LookupInstalled(dir)
+	switch {
+	case err == nil && rec.Version != browser.PinnedVersion:
+		d.add("browser:installed", levelWarn, "pagevow install --browser", "Chrome for Testing %s is installed at %s, this pagevow pins %s", rec.Version, rec.Executable, browser.PinnedVersion)
+	case err == nil:
+		d.add("browser:installed", levelOK, "", "pagevow installed Chrome for Testing %s at %s", rec.Version, rec.Executable)
+	case errors.Is(err, browser.ErrInstallBroken):
+		d.add("browser:installed", levelWarn, "pagevow install --browser", "the browser that pagevow installed cannot be used: %v", err)
+	case noSystemBrowser:
+		d.add("browser:installed", levelWarn, "pagevow install --browser", "pagevow has not installed Chrome for Testing %s", browser.PinnedVersion)
 	}
 }
 

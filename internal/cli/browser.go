@@ -44,14 +44,20 @@ func SystemInterrupts() (<-chan os.Signal, func()) {
 	return ch, func() { signal.Stop(ch) }
 }
 
-// SystemBrowserLauncher launches the installed Chromium or Chrome with a throwaway profile in the user cache directory.
+// SystemBrowserLauncher launches the browser pagevow installed, else an installed Chromium or Chrome, with a throwaway profile in the user cache directory.
 func SystemBrowserLauncher() BrowserLauncher { return systemLauncher{cacheDir: os.UserCacheDir} }
 
 type systemLauncher struct {
 	cacheDir func() (string, error)
 }
 
-func (systemLauncher) Find() (string, error) { return browser.FindExecutable() }
+func (l systemLauncher) Find() (string, error) {
+	dir, err := config.BrowserDir(l.cacheDir)
+	if err != nil {
+		dir = ""
+	}
+	return browser.FindExecutable(dir)
+}
 
 func (l systemLauncher) Launch(ctx context.Context, spec BrowserSpec) (RunBrowser, error) {
 	cache, err := l.cacheDir()

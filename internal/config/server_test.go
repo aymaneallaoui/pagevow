@@ -245,6 +245,7 @@ func TestCacheDirectoryHelpers(t *testing.T) {
 		"logs":     {config.LogDir, filepath.Join(root, "logs")},
 		"profiles": {config.ProfilesDir, filepath.Join(root, "profiles")},
 		"managed":  {config.ManagedProfileDir, filepath.Join(root, "profiles", "managed")},
+		"browser":  {config.BrowserDir, filepath.Join(root, "browser")},
 	} {
 		got, err := tc.fn(cache)
 		require.NoError(t, err, name)

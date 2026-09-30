@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/aymaneallaoui/pagevow/internal/browser"
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
@@ -84,6 +85,9 @@ func (a *app) newStatusCmd() *cobra.Command {
 			}
 			_, statErr := os.Stat(path)
 			report := buildStatus(cfg, path, statErr == nil, resolver)
+			if err := a.addBrowserInstall(&report); err != nil {
+				return err
+			}
 			if err := a.collectRuntime(commandContext(cmd), cfg, &report); err != nil {
 				return err
 			}
@@ -135,6 +139,32 @@ func buildStatus(cfg config.Config, path string, exists bool, resolver *keys.Res
 			{"channel", cfg.Browser.Channel},
 		}),
 	}
+}
+
+func (a *app) addBrowserInstall(report *statusReport) error {
+	cacheDir, err := service[CacheDir](a)
+	if err != nil {
+		return err
+	}
+	dir, err := config.BrowserDir(cacheDir)
+	if err != nil {
+		report.Browser["installed"] = false
+		return nil
+	}
+	rec, err := browser.LookupInstalled(dir)
+	report.Browser["installed"] = err == nil
+	if err == nil {
+		report.Browser["installed_version"] = rec.Version
+		report.Browser["installed_path"] = rec.Executable
+	}
+	return nil
+}
+
+func browserInstallLine(report statusReport) string {
+	if installed, _ := report.Browser["installed"].(bool); installed {
+		return fmt.Sprintf("%v at %v", report.Browser["installed_version"], report.Browser["installed_path"])
+	}
+	return "no (pagevow install --browser)"
 }
 
 type destination struct {
@@ -252,6 +282,7 @@ func renderStatus(out *ui.Printer, cfg config.Config, report statusReport, resol
 		{Key: "headless", Value: fmt.Sprint(cfg.Browser.Headless)},
 		{Key: "viewport", Value: fmt.Sprintf("%dx%d", cfg.Browser.Viewport.Width, cfg.Browser.Viewport.Height)},
 		{Key: "channel", Value: cfg.Browser.Channel},
+		{Key: "installed", Value: browserInstallLine(report)},
 	})
 	out.Blank()
 	out.Heading("Config")

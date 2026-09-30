@@ -12,7 +12,7 @@ import (
 )
 
 func TestRealBrowserDiesWhenTheProcessThatLaunchedItIsKilled(t *testing.T) {
-	execPath, err := FindExecutable()
+	execPath, err := FindExecutable("")
 	if err != nil {
 		t.Skipf("no Chromium or Chrome executable found: %v", err)
 	}

@@ -87,7 +87,7 @@ func TestHookStopMapsRunOutcomesToExitCodes(t *testing.T) {
 			name:       "failing suite blocks Claude",
 			result:     hook.RunResult{ExitCode: 1, Report: failedReport("/p/.pagevow/run-1")},
 			wantCode:   2,
-			wantStderr: []string{"Browser tests failed.", "Full report: /p/.pagevow/run-1/report.json", "Browser test block 1 of 2."},
+			wantStderr: []string{"Browser tests failed.", "Full report: " + filepath.Join("/p/.pagevow/run-1", "report.json"), "Browser test block 1 of 2."},
 		},
 		{
 			name:       "failing suite with the cap at zero never blocks",

@@ -1,0 +1,66 @@
+name: live
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    name: live (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    env:
+      EXE: ${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: build pagevow
+        run: go build -o "bin/pagevow${EXE}" ./cmd/pagevow
+
+      - name: install the pinned browser
+        run: |
+          "bin/pagevow${EXE}" install --browser --json | tee "${RUNNER_TEMP}/install.json"
+
+      - name: run the installed browser
+        run: |
+          exe="$(sed -n 's/.*"executable": *"\([^"]*\)".*/\1/p' "${RUNNER_TEMP}/install.json" | sed 's/\\\\/\\/g' | tr -d '\r')"
+          echo "executable: ${exe}"
+          test -n "${exe}"
+          if [ "${RUNNER_OS}" = "Windows" ]; then
+            version="$(powershell -NoProfile -Command "(Get-Item -LiteralPath '${exe}').VersionInfo.ProductVersion" | tr -d '\r')"
+          else
+            version="$("${exe}" --version)"
+          fi
+          echo "version: ${version}"
+          test -n "${version}"
+
+      - name: doctor
+        run: |
+          code=0
+          "bin/pagevow${EXE}" doctor || code=$?
+          echo "doctor exit code: ${code}"
+          test "${code}" -le 1
+
+      - name: update check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          code=0
+          "bin/pagevow${EXE}" update --check || code=$?
+          echo "update --check exit code: ${code}"
+          test "${code}" -le 1

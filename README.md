@@ -301,6 +301,9 @@ Pushing a tag such as `v1.2.3` runs `.github/workflows/release.yml`: `make check
 Windows archives (Windows on arm64 is left out, Chrome for Testing has no build for it) and publishes the GitHub release
 with `checksums.txt`. CI runs `goreleaser check` on every change.
 
+CI runs the offline tests on Linux, macOS and Windows, and the manual `live` workflow (`.github/workflows/live.yml`) installs the
+browser and checks for updates on all three.
+
 Install the linter with `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0`.
 
 Portions derive from browser-use/jev-ultrafast; see [NOTICE](NOTICE).

@@ -131,9 +131,10 @@ func TestModelCommandNamesAMissingRunDirectory(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), filepath.Join(kevDir, "runs", "nope"))
 
-	_, err = server.ModelCommand(kevDir, "/no/such/run", "nf4", 8009)
+	missing := filepath.Join(t.TempDir(), "no", "such", "run")
+	_, err = server.ModelCommand(kevDir, missing, "nf4", 8009)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "/no/such/run")
+	assert.Contains(t, err.Error(), missing)
 }
 
 func TestModelCommandRejectsRelativeModelsThatLeaveTheRunsDirectory(t *testing.T) {

@@ -15,6 +15,7 @@ import (
 	"os"
 	"runtime/pprof"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -152,6 +153,42 @@ func js(t *testing.T, s *Session, expression string) string {
 		return string(value)
 	}
 	return text
+}
+
+func TestASecondSessionSeesAChangedFileDespiteCacheHeaders(t *testing.T) {
+	tb := startTestBrowser(t)
+	var content atomic.Value
+	content.Store("first")
+	var hits atomic.Int64
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/page.html" {
+			http.NotFound(w, r)
+			return
+		}
+		hits.Add(1)
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, "<!doctype html><title>t</title><p id=v>%s</p>", content.Load())
+	}))
+	t.Cleanup(site.Close)
+	open := func() *Session {
+		session, err := tb.browser.NewSession(testContext(t), SessionOptions{URL: site.URL + "/page.html"})
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			closeCtx, cancel := cleanupContext()
+			defer cancel()
+			assert.NoError(t, session.Close(closeCtx))
+		})
+		return session
+	}
+
+	first := open()
+	assert.Equal(t, "first", js(t, first, "document.getElementById('v').textContent"))
+	content.Store("second")
+	second := open()
+
+	assert.Equal(t, "second", js(t, second, "document.getElementById('v').textContent"))
+	assert.Equal(t, int64(2), hits.Load(), "the browser asked the server again")
 }
 
 func targetIDs(t *testing.T, tb *testBrowser) []string {

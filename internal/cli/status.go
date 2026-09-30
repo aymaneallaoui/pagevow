@@ -151,7 +151,15 @@ func (a *app) addBrowserInstall(report *statusReport) error {
 		report.Browser["installed"] = false
 		return nil
 	}
-	rec, err := browser.LookupInstalled(dir)
+	goos, err := service[GOOS](a)
+	if err != nil {
+		return err
+	}
+	goarch, err := service[GOARCH](a)
+	if err != nil {
+		return err
+	}
+	rec, err := browser.LookupInstalled(dir, string(goos), string(goarch))
 	report.Browser["installed"] = err == nil
 	if err == nil {
 		report.Browser["installed_version"] = rec.Version

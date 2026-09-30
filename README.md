@@ -36,7 +36,7 @@ pagevow install --browser --json   # prints version, platform, executable and al
 The download goes to `<user cache directory>/pagevow/browser/<version>/`. pagevow checks the size and the SHA-256 of the
 archive against values that are pinned in the code (Google publishes none) and records the install in
 `<user cache directory>/pagevow/browser/installed.json`. Linux (amd64, arm64), macOS (arm64, amd64) and Windows
-(amd64) have a build; other systems, such as Windows on arm64, do not. `run`, `start` and `doctor` use the installed
+(amd64, 386) have a build; other systems, such as Windows on arm64, do not. `run`, `start` and `doctor` use the installed
 build before any Chromium or Chrome on `PATH`. The command refuses while the browser of `pagevow start` runs: run
 `pagevow stop` first. `status` and `doctor` show the installed version.
 

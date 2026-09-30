@@ -334,12 +334,22 @@ verifier to make a test pass; report remaining failures plainly.
   - The pinned version is `154.0.8037.92`. Google publishes no checksums, so the pin table in `internal/browser/cft.go`
     holds the size and SHA-256 of each archive, computed by pagevow on 2026-09-30. A different version needs new pins.
     The archives come from `https://storage.googleapis.com/chrome-for-testing-public/<version>/<platform>/chrome-<platform>.zip`.
-  - Download goes to `<version>.zip.part` while it is hashed. A wrong size or hash deletes the file and fails with the
-    expected and the actual value. The archive is unpacked into `<version>.tmp` and renamed to `<version>` only when it
-    is complete and holds the executable; a leftover `.tmp` or `.part` from an earlier try is removed first.
-  - Unpacking refuses entries whose path leaves the target, absolute paths, names with a backslash, anything that is not
-    a file, a directory or a relative symbolic link that stays inside the tree, entries below a symbolic link, archives
-    of more than 50000 entries or 2 GiB, and entries that hold more than they declare. Files keep their execute bit
+  - One install runs at a time: it holds an exclusive lock on `<data>/browser/.install.lock` for its whole run, and a
+    second install fails at once with "another pagevow install is running". The operating system drops the lock when
+    the process ends, so a crash leaves nothing to clean up.
+  - The download goes to a temporary file `download-*.zip.part` in the browser directory while it is hashed. A wrong
+    size or hash deletes the file and fails with the expected size or hash and the received one (at least one byte
+    over the expected size when the body is longer). The archive is read from that same open file, never from its path
+    again. It is unpacked into a temporary directory `staging-*.tmp`, which must hold the executable as a regular file.
+    Any `.part`, `.tmp` or `old-*` left by an interrupted install is removed under the lock.
+  - Before the new tree replaces the old one the start guard runs again and the context is checked. `--force` then
+    renames the existing `<version>` to `old-<version>-*`, renames the staging directory to `<version>`, and puts the
+    old tree back when that fails; the old tree is removed last. The record is written last, atomically.
+  - Unpacking refuses entries whose path leaves the target, absolute paths, names with a backslash, names that are not
+    in canonical form (`a//b`, `./x`, `a/../b`), anything that is not a file, a directory or a relative symbolic link
+    that stays inside the tree, entries below a symbolic link (every existing parent is checked with `lstat`, so case
+    folding does not bypass it), archives of more than 50000 entries or 2 GiB, and entries that hold more than they
+    declare. It stops when the context is cancelled. Files keep their execute bit
     (0755, else 0644), directories are 0755.
   - Run again it does nothing while the pinned build is installed; `--force` installs it again. The install refuses
     while a browser record of `pagevow start` is alive: stop it first.
@@ -355,13 +365,15 @@ verifier to make a test pass; report remaining failures plainly.
 
   Any other system, such as windows/arm64, has no build; the command fails and names the platform.
 - Lookup order of the browser executable: the installed build of the record when its file exists, then the program
-  names on `PATH`, then the standard system locations. A record whose file is gone or points outside the browser
-  directory is ignored.
+  names on `PATH`, then the standard system locations. A record is ignored when its platform differs from the current
+  one, its file is gone, it is not a regular file, or its real path, links resolved, is outside the browser directory.
+- `status --json` reports the install in its `browser` object: `installed` (true or false) and, when true,
+  `installed_version` and `installed_path`.
 - `start` launches it headless with its own profile directory and a fixed debugging port bound to 127.0.0.1.
 - Each test gets a new target in its own window and closes it at the end. A tab inside an existing window gets no
   compositor frames while hidden, so screenshots and wheel scrolling stall for up to 5 seconds, in headless mode too.
-- Each target disables the HTTP cache through CDP before its first navigation, so a run always sees the current files
-  even though the profile persists.
+- Each target disables the HTTP cache and bypasses service workers through CDP before its first navigation, so a run
+  always sees the current files even though the profile persists.
 - Headless is the default because a hidden window under Wayland receives no frames and screenshots hang. With
   `browser.headless: false` on Linux, pagevow adds `--ozone-platform=x11`.
 - Screenshot capture uses a 5 second timeout. After the first failure in a test no further step capture is tried;

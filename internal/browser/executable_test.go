@@ -16,7 +16,8 @@ func fakeFinder(goos string, onPath map[string]string, files []string, env map[s
 		present[file] = true
 	}
 	return finder{
-		goos: goos,
+		goos:   goos,
+		goarch: "amd64",
 		lookPath: func(name string) (string, error) {
 			if path, ok := onPath[name]; ok {
 				return path, nil
@@ -134,7 +135,7 @@ func TestFindExecutableIgnoresARecordThatPointsOutsideTheDirectory(t *testing.T)
 	dir := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "chrome")
 	require.NoError(t, os.WriteFile(outside, []byte("x"), 0o700))
-	require.NoError(t, writeRecord(dir, Installed{Version: PinnedVersion, Executable: outside}))
+	require.NoError(t, writeRecord(dir, Installed{Version: PinnedVersion, Platform: "linux64", Executable: outside}))
 	f := fakeFinder("linux", nil, nil, nil)
 	f.browserDir = dir
 
@@ -151,4 +152,16 @@ func TestFindExecutableWithoutARecordUsesTheSystemBrowser(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "/p/google-chrome", got)
+}
+
+func TestFindExecutableIgnoresARecordForAnotherPlatform(t *testing.T) {
+	dir, _ := installedBrowser(t)
+	f := fakeFinder("linux", map[string]string{"chromium": "/p/chromium"}, nil, nil)
+	f.browserDir = dir
+	f.goarch = "arm64"
+
+	got, err := f.find()
+
+	require.NoError(t, err)
+	assert.Equal(t, "/p/chromium", got, "the linux64 build does not run on linux/arm64")
 }

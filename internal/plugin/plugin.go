@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // Identity of the plugin and of the local marketplace that wraps it.
@@ -317,7 +318,7 @@ func writeTree(dir string, files map[string][]byte) error {
 // Register runs the claude CLI to add the marketplace, then install the plugin or update it when already installed.
 func Register(ctx context.Context, run Runner, claude string, root string) error {
 	listed, err := run.Run(ctx, claude, "plugin", "marketplace", "list")
-	alreadyAdded := err == nil && bytes.Contains(listed, []byte(Marketplace))
+	alreadyAdded := err == nil && marketplaceListed(listed)
 	if !alreadyAdded {
 		if err := runClaude(ctx, run, claude, "plugin", "marketplace", "add", root); err != nil {
 			return err
@@ -327,6 +328,20 @@ func Register(ctx context.Context, run Runner, claude string, root string) error
 		return runClaude(ctx, run, claude, "plugin", "update", ID)
 	}
 	return runClaude(ctx, run, claude, "plugin", "install", ID, "--scope", "user")
+}
+
+// marketplaceListed reports whether a line of the list output names the marketplace, ignoring a leading bullet such as "❯".
+func marketplaceListed(listed []byte) bool {
+	for _, line := range strings.Split(string(listed), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) > 1 && utf8.RuneCountInString(fields[0]) == 1 {
+			fields = fields[1:]
+		}
+		if len(fields) > 0 && fields[0] == Marketplace {
+			return true
+		}
+	}
+	return false
 }
 
 func pluginListed(ctx context.Context, run Runner, claude string) bool {

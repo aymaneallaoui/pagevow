@@ -106,6 +106,7 @@ The plugin installs a Stop hook. When you finish a task it runs the suite, unles
 - Fix the cause. The hook runs the suite again on your next stop, at most `PAGEVOW_HOOK_MAX_BLOCKS` times in a row (default 2).
 - When the tests still fail after that, the hook lets you stop. Tell the user plainly that they fail.
 - When the backend or browser is down, the hook skips the run and says what to start. Ask the user to run `pagevow start`.
+- A change only in git-ignored files does not trigger the hook. Run `pagevow run` yourself then.
 - `PAGEVOW_HOOK=0` turns the hook off. That switch belongs to the user. Never set it to get past a failing suite.
 
 ## Limits

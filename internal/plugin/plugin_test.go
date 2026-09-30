@@ -403,6 +403,24 @@ func TestRegister(t *testing.T) {
 		}, run.calls)
 	})
 
+	t.Run("skips add for the real list shape with a bullet and source line", func(t *testing.T) {
+		run := &fakeRunner{outputs: map[string]string{
+			list: "Configured marketplaces:\n\n  \u276f other\n    Source: GitHub (a/b)\n\n  \u276f pagevow\n    Source: Directory (/x)\n",
+		}}
+
+		require.NoError(t, Register(t.Context(), run, "claude", root))
+		assert.Equal(t, []string{"plugin", "list", "--json"}, run.calls[1].args)
+	})
+
+	t.Run("adds when only a longer name contains the marketplace name", func(t *testing.T) {
+		run := &fakeRunner{outputs: map[string]string{
+			list: "Configured marketplaces:\n  \u276f my-pagevow-fork\n    Source: GitHub (me/pagevow)\n  pagevow-extras\n",
+		}}
+
+		require.NoError(t, Register(t.Context(), run, "claude", root))
+		assert.Equal(t, []string{"plugin", "marketplace", "add", root}, run.calls[1].args)
+	})
+
 	t.Run("a failed list still tries to add", func(t *testing.T) {
 		run := &fakeRunner{results: map[string]error{list: errors.New("unknown command")}}
 

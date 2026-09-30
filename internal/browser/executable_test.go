@@ -54,7 +54,7 @@ func TestFindExecutableLinuxFallsBackToInstallLocations(t *testing.T) {
 }
 
 func TestFindExecutableDarwinChecksSystemAndUserApplications(t *testing.T) {
-	system := "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+	system := filepath.Join("/Applications", "Google Chrome.app/Contents/MacOS/Google Chrome")
 	user := filepath.Join("/Users/ada", "Applications", "Chromium.app/Contents/MacOS/Chromium")
 
 	got, err := fakeFinder("darwin", nil, []string{system}, map[string]string{"HOME": "/Users/ada"}).find()

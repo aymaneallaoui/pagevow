@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync/atomic"
 	"testing"
 
@@ -379,10 +380,12 @@ func TestSystemLauncherFindsTheBrowserThatPagevowInstalled(t *testing.T) {
 	cache, err := os.UserCacheDir()
 	require.NoError(t, err)
 	dir := filepath.Join(cache, "pagevow", "browser")
-	executable := filepath.Join(dir, browser.PinnedVersion, "chrome-linux64", "chrome")
+	pin, err := browser.PinFor(runtime.GOOS, runtime.GOARCH)
+	require.NoError(t, err)
+	executable := filepath.Join(dir, browser.PinnedVersion, filepath.FromSlash(pin.Executable))
 	require.NoError(t, os.MkdirAll(filepath.Dir(executable), 0o700))
 	require.NoError(t, os.WriteFile(executable, []byte("x"), 0o700))
-	record, err := json.Marshal(map[string]string{"version": browser.PinnedVersion, "platform": "linux64", "executable": executable})
+	record, err := json.Marshal(map[string]string{"version": browser.PinnedVersion, "platform": pin.Platform, "executable": executable})
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "installed.json"), record, 0o600))
 

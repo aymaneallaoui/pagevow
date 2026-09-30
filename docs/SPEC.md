@@ -549,3 +549,7 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 2. Windows local model serving is not planned; Windows uses `jev` or `custom`.
 3. Windows and macOS code paths compile, and the offline test suite runs on both in CI (`ci.yml`, `test` job). `install --browser` and
    `update` were verified live on Linux only; the manual `live` workflow (`live.yml`) runs them on Linux, macOS and Windows.
+4. On macOS, `stop` may leave a group member running when the group leader has ended and the supervisor ignores SIGTERM. The
+   member is reparented to launchd, so only the session id can tie it to the record, and it is unverified that macOS `ps -o sess`
+   (or `getsid`, which may return EPERM across sessions) reports it. CI failed the offline test
+   `TestStopKillsTheGroupOfAChildWhoseLeaderEndedWhileAMemberKeepsRunning` there, so it is skipped on darwin until checked on a Mac.

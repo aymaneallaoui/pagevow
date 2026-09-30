@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/samber/do/v2"
 
 	"github.com/aymaneallaoui/pagevow/internal/config"
+	"github.com/aymaneallaoui/pagevow/internal/hook"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
 	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
@@ -22,6 +24,14 @@ type LookupEnv func(string) (string, bool)
 
 // StdinInteractive reports whether a reader is an interactive terminal.
 type StdinInteractive func(io.Reader) bool
+
+// UserConfigDir returns the user configuration directory.
+type UserConfigDir func() (string, error)
+
+// CommandRunner runs an external command and returns its combined output.
+type CommandRunner interface {
+	Run(ctx context.Context, name string, args ...string) ([]byte, error)
+}
 
 // Clock returns the current time.
 type Clock func() time.Time
@@ -48,9 +58,13 @@ type Options struct {
 	GPU              GPUReader
 	Executable       Executable
 	CacheDir         CacheDir
+	UserConfigDir    UserConfigDir
 	HomeDir          HomeDir
 	LookPath         LookPath
 	OS               GOOS
+	CommandRunner    CommandRunner
+	HookRunner       hook.Runner
+	HookGit          hook.Git
 }
 
 // SystemOptions returns the options of a real run: process environment, OS keychain, terminal prompts.
@@ -68,9 +82,11 @@ func SystemOptions() Options {
 		GPU:              server.NvidiaSMI{},
 		Executable:       os.Executable,
 		CacheDir:         os.UserCacheDir,
+		UserConfigDir:    os.UserConfigDir,
 		HomeDir:          os.UserHomeDir,
 		LookPath:         exec.LookPath,
 		OS:               GOOS(runtime.GOOS),
+		CommandRunner:    execCommandRunner{},
 	}
 }
 
@@ -89,7 +105,11 @@ func NewContainer(opts Options) do.Injector {
 	do.ProvideValue(injector, opts.Now)
 	do.ProvideValue(injector, opts.ManagedBrowsers)
 	do.ProvideValue(injector, opts.GPU)
+	do.ProvideValue(injector, opts.Executable)
 	do.ProvideValue(injector, opts.CacheDir)
+	do.ProvideValue(injector, opts.UserConfigDir)
+	do.ProvideValue(injector, opts.CommandRunner)
+	do.ProvideValue(injector, hookRunnerOverride{runner: opts.HookRunner})
 	do.ProvideValue(injector, opts.HomeDir)
 	do.ProvideValue(injector, opts.LookPath)
 	do.ProvideValue(injector, opts.OS)
@@ -105,6 +125,19 @@ func NewContainer(opts Options) do.Injector {
 			return nil, fmt.Errorf("resolve environment lookup: %w", err)
 		}
 		return keys.NewResolver(store, lookup), nil
+	})
+	do.Provide(injector, func(i do.Injector) (hook.Git, error) {
+		if opts.HookGit != nil {
+			return opts.HookGit, nil
+		}
+		lookPath, err := do.Invoke[LookPath](i)
+		if err != nil {
+			return nil, fmt.Errorf("resolve program lookup: %w", err)
+		}
+		if _, err := lookPath("git"); err != nil {
+			return nil, nil
+		}
+		return execGit{}, nil
 	})
 	do.Provide(injector, func(do.Injector) (Processes, error) {
 		if opts.Processes != nil {
@@ -163,6 +196,12 @@ func withDefaults(opts Options) Options {
 	}
 	if opts.CacheDir == nil {
 		opts.CacheDir = system.CacheDir
+	}
+	if opts.UserConfigDir == nil {
+		opts.UserConfigDir = system.UserConfigDir
+	}
+	if opts.CommandRunner == nil {
+		opts.CommandRunner = system.CommandRunner
 	}
 	if opts.HomeDir == nil {
 		opts.HomeDir = system.HomeDir

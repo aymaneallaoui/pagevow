@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/aymaneallaoui/pagevow/internal/cli"
 	"github.com/aymaneallaoui/pagevow/internal/config"
+	"github.com/aymaneallaoui/pagevow/internal/hook"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
 	"github.com/aymaneallaoui/pagevow/internal/server"
 )
@@ -67,6 +69,11 @@ type harness struct {
 	goos        string
 	homeFails   bool
 	now         time.Time
+
+	userConfigDir  string
+	configDirFails bool
+	commands       *fakeCommands
+	hookRunner     hook.Runner
 }
 
 func newHarness(t *testing.T) *harness {
@@ -90,6 +97,9 @@ func newHarness(t *testing.T) *harness {
 		missing:    map[string]bool{},
 		goos:       "linux",
 		now:        time.Date(2026, 9, 30, 9, 0, 0, 0, time.UTC),
+
+		userConfigDir: t.TempDir(),
+		commands:      &fakeCommands{},
 	}
 }
 
@@ -106,6 +116,14 @@ func (h *harness) options() cli.Options {
 		GPU:              h.gpu,
 		Executable:       func() (string, error) { return "/usr/local/bin/pagevow", nil },
 		CacheDir:         func() (string, error) { return h.cacheDir, nil },
+		UserConfigDir: func() (string, error) {
+			if h.configDirFails {
+				return "", errors.New("no config directory")
+			}
+			return h.userConfigDir, nil
+		},
+		CommandRunner: h.commands,
+		HookRunner:    h.hookRunner,
 		HomeDir: func() (string, error) {
 			if h.homeFails {
 				return "", errors.New("no home")
@@ -200,10 +218,6 @@ func TestStubCommandsExitWithCode2(t *testing.T) {
 		phase string
 	}{
 		{[]string{"install", "--browser"}, "phase 5"},
-		{[]string{"hook", "stop"}, "phase 4"},
-		{[]string{"plugin", "install"}, "phase 4"},
-		{[]string{"plugin", "uninstall"}, "phase 4"},
-		{[]string{"plugin", "path"}, "phase 4"},
 		{[]string{"update"}, "phase 5"},
 	}
 	h := newHarness(t)
@@ -224,6 +238,13 @@ func TestExitCodeMapping(t *testing.T) {
 	assert.Equal(t, 1, cli.HandleError(&out, errors.New("boom")))
 	assert.Equal(t, "pagevow: boom\n", out.String())
 	assert.Equal(t, 0, cli.HandleError(&out, nil))
+
+	out.Reset()
+	silent := &cli.ExitError{Code: 2, Err: errors.New("blocked"), Silent: true}
+	assert.Equal(t, 2, cli.HandleError(&out, silent))
+	assert.Empty(t, out.String())
+	assert.Equal(t, 2, cli.HandleError(&out, fmt.Errorf("wrapped: %w", silent)))
+	assert.Empty(t, out.String())
 }
 
 func TestUnknownCommandFails(t *testing.T) {

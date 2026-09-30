@@ -16,10 +16,11 @@ const (
 	ExitInfrastructure = 2
 )
 
-// ExitError carries the process exit code that an error should produce.
+// ExitError carries the process exit code that an error should produce; a Silent error prints nothing.
 type ExitError struct {
-	Code int
-	Err  error
+	Code   int
+	Err    error
+	Silent bool
 }
 
 // Error returns the wrapped error's message.
@@ -45,7 +46,10 @@ func HandleError(w io.Writer, err error) int {
 	if err == nil {
 		return ExitOK
 	}
-	_, _ = fmt.Fprintf(w, "pagevow: %v\n", err)
+	var exit *ExitError
+	if !errors.As(err, &exit) || !exit.Silent {
+		_, _ = fmt.Fprintf(w, "pagevow: %v\n", err)
+	}
 	return ExitCode(err)
 }
 

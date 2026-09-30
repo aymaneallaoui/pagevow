@@ -61,6 +61,7 @@ func groupMembers(pgid int) []groupMember {
 			continue
 		}
 		member.PID = pid
+		member.PGID = group
 		members = append(members, member)
 	}
 	return members

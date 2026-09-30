@@ -38,7 +38,7 @@ jobs:
 
       - name: run the installed browser
         run: |
-          exe="$(sed -n 's/.*"executable": *"\([^"]*\)".*/\1/p' "${RUNNER_TEMP}/install.json" | sed 's/\\\\/\\/g' | tr -d '\r')"
+          exe="$(jq -r .executable "${RUNNER_TEMP}/install.json" | tr -d '\r')"
           echo "executable: ${exe}"
           test -n "${exe}"
           if [ "${RUNNER_OS}" = "Windows" ]; then
@@ -52,9 +52,10 @@ jobs:
       - name: doctor
         run: |
           code=0
-          "bin/pagevow${EXE}" doctor || code=$?
+          "bin/pagevow${EXE}" doctor --json > "${RUNNER_TEMP}/doctor.json" || code=$?
           echo "doctor exit code: ${code}"
-          test "${code}" -le 1
+          jq -r '.checks[] | "\(.id): \(.level)"' "${RUNNER_TEMP}/doctor.json"
+          jq -e '[.checks[] | select(.id == "browser:executable" or .id == "browser:installed")] | length == 2 and all(.level == "ok")' "${RUNNER_TEMP}/doctor.json"
 
       - name: update check
         env:

@@ -5,12 +5,14 @@ package server
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"syscall"
 )
 
 type groupMember struct {
 	PID        int
 	PPID       int
+	PGID       int
 	SID        int
 	StartTicks uint64
 	Zombie     bool
@@ -65,14 +67,34 @@ func groupTied(rec Record) bool {
 	if safeGroup(rec.ChildPGID) != nil || !groupExists(rec.ChildPGID) {
 		return false
 	}
-	for _, member := range groupMembers(rec.ChildPGID) {
-		if member.Zombie {
+	return tiedToRecord(rec, groupMembers(rec.ChildPGID), runtime.GOOS == "darwin")
+}
+
+// tiedToRecord decides from a process table whether a live member of the recorded group belongs to the record. On macOS
+// a reparented member has no usable session id, so one that started at or after the recorded child counts unless the group
+// id was reused.
+func tiedToRecord(rec Record, table []groupMember, darwin bool) bool {
+	byStart := darwin && rec.ChildStartTicks != 0 && !leaderReused(rec, table)
+	for _, member := range table {
+		if member.PGID != rec.ChildPGID || member.Zombie {
 			continue
 		}
 		if rec.ChildStartTicks != 0 && member.StartTicks != 0 && member.StartTicks < rec.ChildStartTicks {
 			continue
 		}
 		if member.PPID == rec.PID || (rec.ChildPID > 1 && member.PPID == rec.ChildPID) || (member.SID != 0 && member.SID == rec.PID) {
+			return true
+		}
+		if byStart && member.StartTicks >= rec.ChildStartTicks {
+			return true
+		}
+	}
+	return false
+}
+
+func leaderReused(rec Record, table []groupMember) bool {
+	for _, member := range table {
+		if member.PID == rec.ChildPGID && member.PGID == rec.ChildPGID && member.StartTicks != rec.ChildStartTicks {
 			return true
 		}
 	}

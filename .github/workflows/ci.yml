@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-go@v7
         with:
@@ -43,6 +45,11 @@ jobs:
       - name: go test
         run: go test -race -count=1 ./...
 
+      - name: cross-build
+        run: |
+          GOOS=darwin GOARCH=amd64 go build ./...
+          GOOS=windows GOARCH=386 go build ./...
+
       - name: goreleaser check
         uses: goreleaser/goreleaser-action@v7
         with:
@@ -56,7 +63,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, windows-latest]
     defaults:
       run:
         shell: bash
@@ -64,6 +71,8 @@ jobs:
       CGO_ENABLED: "1"
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-go@v7
         with:

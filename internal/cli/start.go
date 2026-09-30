@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -55,6 +56,7 @@ type startTarget struct {
 	timeout  time.Duration
 	command  server.Command
 	peakGiB  float64
+	large    bool
 }
 
 type starter struct {
@@ -67,7 +69,7 @@ type starter struct {
 	home     HomeDir
 	lookPath LookPath
 	now      Clock
-	goos     GOOS
+	platform server.Platform
 	out      *ui.Printer
 	logDir   string
 	profile  string
@@ -158,7 +160,7 @@ func (a *app) newStarter(ctx context.Context, cfg config.Config, noBrowser bool)
 	if s.now, err = service[Clock](a); err != nil {
 		return nil, err
 	}
-	if s.goos, err = service[GOOS](a); err != nil {
+	if s.platform, err = a.platformOf(); err != nil {
 		return nil, err
 	}
 	cache, err := service[CacheDir](a)
@@ -268,12 +270,12 @@ func (s *starter) plan() ([]startTarget, []startedProcess) {
 		*problems = append(*problems, err.Error())
 	}
 	kevDir, kevErr := kevDirOf(s.cfg, s.home)
-	if kevErr != nil && len(legs) > 0 && s.goos == "linux" {
+	if kevErr != nil && len(legs) > 0 && s.platform.LocalServing() {
 		*problems = append(*problems, kevErr.Error())
 	}
 	for _, leg := range legs {
 		entry := startedProcess{Name: leg.recordName(), Kind: string(server.KindModel), Port: leg.port, Action: actionFailed, Log: logPathOf(s.logDir, leg.recordName())}
-		if s.goos != "linux" {
+		if !s.platform.LocalServing() {
 			entry.Error = localServingUnsupported
 			unsupported = append(unsupported, entry)
 			continue
@@ -281,7 +283,7 @@ func (s *starter) plan() ([]startTarget, []startedProcess) {
 		if kevErr != nil {
 			continue
 		}
-		command, err := server.ModelCommand(kevDir, leg.model, leg.mode, leg.port)
+		command, err := server.ModelCommand(s.platform, kevDir, leg.model, leg.mode, leg.port)
 		if err != nil {
 			*problems = append(*problems, fmt.Sprintf("%s: %v", leg.label, err))
 			continue
@@ -291,11 +293,13 @@ func (s *starter) plan() ([]startTarget, []startedProcess) {
 			*problems = append(*problems, fmt.Sprintf("%s: %v", leg.label, err))
 			continue
 		}
+		peak, large := leg.memory(s.platform, kevDir)
 		targets = append(targets, startTarget{
 			name: leg.recordName(), kind: server.KindModel, port: leg.port, readyURL: ready, command: command,
-			timeout: time.Duration(s.cfg.Server.StartTimeoutSeconds) * time.Second, peakGiB: leg.peakGiB(),
+			timeout: time.Duration(s.cfg.Server.StartTimeoutSeconds) * time.Second, peakGiB: peak, large: large,
 		})
 	}
+	slices.SortStableFunc(targets, func(a, b startTarget) int { return cmp.Compare(b.peakGiB, a.peakGiB) })
 
 	helper, err := localTextHelperOf(s.cfg)
 	if err != nil {
@@ -314,7 +318,7 @@ func (s *starter) plan() ([]startTarget, []startedProcess) {
 }
 
 func (s *starter) planHelper(helper *localTextHelper, targets []startTarget, unsupported []startedProcess) ([]startTarget, []startedProcess) {
-	if s.goos == "windows" {
+	if s.platform.OS == "windows" {
 		return targets, append(unsupported, startedProcess{
 			Name: helper.recordName(), Kind: string(server.KindTextHelper), Port: helper.port, Action: actionFailed,
 			Error: "the local text helper cannot be started on Windows; run llama-server yourself and set text_helper.url",
@@ -336,6 +340,7 @@ func (s *starter) planHelper(helper *localTextHelper, targets []startTarget, uns
 func (s *starter) preflight(fresh []startTarget) []string {
 	problems := slices.Clone(s.report.Problems)
 	var peaks []float64
+	large := false
 	for _, t := range fresh {
 		if supervised(t.kind) {
 			if _, err := s.lookPath(t.command.Argv[0]); err != nil {
@@ -348,6 +353,7 @@ func (s *starter) preflight(fresh []startTarget) []string {
 		if t.peakGiB > 0 {
 			peaks = append(peaks, t.peakGiB)
 		}
+		large = large || t.large
 		if t.kind == server.KindBrowser && s.execPath == "" {
 			path, err := s.launcher.Find()
 			if err != nil {
@@ -357,7 +363,7 @@ func (s *starter) preflight(fresh []startTarget) []string {
 			s.execPath = path
 		}
 	}
-	return append(problems, s.gpuProblems(peaks)...)
+	return append(problems, s.gpuProblems(peaks, large)...)
 }
 
 func installHint(program string) string {
@@ -367,7 +373,7 @@ func installHint(program string) string {
 	return "install " + program + " and make sure it is on your PATH"
 }
 
-func (s *starter) gpuProblems(peaks []float64) []string {
+func (s *starter) gpuProblems(peaks []float64, large bool) []string {
 	if len(peaks) == 0 {
 		return nil
 	}
@@ -377,13 +383,34 @@ func (s *starter) gpuProblems(peaks []float64) []string {
 		s.warn("nvidia-smi was not found, so free GPU memory was not checked")
 		return nil
 	case err != nil:
-		s.warn("free GPU memory could not be read (%v), so it was not checked", err)
+		s.warn("free %s could not be read (%v), so it was not checked", memoryName(s.platform), err)
 		return nil
 	}
+	if large {
+		if err := server.FitsFloor(reading); err != nil {
+			return []string{err.Error() + "; " + floorFix}
+		}
+	}
 	if err := server.Fits(reading, peaks...); err != nil {
-		return []string{err.Error() + "; stop other GPU programs or choose a smaller mode with: pagevow use local --mode nf4"}
+		return []string{err.Error() + "; " + fitsFix(s.platform)}
 	}
 	return nil
+}
+
+const floorFix = "choose a model of 1B or less, or use backend jev or custom"
+
+func fitsFix(p server.Platform) string {
+	if p.MLX() {
+		return "quit other programs to free memory, or choose a model of 1B or less"
+	}
+	return "stop other GPU programs or choose a smaller mode with: pagevow use local --mode nf4"
+}
+
+func memoryName(p server.Platform) string {
+	if p.MLX() {
+		return "memory"
+	}
+	return "GPU memory"
 }
 
 func (s *starter) startOne(t startTarget, live map[string]server.Record, supervisedFailed bool) startedProcess {

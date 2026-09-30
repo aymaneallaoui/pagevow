@@ -3,6 +3,7 @@ package cli_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -32,10 +33,11 @@ type statusJSON struct {
 		Error      string `json:"error"`
 	} `json:"health"`
 	GPU *struct {
-		TotalMiB     int `json:"total_mib"`
-		UsedMiB      int `json:"used_mib"`
-		FreeMiB      int `json:"free_mib"`
-		TemperatureC int `json:"temperature_c"`
+		TotalMiB     int  `json:"total_mib"`
+		UsedMiB      int  `json:"used_mib"`
+		FreeMiB      int  `json:"free_mib"`
+		TemperatureC int  `json:"temperature_c"`
+		Unified      bool `json:"unified"`
 	} `json:"gpu"`
 	Versions     map[string]string `json:"versions"`
 	Tripped      []struct{ Name, Message string }
@@ -144,6 +146,40 @@ func TestStatusShowsGPUWhenKnown(t *testing.T) {
 	assert.Equal(t, 4096, report.GPU.UsedMiB)
 	assert.Equal(t, 20480, report.GPU.FreeMiB)
 	assert.Equal(t, 51, report.GPU.TemperatureC)
+	assert.False(t, report.GPU.Unified)
+}
+
+func TestStatusShowsUnifiedMemoryOnAppleSiliconWithStableKeys(t *testing.T) {
+	h := newHarness(t)
+	h.appleSilicon()
+
+	report, raw := statusOf(t, h)
+
+	require.NotNil(t, report.GPU)
+	assert.Equal(t, 32768, report.GPU.TotalMiB)
+	assert.Equal(t, 12768, report.GPU.UsedMiB)
+	assert.Equal(t, 20000, report.GPU.FreeMiB)
+	assert.True(t, report.GPU.Unified)
+	for _, key := range []string{`"total_mib": 32768`, `"used_mib": 12768`, `"free_mib": 20000`, `"temperature_c": 0`, `"unified": true`} {
+		assert.Contains(t, raw, key)
+	}
+
+	plain := h.mustRun("status")
+	assert.Contains(t, plain, "Memory")
+	assert.Contains(t, plain, "20000 MiB free, 12768 MiB used, 32768 MiB total")
+	assert.NotContains(t, plain, "temperature")
+	assert.NotContains(t, plain, "GPU")
+}
+
+func TestStatusOnAppleSiliconSaysWhenTheMemoryIsUnknown(t *testing.T) {
+	h := newHarness(t)
+	h.appleSilicon()
+	h.gpu.err = errors.New("sysctl failed")
+
+	plain := h.mustRun("status")
+
+	assert.Contains(t, plain, "unknown (sysctl could not be read)")
+	assert.NotContains(t, plain, "nvidia-smi")
 }
 
 func TestStatusShowsGuardMessages(t *testing.T) {

@@ -30,10 +30,13 @@ type Command struct {
 	Env  []string
 }
 
-// ModelCommand builds the command of a model server; the environment it returns is set whatever the caller's environment holds.
-func ModelCommand(kevDir, model, modeName string, port int) (Command, error) {
+// ModelCommand builds the command of a model server on p; the environment it returns is set whatever the caller's environment holds.
+func ModelCommand(p Platform, kevDir, model, modeName string, port int) (Command, error) {
 	if !mode.Valid(modeName) {
 		return Command{}, fmt.Errorf("model command: unknown mode %q (use %s)", modeName, strings.Join(mode.Names(), ", "))
+	}
+	if err := CheckMode(p, modeName); err != nil {
+		return Command{}, err
 	}
 	if port < 1 || port > 65535 {
 		return Command{}, fmt.Errorf("model command: invalid port %d", port)
@@ -48,17 +51,33 @@ func ModelCommand(kevDir, model, modeName string, port int) (Command, error) {
 	if modeName == mode.Default {
 		base, err := BaseModel(runDir)
 		if err != nil {
-			return Command{}, ErrDefaultModeUnsafe
+			return Command{}, defaultModeUnsafe(p)
 		}
 		if size, ok := modelSizeBillions(base); !ok || size > maxDefaultModeBillions {
-			return Command{}, ErrDefaultModeUnsafe
+			return Command{}, defaultModeUnsafe(p)
 		}
 	}
 	return Command{
 		Argv: []string{"uv", "run", "--extra", "serve", "python", "-m", "kev.serve", "--run", runDir, "--port", strconv.Itoa(port)},
 		Dir:  kevDir,
-		Env:  modeEnvironment(modeName),
+		Env:  modeEnvironment(p, modeName),
 	}, nil
+}
+
+type mlxDefaultModeError struct{}
+
+func (mlxDefaultModeError) Error() string {
+	return "mode default is only allowed for models of 1B or less on macOS; choose bf16"
+}
+
+func (mlxDefaultModeError) Unwrap() error { return ErrDefaultModeUnsafe }
+
+// defaultModeUnsafe returns the refusal of mode default on p, which always wraps ErrDefaultModeUnsafe.
+func defaultModeUnsafe(p Platform) error {
+	if p.MLX() {
+		return mlxDefaultModeError{}
+	}
+	return ErrDefaultModeUnsafe
 }
 
 func resolveRunDir(kevDir, model string) (string, error) {
@@ -79,7 +98,10 @@ func resolveRunDir(kevDir, model string) (string, error) {
 	return runDir, nil
 }
 
-func modeEnvironment(modeName string) []string {
+func modeEnvironment(p Platform, modeName string) []string {
+	if p.MLX() {
+		return []string{"KEV_BACKEND=mlx", "KEV_LOAD_IN_4BIT=0", "KEV_LOAD_IN_8BIT=0"}
+	}
 	if modeName == mode.Default {
 		return nil
 	}

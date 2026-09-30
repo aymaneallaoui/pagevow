@@ -214,7 +214,7 @@ All backends speak `POST <url>/v1/systemone` with a bearer key.
 |---|---|---|
 | `jev` | nothing | key in keychain |
 | `custom` | nothing | reachable URL |
-| `local` | starts the model server as a background process, waits for `/v1/models` | Linux + NVIDIA in phase 3, macOS in phase 6 |
+| `local` | starts the model server as a background process, waits for `/v1/models` | Linux + NVIDIA, macOS arm64 through MLX |
 | `cascade` | starts each leg whose URL is loopback, largest first, one after the other | as `local` |
 
 Local model serving stays in Python (`kev.serve`). `internal/server` manages it as a child process: it never links to
@@ -242,6 +242,13 @@ keeps CUDA graphs on; it is refused unless the base model named in the run direc
 number from the model name. `model` is a directory under `<kev_dir>/runs/` or an
 absolute path. pagevow never sets `KEV_API_KEY`: a local server is open and bound to 127.0.0.1.
 
+Modes on macOS: the model server runs through MLX on Apple Silicon (darwin/arm64), and pagevow sets
+`KEV_BACKEND=mlx`, `KEV_LOAD_IN_4BIT=0` and `KEV_LOAD_IN_8BIT=0` and nothing else, so `/v1/models` reports
+`backend: mlx`. MLX serves bf16 only: `nf4` and `int8` are refused by `use`, `start` and `doctor` with
+`mode nf4 is not available on macOS: MLX serves bf16; choose --mode bf16 or, for models of 1B or less, default`
+(`int8` likewise). `bf16` and `default` are accepted, and `default` keeps the 1B rule. `use` refuses before the config
+file changes, and only for a leg pagevow would start (a loopback URL). darwin/amd64 and Windows refuse a local model.
+
 Logs: `<os.UserCacheDir()>/pagevow/logs/<name>.log`, appended, mode 0600.
 
 GPU safety: before starting a local model, `start` reads free GPU memory (`nvidia-smi`, when present) and refuses when
@@ -250,10 +257,28 @@ the model's known peak plus a 1.5 GiB margin does not fit, with the numbers in t
 launch are summed, the local text helper counts 2.0 GiB when it uses GPU layers, and the margin is added once; when
 the sum does not fit, nothing is launched.
 
+Unified memory on macOS: on Apple Silicon the reader runs `/usr/sbin/sysctl -n hw.memsize hw.pagesize
+vm.page_free_count vm.page_speculative_count vm.page_purgeable_count` once. Total is `hw.memsize`, free is the free,
+speculative and purgeable pages times the page size, used is total minus free, and the temperature is 0 (no
+unprivileged source). `status` prints a `Memory` section without a temperature and keeps the JSON keys of `gpu`
+(`total_mib`, `used_mib`, `free_mib`, `temperature_c`) with `unified: true`; `doctor` reports `unified memory: N MiB
+free of M MiB` under the same check ids. The peaks on macOS are estimates until they are measured on a real Mac:
+
+| Model on MLX | Estimated peak |
+|---|---|
+| above 1B, or a base model whose size cannot be read (counts as 4B) | 11.5 GiB |
+| 1B or less (`bf16` or `default`) | 3.0 GiB |
+| local text helper with GPU layers | 2.0 GiB |
+
+The size is read from `base_model_name_or_path` in the run directory, as for the 1B rule, and the margin is 1.5 GiB as
+on Linux. A model above 1B is also refused on a Mac with less than 16 GiB of memory in total, with a message that names
+the total.
+
 GPU guard: while a model runs, its supervisor samples the GPU once per second and stops the model when the
 temperature reaches `server.gpu_max_temp_c` or free memory falls to `server.gpu_min_free_mib`. It exits with code 99
 and leaves the reason in the log and in `<state dir>/<name>.tripped`, which `status` and `doctor` show. Five failed
-samples in a row end the watch and leave the model running.
+samples in a row end the watch and leave the model running. A temperature of 0 is no reading and never trips the guard,
+so on macOS only free memory is watched.
 
 ## 10. Stop hook
 
@@ -391,7 +416,7 @@ verifier to make a test pass; report remaining failures plainly.
 | 3 | `server` (Linux + NVIDIA), `start`, `stop`, `status`, `doctor`, GPU guard | `pagevow use local && pagevow start && pagevow run` works from a clean state |
 | 4 | `hook`, `plugin` | a real Claude Code session is blocked by a failing test and released after the fix |
 | 5 | `install --browser` on three systems, `update`, goreleaser, CI matrix | release archives for Linux, macOS, Windows |
-| 6 | macOS local model through MLX | same suite passes on Apple Silicon |
+| 6 | macOS local model through MLX | in progress: CI evidence with the public 0.8B checkpoint on the macOS runner; the private 4B suite on a real Mac is the done criterion |
 
 Parity fixtures for phase 1 come from recorded traces in `~/jev-traces` (request bodies and answers) and from verifier
 calls on recorded final pages; they are copied into `testdata/` with page text trimmed and no personal data.
@@ -484,7 +509,7 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Cascade keys | `primary_key` and `verifier_key` are key references; a remote leg counts for the paid notice and is never started |
 | Local text helper | `llama-server` under the supervisor, off by default, not part of the GPU memory sum |
 | `doctor` before the first `start` | a loopback destination that does not answer is a warning with the fix `pagevow start`; a remote one is a failure |
-| Other systems | macOS and Windows refuse a local model with a message that names `jev` and `custom`; the browser still starts |
+| Other systems | darwin/amd64 and Windows refuse a local model with a message that names `jev` and `custom`; the browser still starts. macOS on Apple Silicon serves a local model through MLX since phase 6 |
 | Spec files | a spec with an environment entry whose name ends in `_KEY`, `_TOKEN` or `_SECRET` is rejected |
 | Agent skills | `.claude/skills/` and `CLAUDE.md` guide coding agents and reviews; they are not part of the binary or of release archives |
 | Cascade live check | verified on 2026-09-30 on a 16 GiB GPU: `pagevow start` launched jev-4b nf4 on 8009 and jev-08b-d1a default on 8010, largest first, then the text helper and the browser; the demo suite ran with the verifier consulted. With the local text helper on GPU layers the guard refused (14.0 GiB peaks plus 1.5 GiB margin against 14.4 GiB free), so the check ran with `text_helper.local.gpu_layers: 0` |
@@ -543,6 +568,19 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Release targets | Linux, macOS and Windows on amd64 and arm64, except Windows arm64 because Chrome for Testing has no build for it; goreleaser creates the GitHub release, marked as a prerelease when the tag has a pre-release part |
 | Release workflow | `.github/workflows/release.yml` runs, on a `v*` tag, a `check` job (`make check`, `contents: read`) and then a `release` job (goreleaser pinned to `v2.18.2`, `contents: write`, `needs: check`); both checkouts set `persist-credentials: false`, so the write token is never stored in `.git/config` while code from the repository runs; CI runs `goreleaser check` on every change; `make release-snapshot` builds the archives locally without publishing |
 
+### Decisions of phase 6
+
+| Topic | Decision |
+|---|---|
+| Platform gate | a local model (backend `local`, the loopback legs of `cascade`) is allowed on Linux and on darwin/arm64; darwin/amd64 and Windows refuse it with `local model serving is supported on Linux with an NVIDIA GPU and on macOS with Apple Silicon; use backend jev or custom on this system`; the local text helper keeps its own rule (refused on Windows only) |
+| Backend | kev's own MLX path (`kev.serve` with `KEV_BACKEND=mlx`) serves the model; `mlx_lm.server` cannot serve the pointer head and is not used |
+| Modes | `nf4` and `int8` are refused on macOS by `use`, `start` and `doctor`; `bf16` and `default` are accepted and `default` keeps the 1B rule; on macOS `ModelCommand` never sets `KEV_LOAD_IN_4BIT` or `KEV_LOAD_IN_8BIT` to 1 |
+| Memory reader | `server.UnifiedMemory` (darwin only) runs one `sysctl -n` call; the parser is untagged and tested on every system; `status` and `doctor` say memory instead of GPU and omit the temperature |
+| Peaks | 11.5 GiB above 1B (and for an unknown size), 3.0 GiB for 1B or less, the text helper 2.0 GiB, margin 1.5 GiB; estimates until measured on a real Mac |
+| Floor | a model above 1B needs 16 GiB of memory in total |
+| Workflow | `.github/workflows/mlx-live.yml` (`workflow_dispatch`, `contents: read`, `macos-latest`, 30 minutes) probes `sysctl` and `vm_stat`, clones kev, runs `uv sync --extra serve`, starts the public checkpoint in mode `default`, checks `backend == "mlx"` on `/v1/models`, stops it and checks that no `kev.serve` is left, then kills the supervisor with SIGKILL and reports whether `kev.serve` survives `pagevow stop` (informational; recorded here after the first run) |
+| Public checkpoint | `jaredpalmer/kev-0.8b` at revision `9a45d25eb2ab761841196625383fa1dff0e56c1e` is used only in that workflow; pagevow ships no model |
+
 ## 17. Open questions
 
 1. TypeSafe terms on training models from API output decide whether the local checkpoints may be distributed.
@@ -550,3 +588,6 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 2. Windows local model serving is not planned; Windows uses `jev` or `custom`.
 3. Windows and macOS code paths compile, and the offline test suite runs on both in CI (`ci.yml`, `test` job). `install --browser` and
    `update` were verified live on Linux only; the manual `live` workflow (`live.yml`) runs them on Linux, macOS and Windows.
+4. The macOS peaks and the free memory formula (free, speculative and purgeable pages) are not measured yet. macOS keeps
+   file pages as inactive memory, which this formula does not count as free, so a busy Mac may be refused although it
+   could run the model; the first `mlx-live` run and a real Mac decide whether the formula or the guard limit change.

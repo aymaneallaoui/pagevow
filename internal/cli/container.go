@@ -16,7 +16,6 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/hook"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
-	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 	"github.com/aymaneallaoui/pagevow/internal/version"
 )
@@ -100,7 +99,7 @@ func SystemOptions() Options {
 		Exit:             os.Exit,
 		Now:              time.Now,
 		ManagedBrowsers:  systemManagedBrowsers{},
-		GPU:              server.NvidiaSMI{},
+		GPU:              systemGPU(),
 		Executable:       os.Executable,
 		CacheDir:         os.UserCacheDir,
 		UserConfigDir:    os.UserConfigDir,

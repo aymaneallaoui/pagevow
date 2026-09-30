@@ -301,17 +301,155 @@ func TestDoctorWithABrokenConfigFailsThatCheckAndStillRunsTheOthers(t *testing.T
 }
 
 func TestDoctorFailsLocalServingOnAnotherSystem(t *testing.T) {
+	for _, platform := range [][2]string{{"darwin", "amd64"}, {"windows", "amd64"}} {
+		t.Run(platform[0]+"/"+platform[1], func(t *testing.T) {
+			h := newHarness(t)
+			h.goos, h.arch = platform[0], platform[1]
+			h.mustRun("use", "local")
+
+			report, err := doctorOf(t, h)
+
+			require.Error(t, err)
+			c := report.check(t, "local:platform")
+			assert.Equal(t, "fail", c.Level)
+			assert.Equal(t, "local model serving is supported on Linux with an NVIDIA GPU and on macOS with Apple Silicon; use backend jev or custom on this system", c.Finding)
+			assert.Equal(t, "run: pagevow use jev, or pagevow use custom --url URL", c.Fix)
+			assert.False(t, report.has("local:uv"))
+		})
+	}
+}
+
+func TestDoctorGatesLocalServingByPlatform(t *testing.T) {
+	tests := []struct {
+		goos, arch string
+		allowed    bool
+	}{
+		{"linux", "amd64", true},
+		{"linux", "arm64", true},
+		{"darwin", "arm64", true},
+		{"darwin", "amd64", false},
+		{"windows", "amd64", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.goos+"/"+tt.arch, func(t *testing.T) {
+			h := newHarness(t)
+			h.kevCheckout()
+			h.goos, h.arch = tt.goos, tt.arch
+			h.mustRun("use", "local", "--model", "jev-4b", "--mode", "bf16")
+
+			report, _ := doctorOf(t, h)
+
+			assert.Equal(t, !tt.allowed, report.has("local:platform"))
+			assert.Equal(t, tt.allowed, report.has("local:uv"))
+			assert.Equal(t, tt.allowed, report.has("local:model-8009:mode"))
+		})
+	}
+}
+
+func TestDoctorOnAppleSiliconRefusesQuantisedModesWithABF16Fix(t *testing.T) {
+	tests := []struct {
+		name   string
+		config map[string]any
+		id     string
+		mode   string
+		fix    string
+	}{
+		{"local nf4", map[string]any{"backend": "local", "backends.local.mode": "nf4"}, "local:model-8009:mode", "nf4", "pagevow use local --mode bf16"},
+		{"local int8", map[string]any{"backend": "local", "backends.local.mode": "int8"}, "local:model-8009:mode", "int8", "pagevow use local --mode bf16"},
+		{"cascade verifier nf4", map[string]any{"backend": "cascade"}, "local:model-8010:mode", "nf4", "pagevow use cascade --verifier-mode bf16"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+			h.kevCheckout()
+			h.appleSilicon()
+			h.setConfig(tt.config)
+
+			report, err := doctorOf(t, h)
+
+			require.Error(t, err)
+			c := report.check(t, tt.id)
+			assert.Equal(t, "fail", c.Level)
+			assert.Equal(t, "mode "+tt.mode+" is not available on macOS: MLX serves bf16; choose --mode bf16 or, for models of 1B or less, default", c.Finding)
+			assert.Equal(t, tt.fix, c.Fix)
+			assert.False(t, report.has(strings.TrimSuffix(tt.id, ":mode")+":checkpoint"), "MLX never reads the quantisation switches")
+		})
+	}
+}
+
+func TestDoctorOnAppleSiliconRefusesDefaultForA4BModelWithABF16Fix(t *testing.T) {
 	h := newHarness(t)
-	h.goos = "darwin"
-	h.mustRun("use", "local")
+	h.kevCheckout()
+	h.appleSilicon()
+	h.mustRun("use", "local", "--model", "jev-4b", "--mode", "default")
 
 	report, err := doctorOf(t, h)
 
 	require.Error(t, err)
-	c := report.check(t, "local:platform")
+	c := report.check(t, "local:model-8009:mode")
 	assert.Equal(t, "fail", c.Level)
-	assert.Contains(t, c.Finding, "local model serving is supported on Linux with an NVIDIA GPU")
-	assert.False(t, report.has("local:uv"))
+	assert.Equal(t, "mode default is not allowed for jev-4b: it is only allowed for models of 1B or less", c.Finding)
+	assert.Equal(t, "pagevow use local --mode bf16", c.Fix)
+}
+
+func TestDoctorOnAppleSiliconReportsUnifiedMemoryWithoutATemperature(t *testing.T) {
+	h := newHarness(t)
+	h.kevCheckout()
+	h.appleSilicon()
+	h.mustRun("use", "local", "--model", "jev-4b", "--mode", "bf16")
+	h.procs.answer("http://127.0.0.1:8009/v1/models", 200)
+	h.setConfig(map[string]any{"text_helper.url": "http://127.0.0.1:8081/v1"})
+
+	report, err := doctorOf(t, h)
+
+	require.NoError(t, err)
+	assert.True(t, report.OK)
+	gpu := report.check(t, "local:gpu")
+	assert.Equal(t, "ok", gpu.Level)
+	assert.Equal(t, "unified memory: 20000 MiB free of 32768 MiB", gpu.Finding)
+	memory := report.check(t, "local:gpu-memory")
+	assert.Equal(t, "ok", memory.Level)
+	assert.Equal(t, "free memory fits the models pagevow start would launch (the macOS peaks are estimates)", memory.Finding)
+
+	plain := h.mustRun("doctor")
+	assert.Contains(t, plain, "unified memory: 20000 MiB free of 32768 MiB")
+	assert.NotContains(t, plain, " 0 C")
+	assert.NotContains(t, plain, "nvidia-smi")
+}
+
+func TestDoctorOnAppleSiliconChecksTheMemoryFloorAndThePeaks(t *testing.T) {
+	tests := []struct {
+		name    string
+		model   string
+		mode    string
+		reading server.GPU
+		finding string
+		fix     string
+	}{
+		{"8 GiB Mac with a 4B model", "jev-4b", "bf16", server.GPU{TotalMiB: 8192, FreeMiB: 7000, Unified: true},
+			"this Mac has 8.0 GiB of memory in total and a model above 1B needs at least 16 GiB", "choose a model of 1B or less, or use backend jev or custom"},
+		{"busy 16 GiB Mac", "jev-4b", "bf16", server.GPU{TotalMiB: 16384, FreeMiB: 13000, Unified: true},
+			"needed 13.0 GiB (model peaks 11.5 GiB plus margin 1.5 GiB)", "quit other programs to free memory, or choose a model of 1B or less"},
+		{"busy 8 GiB Mac with a 0.8B model", "jev-08b-d1a", "default", server.GPU{TotalMiB: 8192, FreeMiB: 4000, Unified: true},
+			"needed 4.5 GiB (model peaks 3.0 GiB plus margin 1.5 GiB)", "quit other programs to free memory, or choose a model of 1B or less"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+			h.kevCheckout()
+			h.appleSilicon()
+			h.gpu.reading = tt.reading
+			h.mustRun("use", "local", "--model", tt.model, "--mode", tt.mode)
+
+			report, err := doctorOf(t, h)
+
+			require.Error(t, err)
+			c := report.check(t, "local:gpu-memory")
+			assert.Equal(t, "fail", c.Level)
+			assert.Contains(t, c.Finding, tt.finding)
+			assert.Equal(t, tt.fix, c.Fix)
+		})
+	}
 }
 
 func TestDoctorCascadeChecksEveryLocalLegAndSumsTheMemory(t *testing.T) {

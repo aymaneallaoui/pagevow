@@ -47,6 +47,7 @@ type doctor struct {
 	home     HomeDir
 	goos     GOOS
 	goarch   GOARCH
+	platform server.Platform
 	cache    CacheDir
 	cfg      config.Config
 	checks   []doctorCheck
@@ -157,6 +158,7 @@ func (a *app) newDoctor(ctx context.Context) (*doctor, error) {
 	if d.goarch, err = service[GOARCH](a); err != nil {
 		return nil, err
 	}
+	d.platform = server.Platform{OS: string(d.goos), Arch: string(d.goarch)}
 	if d.cache, err = service[CacheDir](a); err != nil {
 		return nil, err
 	}
@@ -282,7 +284,7 @@ func (d *doctor) localServing() {
 	if len(legs) == 0 {
 		return
 	}
-	if d.goos != "linux" {
+	if !d.platform.LocalServing() {
 		d.add("local:platform", levelFail, "run: pagevow use jev, or pagevow use custom --url URL", "%s", localServingUnsupported)
 		return
 	}
@@ -300,10 +302,13 @@ func (d *doctor) localServing() {
 		return
 	}
 	var peaks []float64
+	large := false
 	for _, leg := range legs {
 		d.checkLeg(kevDir, leg)
 		if _, running := d.live[leg.recordName()]; !running {
-			peaks = append(peaks, leg.peakGiB())
+			peak, legLarge := leg.memory(d.platform, kevDir)
+			peaks = append(peaks, peak)
+			large = large || legLarge
 		}
 	}
 	if helper, _ := localTextHelperOf(d.cfg); helper != nil {
@@ -313,7 +318,7 @@ func (d *doctor) localServing() {
 			}
 		}
 	}
-	d.gpuChecks(peaks)
+	d.gpuChecks(peaks, large)
 }
 
 func (d *doctor) kevCheckout(kevDir string) bool {
@@ -327,7 +332,7 @@ func (d *doctor) kevCheckout(kevDir string) bool {
 
 func (d *doctor) checkLeg(kevDir string, leg modelLeg) {
 	prefix := "local:" + leg.recordName()
-	if variable := quantisationVariable(leg.mode); variable != "" {
+	if variable := quantisationVariable(leg.mode); variable != "" && d.platform.OS != "darwin" {
 		text, err := os.ReadFile(filepath.Join(kevDir, "kev", "checkpoint.py")) //nolint:gosec // the path is inside the configured kev directory
 		if err != nil || !strings.Contains(string(text), variable) {
 			d.add(prefix+":checkpoint", levelFail, "update the kev checkout, or use mode bf16: pagevow use local --mode bf16", "mode %s needs %s in kev/checkpoint.py and %s does not have it", leg.mode, variable, kevDir)
@@ -344,8 +349,15 @@ func (d *doctor) checkLeg(kevDir string, leg modelLeg) {
 		return
 	}
 	d.add(prefix+":run", levelOK, "", "run directory %s exists", runDir)
-	_, err := server.ModelCommand(kevDir, leg.model, leg.mode, leg.port)
-	if errors.Is(err, server.ErrDefaultModeUnsafe) {
+	_, err := server.ModelCommand(d.platform, kevDir, leg.model, leg.mode, leg.port)
+	switch {
+	case errors.Is(err, server.ErrModeUnavailable):
+		d.add(prefix+":mode", levelFail, leg.bf16Fix(d.cfg.Backend), "%v", err)
+		return
+	case errors.Is(err, server.ErrDefaultModeUnsafe) && d.platform.MLX():
+		d.add(prefix+":mode", levelFail, leg.bf16Fix(d.cfg.Backend), "mode default is not allowed for %s: it is only allowed for models of 1B or less", leg.model)
+		return
+	case errors.Is(err, server.ErrDefaultModeUnsafe):
 		d.add(prefix+":mode", levelFail, "use nf4, int8 or bf16", "mode default is not allowed for %s: it keeps CUDA graphs on and needs more GPU memory than is safe for this model", leg.model)
 		return
 	}
@@ -366,25 +378,49 @@ func quantisationVariable(mode string) string {
 	return ""
 }
 
-func (d *doctor) gpuChecks(peaks []float64) {
+func (d *doctor) gpuChecks(peaks []float64, large bool) {
 	reading, err := d.gpu.Read(d.ctx)
 	switch {
 	case errors.Is(err, server.ErrNoGPUTool):
 		d.add("local:gpu", levelFail, "install the NVIDIA driver, or use backend jev or custom", "nvidia-smi was not found")
 		return
+	case err != nil && d.platform.MLX():
+		d.add("local:gpu", levelFail, "run: sysctl hw.memsize vm.page_free_count", "the memory could not be read: %v", err)
+		return
 	case err != nil:
 		d.add("local:gpu", levelFail, "run nvidia-smi and check the driver", "the GPU could not be read: %v", err)
 		return
 	}
-	d.add("local:gpu", levelOK, "", "nvidia-smi answers: %d MiB free of %d MiB, %d C", reading.FreeMiB, reading.TotalMiB, reading.TempC)
+	if reading.Unified {
+		d.add("local:gpu", levelOK, "", "unified memory: %d MiB free of %d MiB", reading.FreeMiB, reading.TotalMiB)
+	} else {
+		d.add("local:gpu", levelOK, "", "nvidia-smi answers: %d MiB free of %d MiB, %d C", reading.FreeMiB, reading.TotalMiB, reading.TempC)
+	}
 	if len(peaks) == 0 {
 		return
 	}
+	if large {
+		if err := server.FitsFloor(reading); err != nil {
+			d.add("local:gpu-memory", levelFail, floorFix, "%v", err)
+			return
+		}
+	}
 	if err := server.Fits(reading, peaks...); err != nil {
-		d.add("local:gpu-memory", levelFail, "stop other GPU programs or choose a smaller mode: pagevow use local --mode nf4", "%v", err)
+		d.add("local:gpu-memory", levelFail, doctorFitsFix(d.platform), "%v", err)
+		return
+	}
+	if d.platform.MLX() {
+		d.add("local:gpu-memory", levelOK, "", "free memory fits the models pagevow start would launch (the macOS peaks are estimates)")
 		return
 	}
 	d.add("local:gpu-memory", levelOK, "", "free GPU memory fits the models pagevow start would launch")
+}
+
+func doctorFitsFix(p server.Platform) string {
+	if p.MLX() {
+		return fitsFix(p)
+	}
+	return "stop other GPU programs or choose a smaller mode: pagevow use local --mode nf4"
 }
 
 func (d *doctor) browserChecks(haveConfig bool) {
@@ -450,7 +486,7 @@ func (d *doctor) textHelper() {
 	if legs, _ := modelLegs(d.cfg); len(legs) == 0 && d.goos != "windows" {
 		if _, running := d.live[server.RecordName(server.KindTextHelper, portOfTextHelper(d.cfg))]; !running {
 			if peak := server.TextHelperPeak(t.Local.GPULayers); peak > 0 {
-				d.gpuChecks([]float64{peak})
+				d.gpuChecks([]float64{peak}, false)
 			}
 		}
 	}

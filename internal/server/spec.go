@@ -119,3 +119,36 @@ func ReadSpec(path string) (Spec, error) {
 	}
 	return spec, nil
 }
+
+func (g Guard) interval() time.Duration {
+	if g.IntervalMS <= 0 {
+		return defaultGuardInterval
+	}
+	return time.Duration(g.IntervalMS) * time.Millisecond
+}
+
+// breach returns why sample breaks the limits of g, or an empty string; a temperature of 0 is no reading.
+func (g Guard) breach(sample GPU) string {
+	if g.MaxTempC > 0 && sample.TempC > 0 && sample.TempC >= g.MaxTempC {
+		return fmt.Sprintf("temperature %d C reached the limit of %d C", sample.TempC, g.MaxTempC)
+	}
+	if sample.FreeMiB <= g.MinFreeMiB {
+		memory := "free GPU memory"
+		if sample.Unified {
+			memory = "free memory"
+		}
+		return fmt.Sprintf("%s %d MiB fell to the limit of %d MiB", memory, sample.FreeMiB, g.MinFreeMiB)
+	}
+	return ""
+}
+
+func (g Guard) breachMessage(name string, sample GPU) string {
+	reason := g.breach(sample)
+	switch {
+	case reason == "":
+		return ""
+	case sample.TempC == 0:
+		return fmt.Sprintf("guard: stopped %s: %s (free %d MiB)", name, reason, sample.FreeMiB)
+	}
+	return fmt.Sprintf("guard: stopped %s: %s (temp %d C, free %d MiB)", name, reason, sample.TempC, sample.FreeMiB)
+}

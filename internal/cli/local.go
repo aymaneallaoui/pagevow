@@ -12,20 +12,35 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/server"
 )
 
-const localServingUnsupported = "local model serving is supported on Linux with an NVIDIA GPU; use backend jev or custom on this system"
+const localServingUnsupported = "local model serving is supported on Linux with an NVIDIA GPU and on macOS with Apple Silicon; use backend jev or custom on this system"
 
 // modelLeg is one model server that pagevow starts on this machine.
 type modelLeg struct {
-	label string
-	url   string
-	port  int
-	model string
-	mode  string
+	label    string
+	url      string
+	port     int
+	model    string
+	mode     string
+	modeFlag string
 }
 
 func (l modelLeg) peakGiB() float64 {
 	peak, _ := server.Peak(l.mode)
 	return peak
+}
+
+// memory returns the peak memory in GiB of the leg on p and whether it needs the memory floor of a model above 1B on MLX.
+func (l modelLeg) memory(p server.Platform, kevDir string) (float64, bool) {
+	if !p.MLX() {
+		return l.peakGiB(), false
+	}
+	size, known := server.RunSizeBillions(kevDir, l.model)
+	return server.MLXPeak(size, known), server.MLXLarge(size, known)
+}
+
+// bf16Fix is the command that switches the leg to mode bf16.
+func (l modelLeg) bf16Fix(backend string) string {
+	return fmt.Sprintf("pagevow use %s %s bf16", backend, l.modeFlag)
 }
 
 func (l modelLeg) recordName() string { return server.RecordName(server.KindModel, l.port) }
@@ -38,12 +53,12 @@ func modelLegs(cfg config.Config) ([]modelLeg, error) {
 	switch cfg.Backend {
 	case config.BackendLocal:
 		l := cfg.Backends.Local
-		candidates = append(candidates, modelLeg{label: "local model", url: l.URL, model: l.Model, mode: l.Mode})
+		candidates = append(candidates, modelLeg{label: "local model", url: l.URL, model: l.Model, mode: l.Mode, modeFlag: "--mode"})
 	case config.BackendCascade:
 		c := cfg.Backends.Cascade
 		candidates = append(candidates,
-			modelLeg{label: "cascade primary", url: c.Primary, model: c.PrimaryModel, mode: c.PrimaryMode},
-			modelLeg{label: "cascade verifier", url: c.Verifier, model: c.VerifierModel, mode: c.VerifierMode})
+			modelLeg{label: "cascade primary", url: c.Primary, model: c.PrimaryModel, mode: c.PrimaryMode, modeFlag: "--primary-mode"},
+			modelLeg{label: "cascade verifier", url: c.Verifier, model: c.VerifierModel, mode: c.VerifierMode, modeFlag: "--verifier-mode"})
 	}
 	var legs []modelLeg
 	for _, leg := range candidates {
@@ -127,6 +142,19 @@ func kevDirOf(cfg config.Config, home HomeDir) (string, error) {
 }
 
 func logPathOf(logDir, name string) string { return filepath.Join(logDir, name+".log") }
+
+// platformOf returns the platform the commands assume.
+func (a *app) platformOf() (server.Platform, error) {
+	goos, err := service[GOOS](a)
+	if err != nil {
+		return server.Platform{}, err
+	}
+	goarch, err := service[GOARCH](a)
+	if err != nil {
+		return server.Platform{}, err
+	}
+	return server.Platform{OS: string(goos), Arch: string(goarch)}, nil
+}
 
 func guardOf(cfg config.Config) server.Guard {
 	return server.Guard{Enabled: cfg.Server.GPUWatch, MaxTempC: cfg.Server.GPUMaxTempC, MinFreeMiB: cfg.Server.GPUMinFreeMiB}

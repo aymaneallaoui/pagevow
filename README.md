@@ -4,11 +4,13 @@ pagevow runs browser tests written as goals. A decision model drives a real Chro
 verifier checks the final page, and every test leaves PNG screenshots. A Claude Code plugin runs the suite after a
 coding task and sends failures back to Claude.
 
-Status: phase 5 is done and `v0.1.0` is released. The Linux path is verified live, while macOS and Windows are compiled and released but not yet run. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
+Status: phase 6 is in progress. `v0.1.0` is released and the Linux path is verified live. A local model on macOS with
+Apple Silicon now runs through MLX; the manual `mlx-live` workflow checks it with a public 0.8B checkpoint, and the
+private 4B suite on a real Mac is still to run. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
 screenshots. `pagevow start`, `stop`, `status` and `doctor` manage the local model servers, the local text helper and a
 browser. `pagevow hook stop` and `pagevow plugin` provide the Claude Code Stop hook and plugin. `pagevow install --browser`
 downloads a pinned Chrome for Testing, and `pagevow update` replaces the binary with the latest GitHub release. goreleaser
-builds the release archives on a version tag. The CI matrix that runs the tests on macOS and Windows is still open. The design is
+builds the release archives on a version tag, and CI runs the tests on Linux, macOS and Windows. The design is
 in [docs/SPEC.md](docs/SPEC.md).
 
 ## Install from source
@@ -177,14 +179,15 @@ not be stopped is exit code 2.
 
 `pagevow status` also lists the recorded processes (pid, port, whether alive and ready, uptime, log), asks each
 destination of the active backend for `/v1/models` with a 2 second timeout, shows GPU memory and temperature when
-`nvidia-smi` answers, the pagevow version and the browser version, and the messages left by the GPU guard. It exits
-with 0 also when something is down. `--json` adds the keys `processes`, `health`, `gpu` (omitted when unknown),
+`nvidia-smi` answers (on a Mac with Apple Silicon the unified memory, without a temperature), the pagevow version and the browser version, and the messages left by the GPU guard. It exits
+with 0 also when something is down. `--json` adds the keys `processes`, `health`, `gpu` (omitted when unknown; `unified`
+is true on a Mac),
 `versions`, `tripped` and `stale_removed` to the existing ones.
 
 `pagevow doctor` runs a list of checks, each one `ok`, `warn` or `fail` with a finding and a fix: the config file, the
-key references of the active backend (the value is never printed), the backend destination, on Linux `uv`, the kev
-checkout, the quantisation switch in `kev/checkpoint.py`, the run directory, the mode for the model, `nvidia-smi` and
-free GPU memory, then the Chromium executable, the browser port, the text helper, stale records, guard messages and
+key references of the active backend (the value is never printed), the backend destination, on Linux and on macOS with
+Apple Silicon `uv`, the kev checkout, the quantisation switch in `kev/checkpoint.py` (Linux only), the run directory,
+the mode for the model, `nvidia-smi` and free GPU memory (the unified memory on a Mac), then the Chromium executable, the browser port, the text helper, stale records, guard messages and
 the state and log directories. The exit code is 1 when a check fails; warnings do not change it.
 
 ### Modes and GPU memory
@@ -210,15 +213,34 @@ pagevow use cascade --primary https://gpu.example.test --primary-key env:GPU_KEY
 
 A cascade leg is started only when its URL is a loopback address. A remote leg is never started; its key reference
 (`primary_key`, `verifier_key`) is resolved like the key of `jev` and `custom`, and the leg counts for the paid service
-notice. Local model serving needs Linux with an NVIDIA GPU; on other systems `start` says so and still starts the
-browser.
+notice. Local model serving needs Linux with an NVIDIA GPU or macOS with Apple Silicon; on other systems `start` says
+so and still starts the browser.
+
+### macOS with Apple Silicon
+
+On a Mac with Apple Silicon the model server runs through MLX. Install `uv`, clone kev and point `server.kev_dir` at
+the clone, then choose mode `bf16` (or `default` for a model of 1B or less) and install the browser:
+
+```
+pagevow use local --model jev-4b --mode bf16
+pagevow install --browser
+pagevow start
+```
+
+pagevow sets `KEV_BACKEND=mlx`, and `/v1/models` reports `backend: mlx`. Modes `nf4` and `int8` are refused on macOS
+because MLX serves bf16. Free memory is the unified memory read through `sysctl` (free, speculative and purgeable
+pages). The peaks are estimates until they are measured on a real Mac: 11.5 GiB for a 4B model and 3.0 GiB for a
+model of 1B or less, plus the text helper and the 1.5 GiB margin. A model above 1B also needs 16 GiB of memory in
+total. The temperature is not read, so `server.gpu_max_temp_c` has no effect on a Mac.
 
 ### The GPU guard
 
 Every model server and the text helper runs under a small supervisor process (`pagevow supervise`, hidden from help).
-When `server.gpu_watch` is true and `nvidia-smi` is present, the supervisor samples the GPU once per second. It stops
+When `server.gpu_watch` is true and `nvidia-smi` is present (the unified memory on a Mac), the supervisor samples the GPU
+once per second. It stops
 its process when the temperature reaches `server.gpu_max_temp_c` (default 87) or free memory falls to
-`server.gpu_min_free_mib` (default 1500). It then writes `guard: stopped <name>: <reason> (temp N C, free N MiB)` to
+`server.gpu_min_free_mib` (default 1500). It then writes `guard: stopped <name>: <reason> (temp N C, free N MiB)`
+(without the temperature on a Mac) to
 the log and to `<user cache directory>/pagevow/run/<name>.tripped`, and exits with code 99. `status` and `doctor`
 show that message until the next `pagevow start` of the same process clears it. A sample that fails is ignored; five
 in a row end the watch and leave the process running.

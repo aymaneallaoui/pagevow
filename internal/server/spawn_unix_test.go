@@ -305,9 +305,6 @@ func startFakeSupervisor(t *testing.T, store *server.Store, name, dir string) *e
 }
 
 func TestStopKillsTheGroupOfAChildWhoseLeaderEndedWhileAMemberKeepsRunning(t *testing.T) {
-	if runtime.GOOS == "darwin" {
-		t.Skip("unverified on macOS: a group member reparented to launchd may not be tied to the record there (SPEC section 17)")
-	}
 	dir := t.TempDir()
 	store := newStore(t)
 	supervisor := startFakeSupervisor(t, store, "model-8113", dir)
@@ -319,7 +316,7 @@ func TestStopKillsTheGroupOfAChildWhoseLeaderEndedWhileAMemberKeepsRunning(t *te
 	require.NoError(t, err)
 	rec := server.Record{
 		Name: "model-8113", Kind: server.KindModel, PID: supervisor.Process.Pid, StartTicks: ticks,
-		ChildPID: leader, ChildPGID: leader, Command: []string{"sleep", "60"},
+		ChildPID: leader, ChildPGID: leader, ChildStartTicks: ticks, Command: []string{"sleep", "60"},
 	}
 	require.True(t, store.Alive(rec))
 	require.False(t, server.ChildAlive(rec))

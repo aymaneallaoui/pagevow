@@ -33,6 +33,7 @@ func parseGroupLine(line string) (member groupMember, pgid int, ok bool) {
 	return groupMember{
 		PID:        numbers[0],
 		PPID:       numbers[1],
+		PGID:       numbers[2],
 		SID:        numbers[3],
 		StartTicks: uint64(started.Unix()), //nolint:gosec // dates after 1970 are positive
 		Zombie:     strings.HasPrefix(state, "Z"),

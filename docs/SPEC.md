@@ -488,6 +488,7 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Spec files | a spec with an environment entry whose name ends in `_KEY`, `_TOKEN` or `_SECRET` is rejected |
 | Agent skills | `.claude/skills/` and `CLAUDE.md` guide coding agents and reviews; they are not part of the binary or of release archives |
 | Cascade live check | verified on 2026-09-30 on a 16 GiB GPU: `pagevow start` launched jev-4b nf4 on 8009 and jev-08b-d1a default on 8010, largest first, then the text helper and the browser; the demo suite ran with the verifier consulted. With the local text helper on GPU layers the guard refused (14.0 GiB peaks plus 1.5 GiB margin against 14.4 GiB free), so the check ran with `text_helper.local.gpu_layers: 0` |
+| macOS group tie | `stop` and the orphan check tie a live member of the recorded process group to the record by the parent or session on every system; on macOS, where a member reparented to launchd reports no usable session id, a member also counts when its start time (`ps` `lstart`, whole seconds) is at or after `child_start_ticks` of the record, which needs a non-zero `child_start_ticks`; a group whose leader (pid equal to the group id) has a different start time than the child is a reused group id and ties nothing |
 
 ### Decisions of phase 4
 
@@ -549,7 +550,3 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 2. Windows local model serving is not planned; Windows uses `jev` or `custom`.
 3. Windows and macOS code paths compile, and the offline test suite runs on both in CI (`ci.yml`, `test` job). `install --browser` and
    `update` were verified live on Linux only; the manual `live` workflow (`live.yml`) runs them on Linux, macOS and Windows.
-4. On macOS, `stop` may leave a group member running when the group leader has ended and the supervisor ignores SIGTERM. The
-   member is reparented to launchd, so only the session id can tie it to the record, and it is unverified that macOS `ps -o sess`
-   (or `getsid`, which may return EPERM across sessions) reports it. CI failed the offline test
-   `TestStopKillsTheGroupOfAChildWhoseLeaderEndedWhileAMemberKeepsRunning` there, so it is skipped on darwin until checked on a Mac.

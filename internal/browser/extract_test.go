@@ -2,6 +2,8 @@ package browser
 
 import (
 	"archive/zip"
+	"context"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -37,11 +39,20 @@ func buildZip(t *testing.T, entries []zipEntry) string {
 	return path
 }
 
+func extractArchive(ctx context.Context, archive, dest string, maxBytes int64) error {
+	reader, err := zip.OpenReader(archive)
+	if err != nil {
+		return fmt.Errorf("open archive: %w", err)
+	}
+	defer func() { _ = reader.Close() }()
+	return extractZip(ctx, &reader.Reader, dest, maxBytes)
+}
+
 func extractTo(t *testing.T, entries []zipEntry, maxBytes int64) (string, error) {
 	t.Helper()
 	dest := filepath.Join(t.TempDir(), "out")
 	require.NoError(t, os.Mkdir(dest, 0o700))
-	return dest, extractZip(buildZip(t, entries), dest, maxBytes)
+	return dest, extractArchive(context.Background(), buildZip(t, entries), dest, maxBytes)
 }
 
 func TestExtractZipWritesFilesDirectoriesAndModes(t *testing.T) {
@@ -142,6 +153,22 @@ func TestExtractZipRejectsUnsafeSymlinks(t *testing.T) {
 			{"deep/s", "../top", fs.ModeSymlink | 0o777},
 			{"deep/s/l", "../../x", fs.ModeSymlink | 0o777},
 		}, "below a symbolic link"},
+		{"doubled slash in a link name", []zipEntry{{"a//up", "..", fs.ModeSymlink | 0o777}}, "canonical"},
+		{"dot prefix on a link name", []zipEntry{{"d/", "", fs.ModeDir | 0o755}, {"./l", "d", fs.ModeSymlink | 0o777}}, "canonical"},
+		{"entry below a link reached with a dot segment", []zipEntry{
+			{"d/", "", fs.ModeDir | 0o755},
+			{"l", "d", fs.ModeSymlink | 0o777},
+			{"./l/f", "x", 0o644},
+		}, "canonical"},
+		{"link chain through a parent link", []zipEntry{
+			{"a/up", "..", fs.ModeSymlink | 0o777},
+			{"a/up/a/up/x/esc", "../..", fs.ModeSymlink | 0o777},
+		}, "below a symbolic link"},
+		{"entry below a link to a directory", []zipEntry{
+			{"d/", "", fs.ModeDir | 0o755},
+			{"l", "d", fs.ModeSymlink | 0o777},
+			{"l/f", "x", 0o644},
+		}, "below a symbolic link"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -180,7 +207,7 @@ func TestExtractZipRejectsADeclaredSizeOverTheLimit(t *testing.T) {
 
 	dest := filepath.Join(t.TempDir(), "out")
 	require.NoError(t, os.Mkdir(dest, 0o700))
-	err = extractZip(path, dest, maxExtractBytes)
+	err = extractArchive(context.Background(), path, dest, maxExtractBytes)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "expands to more than")
 	assert.NoFileExists(t, filepath.Join(dest, "huge"))
@@ -202,7 +229,7 @@ func TestExtractZipRejectsAnEntryThatHoldsMoreThanItDeclares(t *testing.T) {
 
 	dest := filepath.Join(t.TempDir(), "out")
 	require.NoError(t, os.Mkdir(dest, 0o700))
-	err = extractZip(path, dest, maxExtractBytes)
+	err = extractArchive(context.Background(), path, dest, maxExtractBytes)
 	require.Error(t, err)
 }
 
@@ -214,7 +241,7 @@ func TestExtractZipRejectsADuplicateEntry(t *testing.T) {
 func TestExtractZipReportsAnArchiveThatIsNotAZip(t *testing.T) {
 	bad := filepath.Join(t.TempDir(), "bad.zip")
 	require.NoError(t, os.WriteFile(bad, []byte("not a zip"), 0o600))
-	err := extractZip(bad, t.TempDir(), maxExtractBytes)
+	err := extractArchive(context.Background(), bad, t.TempDir(), maxExtractBytes)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "open archive")
 }
@@ -228,7 +255,50 @@ func TestExtractZipWritesNothingThroughAnOutsideLink(t *testing.T) {
 	require.NoError(t, os.Mkdir(dest, 0o700))
 	require.NoError(t, os.Symlink(outside, filepath.Join(dest, "escape")))
 
-	err := extractZip(buildZip(t, []zipEntry{{"escape/evil", "x", 0o644}}), dest, maxExtractBytes)
+	err := extractArchive(context.Background(), buildZip(t, []zipEntry{{"escape/evil", "x", 0o644}}), dest, maxExtractBytes)
 	require.Error(t, err)
 	assert.NoFileExists(t, filepath.Join(outside, "evil"))
+}
+
+func TestExtractZipRejectsNonCanonicalEntryNames(t *testing.T) {
+	for _, name := range []string{"a//b", "./x", "a/./b", "a/b/../c", "a//"} {
+		t.Run(name, func(t *testing.T) {
+			_, err := extractTo(t, []zipEntry{{name, "", fs.ModeDir | 0o755}}, maxExtractBytes)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "canonical")
+		})
+	}
+	t.Run("file with a doubled slash", func(t *testing.T) {
+		dest, err := extractTo(t, []zipEntry{{"a//b", "x", 0o644}}, maxExtractBytes)
+		require.Error(t, err)
+		assert.NoFileExists(t, filepath.Join(dest, "a", "b"))
+	})
+}
+
+func TestExtractZipWritesNothingThroughALinkWhoseParentDiffersInCase(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symbolic links need privileges on Windows")
+	}
+	dest, err := extractTo(t, []zipEntry{
+		{"a/up", "..", fs.ModeSymlink | 0o777},
+		{"a/UP/x", "escaped", 0o644},
+	}, maxExtractBytes)
+	if err != nil {
+		assert.Contains(t, err.Error(), "below a symbolic link")
+	}
+	assert.NoFileExists(t, filepath.Join(dest, "x"), "nothing is written through the link")
+}
+
+func TestExtractZipStopsWhenTheContextIsCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	dest := filepath.Join(t.TempDir(), "out")
+	require.NoError(t, os.Mkdir(dest, 0o700))
+
+	err := extractArchive(ctx, buildZip(t, []zipEntry{{"a", "1", 0o644}, {"b", "2", 0o644}}), dest, maxExtractBytes)
+
+	require.ErrorIs(t, err, context.Canceled)
+	entries, readErr := os.ReadDir(dest)
+	require.NoError(t, readErr)
+	assert.Empty(t, entries)
 }

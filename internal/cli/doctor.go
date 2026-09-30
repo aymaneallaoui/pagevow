@@ -46,6 +46,7 @@ type doctor struct {
 	lookPath LookPath
 	home     HomeDir
 	goos     GOOS
+	goarch   GOARCH
 	cache    CacheDir
 	cfg      config.Config
 	checks   []doctorCheck
@@ -151,6 +152,9 @@ func (a *app) newDoctor(ctx context.Context) (*doctor, error) {
 		return nil, err
 	}
 	if d.goos, err = service[GOOS](a); err != nil {
+		return nil, err
+	}
+	if d.goarch, err = service[GOARCH](a); err != nil {
 		return nil, err
 	}
 	if d.cache, err = service[CacheDir](a); err != nil {
@@ -411,7 +415,7 @@ func (d *doctor) installedBrowserCheck(noSystemBrowser bool) {
 	if err != nil {
 		return
 	}
-	rec, err := browser.LookupInstalled(dir)
+	rec, err := browser.LookupInstalled(dir, string(d.goos), string(d.goarch))
 	switch {
 	case err == nil && rec.Version != browser.PinnedVersion:
 		d.add("browser:installed", levelWarn, "pagevow install --browser", "Chrome for Testing %s is installed at %s, this pagevow pins %s", rec.Version, rec.Executable, browser.PinnedVersion)

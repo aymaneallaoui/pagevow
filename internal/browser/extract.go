@@ -2,6 +2,7 @@ package browser
 
 import (
 	"archive/zip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -21,17 +22,12 @@ const (
 )
 
 type extractor struct {
-	root  *os.Root
-	links map[string]struct{}
+	root *os.Root
+	dirs map[string]struct{}
 }
 
-// extractZip unpacks archive into dest, which must exist, and refuses anything that could write outside it.
-func extractZip(archive, dest string, maxBytes int64) error {
-	reader, err := zip.OpenReader(archive)
-	if err != nil {
-		return fmt.Errorf("open archive: %w", err)
-	}
-	defer func() { _ = reader.Close() }()
+// extractZip unpacks reader into dest, which must exist, and refuses anything that could write outside it.
+func extractZip(ctx context.Context, reader *zip.Reader, dest string, maxBytes int64) error {
 	if len(reader.File) > maxExtractEntries {
 		return fmt.Errorf("archive has %d entries, more than the limit of %d", len(reader.File), maxExtractEntries)
 	}
@@ -50,8 +46,11 @@ func extractZip(archive, dest string, maxBytes int64) error {
 		return fmt.Errorf("open extraction directory: %w", err)
 	}
 	defer func() { _ = root.Close() }()
-	ex := extractor{root: root, links: map[string]struct{}{}}
+	ex := extractor{root: root, dirs: map[string]struct{}{}}
 	for _, entry := range reader.File {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("extract archive: %w", err)
+		}
 		if err := ex.extract(entry); err != nil {
 			return fmt.Errorf("extract %q: %w", entry.Name, err)
 		}
@@ -67,12 +66,15 @@ func (e extractor) extract(entry *zip.File) error {
 	if rel == "." {
 		return nil
 	}
-	if e.underLink(rel) {
-		return errors.New("the entry sits below a symbolic link")
+	if err := e.requirePlainParents(rel); err != nil {
+		return err
 	}
 	mode := entry.Mode()
 	switch {
 	case mode.IsDir():
+		if mode.Type() != fs.ModeDir {
+			return errors.New("the entry name ends with a slash but the entry is not a directory")
+		}
 		return e.root.MkdirAll(rel, dirMode)
 	case mode&fs.ModeSymlink != 0:
 		return e.symlink(entry, rel)
@@ -86,20 +88,40 @@ func entryPath(name string) (string, error) {
 	if name == "" || strings.ContainsAny(name, "\\\x00") {
 		return "", errors.New("invalid entry name")
 	}
-	native := filepath.FromSlash(strings.TrimSuffix(name, "/"))
+	trimmed := strings.TrimSuffix(name, "/")
+	native := filepath.FromSlash(trimmed)
 	if native == "" || !filepath.IsLocal(native) {
 		return "", errors.New("the entry name leaves the extraction directory")
+	}
+	if path.Clean(trimmed) != trimmed {
+		return "", errors.New("the entry name is not in canonical form")
 	}
 	return native, nil
 }
 
-func (e extractor) underLink(rel string) bool {
-	for dir := filepath.Dir(rel); dir != "." && dir != string(filepath.Separator); dir = filepath.Dir(dir) {
-		if _, ok := e.links[dir]; ok {
-			return true
+// requirePlainParents rejects an entry when any existing parent directory is a symbolic link, so case folding and
+// unclean names cannot steer a write through a link.
+func (e extractor) requirePlainParents(rel string) error {
+	parts := strings.Split(rel, string(filepath.Separator))
+	for i := 1; i < len(parts); i++ {
+		parent := strings.Join(parts[:i], string(filepath.Separator))
+		if _, ok := e.dirs[parent]; ok {
+			continue
 		}
+		info, err := e.root.Lstat(parent)
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			return nil
+		case err != nil:
+			return err
+		case info.Mode()&fs.ModeSymlink != 0:
+			return errors.New("the entry sits below a symbolic link")
+		case !info.IsDir():
+			return errors.New("the entry sits below a file")
+		}
+		e.dirs[parent] = struct{}{}
 	}
-	return false
+	return nil
 }
 
 func (e extractor) file(entry *zip.File, rel string, mode fs.FileMode) error {
@@ -162,11 +184,7 @@ func (e extractor) symlink(entry *zip.File, rel string) error {
 	if err := e.root.MkdirAll(filepath.Dir(rel), dirMode); err != nil {
 		return err
 	}
-	if err := e.root.Symlink(filepath.FromSlash(target), rel); err != nil {
-		return err
-	}
-	e.links[rel] = struct{}{}
-	return nil
+	return e.root.Symlink(filepath.FromSlash(target), rel)
 }
 
 func checkLinkTarget(rel, target string) error {

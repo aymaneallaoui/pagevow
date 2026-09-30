@@ -22,6 +22,8 @@ import (
 const (
 	loadTimeout      = 15 * time.Second
 	loadPollInterval = 20 * time.Millisecond
+	// networkBufferBytes keeps Chrome from retaining response bodies that pagevow never reads; zero would be omitted on the wire.
+	networkBufferBytes = 1
 )
 
 // ErrNavigation reports that the browser could not load the requested URL.
@@ -186,11 +188,14 @@ func setDownloadBehavior(ctx context.Context, dir string) error {
 }
 
 func (s *Session) openPage(ctx context.Context, url string) error {
-	if err := s.call(ctx, network.Enable().Do); err != nil {
+	if err := s.call(ctx, network.Enable().WithMaxTotalBufferSize(networkBufferBytes).Do); err != nil {
 		return fmt.Errorf("enable network: %w", err)
 	}
 	if err := s.call(ctx, network.SetCacheDisabled(true).Do); err != nil {
 		return fmt.Errorf("disable cache: %w", err)
+	}
+	if err := s.call(ctx, network.SetBypassServiceWorker(true).Do); err != nil {
+		return fmt.Errorf("bypass service workers: %w", err)
 	}
 	metrics := emulation.SetDeviceMetricsOverride(int64(s.viewport.Width), int64(s.viewport.Height), 1, false)
 	err := s.call(ctx, metrics.Do)

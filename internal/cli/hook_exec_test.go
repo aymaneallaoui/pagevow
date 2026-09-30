@@ -42,7 +42,7 @@ func TestSubprocessHookRunnerDecodesAFailingReport(t *testing.T) {
 	cwdFile := filepath.Join(t.TempDir(), "cwd.txt")
 
 	executable := fakePagevow(t, `printf '%s\n' "$@" > '`+argsFile+`'
-pwd > '`+cwdFile+`'
+pwd -P > '`+cwdFile+`'
 cat '`+reportFile+`'
 echo "step 3 failed" >&2
 exit 1

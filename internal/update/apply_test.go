@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -37,7 +38,9 @@ func TestApplyReplacesTheExecutable(t *testing.T) {
 	assert.Equal(t, "new binary", readFile(t, exe))
 	info, err := os.Stat(exe)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o700), info.Mode().Perm(), "the mode of the old file is kept")
+	if runtime.GOOS != "windows" {
+		assert.Equal(t, os.FileMode(0o700), info.Mode().Perm(), "the mode of the old file is kept")
+	}
 	assert.Equal(t, []string{"pagevow"}, dirNames(t, filepath.Dir(exe)), "no part or staging file is left")
 	assert.Equal(t, "1.0.0", result.From)
 	assert.Equal(t, "1.3.0", result.To)
@@ -56,6 +59,9 @@ func TestApplyReplacesTheExecutable(t *testing.T) {
 }
 
 func TestApplyFollowsASymlinkedExecutable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on windows")
+	}
 	fake := newFakeRelease(t, "v1.3.0", releaseAssets(t, "linux", "amd64", "1.3.0", "new binary"))
 	target := writeExecutable(t, "pagevow-real", "old binary", 0o755)
 	link := filepath.Join(t.TempDir(), "pagevow")
@@ -280,8 +286,8 @@ func TestApplyRefusesAnAssetOutsideTheAPIHost(t *testing.T) {
 }
 
 func TestApplyFallsBackWhenTheExecutableDirectoryIsNotWritable(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("a root user can write to any directory")
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("directory modes are not enforced on windows and a root user can write to any directory")
 	}
 	fake := newFakeRelease(t, "v1.3.0", releaseAssets(t, "linux", "amd64", "1.3.0", "new binary"))
 	exe := writeExecutable(t, "pagevow", "old binary", 0o755)
@@ -299,14 +305,16 @@ func TestApplyFallsBackWhenTheExecutableDirectoryIsNotWritable(t *testing.T) {
 	assert.Equal(t, "new binary", readFile(t, result.Staged))
 	info, statErr := os.Stat(result.Staged)
 	require.NoError(t, statErr)
-	assert.NotZero(t, info.Mode().Perm()&0o100, "the staged binary is executable")
+	if runtime.GOOS != "windows" {
+		assert.NotZero(t, info.Mode().Perm()&0o100, "the staged binary is executable")
+	}
 	assert.Equal(t, "old binary", readFile(t, exe))
 	assert.Equal(t, []string{"pagevow-1.3.0"}, dirNames(t, fallback), "no part or staging file is left")
 }
 
 func TestApplyFailsWithoutAFallbackWhenTheDirectoryIsNotWritable(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("a root user can write to any directory")
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("directory modes are not enforced on windows and a root user can write to any directory")
 	}
 	fake := newFakeRelease(t, "v1.3.0", releaseAssets(t, "linux", "amd64", "1.3.0", "new binary"))
 	exe := writeExecutable(t, "pagevow", "old binary", 0o755)
@@ -379,7 +387,9 @@ func TestApplyKeepsTheVerifiedBinaryWhenTheReplacementFails(t *testing.T) {
 	assert.Equal(t, "new binary", readFile(t, result.Staged))
 	info, statErr := os.Stat(result.Staged)
 	require.NoError(t, statErr)
-	assert.NotZero(t, info.Mode().Perm()&0o100, "the kept binary is executable")
+	if runtime.GOOS != "windows" {
+		assert.NotZero(t, info.Mode().Perm()&0o100, "the kept binary is executable")
+	}
 	assert.Equal(t, []string{"pagevow"}, dirNames(t, filepath.Dir(exe)), "no part or staging file is left")
 	assert.Equal(t, []string{"pagevow-1.3.0"}, dirNames(t, fallback))
 }
@@ -396,6 +406,9 @@ func TestApplyDeletesTheNewBinaryWhenTheReplacementFailsWithoutAFallback(t *test
 }
 
 func TestCopyAndRemoveMovesTheFileWithItsMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes are not enforced on windows")
+	}
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src")
 	dst := filepath.Join(dir, "dst")

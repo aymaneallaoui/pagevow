@@ -547,4 +547,5 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 1. TypeSafe terms on training models from API output decide whether the local checkpoints may be distributed.
    Until checked, pagevow ships no model and `install --model` takes a path or a private Hugging Face repository.
 2. Windows local model serving is not planned; Windows uses `jev` or `custom`.
-3. Windows and macOS code paths compile but have not run on those systems; `install --browser` and `update` were verified live on Linux only.
+3. Windows and macOS code paths compile, and the offline test suite runs on both in CI (`ci.yml`, `test` job). `install --browser` and
+   `update` were verified live on Linux only; the manual `live` workflow (`live.yml`) runs them on Linux, macOS and Windows.

@@ -2,6 +2,8 @@ package runner_test
 
 import (
 	"errors"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,7 +66,7 @@ FAIL       cart  steps=6  120.0s  attempt 2
   screenshots: 1 of 5 could not be captured (hung)
 UNVERIFIED loose  steps=1  0.9s
 
-1/3 passed. Report: /run/report.json
+1/3 passed. Report: {report}
 1 with missing screenshots.
 
 FAIL cart
@@ -85,8 +87,10 @@ UNVERIFIED loose
   final.png: /run/loose/final.png
   directory: /run/loose`
 
+var sampleReportPath = filepath.Join("/run", "report.json")
+
 func TestTextReportGolden(t *testing.T) {
-	assert.Equal(t, wantText, sampleReport().Text())
+	assert.Equal(t, strings.ReplaceAll(wantText, "{report}", sampleReportPath), sampleReport().Text())
 }
 
 func TestFailuresListsOnlyTestsThatDidNotPass(t *testing.T) {
@@ -104,7 +108,7 @@ func TestTextReportForAPassingRunHasNoFailureBlocks(t *testing.T) {
 	report.Tests = report.Tests[:1]
 	report.Totals = runner.Totals{Tests: 1, Passed: 1}
 	report.Passed = true
-	assert.Equal(t, "PASS       nav  steps=2  1.4s\n\n1/1 passed. Report: /run/report.json", report.Text())
+	assert.Equal(t, "PASS       nav  steps=2  1.4s\n\n1/1 passed. Report: "+sampleReportPath, report.Text())
 }
 
 func TestInterruptedNoteInTheText(t *testing.T) {

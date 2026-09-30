@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -201,7 +202,9 @@ func TestUpdateReplacesTheBinary(t *testing.T) {
 	assert.Equal(t, "new binary", e.binary(t))
 	info, err := os.Stat(e.exe)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
+	if runtime.GOOS != "windows" {
+		assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
+	}
 }
 
 func TestUpdateRemindsToInstallThePluginAgain(t *testing.T) {
@@ -397,8 +400,8 @@ func namesIn(t *testing.T, dir string) []string {
 }
 
 func TestUpdateKeepsTheVerifiedBinaryWhenTheDirectoryIsNotWritable(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("a root user can write to any directory")
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("directory modes are not enforced on windows and a root user can write to any directory")
 	}
 	e := newUpdateEnv(t)
 	dir := filepath.Dir(e.exe)

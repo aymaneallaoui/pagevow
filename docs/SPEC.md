@@ -326,6 +326,8 @@ verifier to make a test pass; report remaining failures plainly.
 - `start` launches it headless with its own profile directory and a fixed debugging port bound to 127.0.0.1.
 - Each test gets a new target in its own window and closes it at the end. A tab inside an existing window gets no
   compositor frames while hidden, so screenshots and wheel scrolling stall for up to 5 seconds, in headless mode too.
+- Each target disables the HTTP cache through CDP before its first navigation, so a run always sees the current files
+  even though the profile persists.
 - Headless is the default because a hidden window under Wayland receives no frames and screenshots hang. With
   `browser.headless: false` on Linux, pagevow adds `--ozone-platform=x11`.
 - Screenshot capture uses a 5 second timeout. After the first failure in a test no further step capture is tried;

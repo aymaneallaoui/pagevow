@@ -12,18 +12,20 @@ import (
 var ErrExecutableNotFound = errors.New("no Chromium or Chrome executable found on PATH or in the standard install locations")
 
 type finder struct {
-	goos     string
-	lookPath func(string) (string, error)
-	isFile   func(string) bool
-	getenv   func(string) string
+	browserDir string
+	goos       string
+	lookPath   func(string) (string, error)
+	isFile     func(string) bool
+	getenv     func(string) string
 }
 
-func systemFinder() finder {
+func systemFinder(browserDir string) finder {
 	return finder{
-		goos:     runtime.GOOS,
-		lookPath: exec.LookPath,
-		isFile:   regularFile,
-		getenv:   os.Getenv,
+		browserDir: browserDir,
+		goos:       runtime.GOOS,
+		lookPath:   exec.LookPath,
+		isFile:     regularFile,
+		getenv:     os.Getenv,
 	}
 }
 
@@ -32,12 +34,15 @@ func regularFile(path string) bool {
 	return err == nil && info.Mode().IsRegular()
 }
 
-// FindExecutable returns the path of an installed Chromium or Chrome for the current OS.
-func FindExecutable() (string, error) {
-	return systemFinder().find()
+// FindExecutable returns the browser that pagevow installed in browserDir, else an installed Chromium or Chrome for the current OS.
+func FindExecutable(browserDir string) (string, error) {
+	return systemFinder(browserDir).find()
 }
 
 func (f finder) find() (string, error) {
+	if rec, err := LookupInstalled(f.browserDir); err == nil {
+		return rec.Executable, nil
+	}
 	for _, name := range f.pathNames() {
 		if path, err := f.lookPath(name); err == nil && path != "" {
 			return path, nil

@@ -62,7 +62,8 @@ behaviour is the Python source in `~/jev-ultrafast` at branch `browser-tests`:
 ## 4. Commands
 
 ```
-pagevow install [--browser] [--model NAME]   download the browser, and optionally a local model
+pagevow install [--browser] [--force] [--json] [--model NAME]
+                                             download the browser, and optionally a local model
 pagevow use local|jev|custom|cascade [...]   choose the decision backend
 pagevow start [--no-browser] [--json]        start what the active backend needs, and the browser
 pagevow stop [--json]                        stop everything pagevow started
@@ -81,6 +82,7 @@ pagevow version
 Exit codes of `run`: 0 all passed; 1 at least one test failed or is unverified; 2 infrastructure problem (backend or
 browser not reachable, invalid tests file). `hook stop` follows section 10.
 
+Exit codes of `install`: 0 installed or already installed; 2 nothing was installed, including a missing flag.
 Exit codes of `start` and `stop`: 0 everything requested runs or is stopped; 2 otherwise. `status` exits 0 also when
 something is down. `doctor` exits 1 when a check fails; warnings do not change its exit code.
 
@@ -150,6 +152,9 @@ browser: {port: 9333, headless: true, viewport: {width: 1480, height: 780}, chan
 run: {retries: 1, timeout_seconds: 120, screenshots: failed, max_steps: 60}
 guards: {loop_guard: false, done_min_conf: 0, blocked_min_conf: 0}
 ```
+
+`browser.channel` is informational: `status` shows it and nothing reads it to choose an executable. The browser that is used
+follows the lookup order of section 12.
 
 `key` values are references (`keychain:<name>` or `env:<NAME>`), never literal secrets. A literal value is rejected
 with an error that names the fix.
@@ -323,6 +328,35 @@ verifier to make a test pass; report remaining failures plainly.
 
 - `pagevow install --browser` downloads a pinned Chrome for Testing build for the current OS and architecture into the
   data directory, verifies its checksum, and records the version.
+  - The data directory is `<os.UserCacheDir()>/pagevow`. Installs live in `<data>/browser/<version>/` and the record is
+    `<data>/browser/installed.json`: `{"version", "platform", "executable", "installed_at"}`, mode 0600, `executable`
+    absolute and inside the browser directory.
+  - The pinned version is `154.0.8037.92`. Google publishes no checksums, so the pin table in `internal/browser/cft.go`
+    holds the size and SHA-256 of each archive, computed by pagevow on 2026-09-30. A different version needs new pins.
+    The archives come from `https://storage.googleapis.com/chrome-for-testing-public/<version>/<platform>/chrome-<platform>.zip`.
+  - Download goes to `<version>.zip.part` while it is hashed. A wrong size or hash deletes the file and fails with the
+    expected and the actual value. The archive is unpacked into `<version>.tmp` and renamed to `<version>` only when it
+    is complete and holds the executable; a leftover `.tmp` or `.part` from an earlier try is removed first.
+  - Unpacking refuses entries whose path leaves the target, absolute paths, names with a backslash, anything that is not
+    a file, a directory or a relative symbolic link that stays inside the tree, entries below a symbolic link, archives
+    of more than 50000 entries or 2 GiB, and entries that hold more than they declare. Files keep their execute bit
+    (0755, else 0644), directories are 0755.
+  - Run again it does nothing while the pinned build is installed; `--force` installs it again. The install refuses
+    while a browser record of `pagevow start` is alive: stop it first.
+
+  | Platform | Go | Executable inside the archive |
+  |---|---|---|
+  | `linux64` | linux/amd64 | `chrome-linux64/chrome` |
+  | `linux-arm64` | linux/arm64 | `chrome-linux-arm64/chrome` |
+  | `mac-arm64` | darwin/arm64 | `chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing` |
+  | `mac-x64` | darwin/amd64 | `chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing` |
+  | `win64` | windows/amd64 | `chrome-win64/chrome.exe` |
+  | `win32` | windows/386 | `chrome-win32/chrome.exe` |
+
+  Any other system, such as windows/arm64, has no build; the command fails and names the platform.
+- Lookup order of the browser executable: the installed build of the record when its file exists, then the program
+  names on `PATH`, then the standard system locations. A record whose file is gone or points outside the browser
+  directory is ignored.
 - `start` launches it headless with its own profile directory and a fixed debugging port bound to 127.0.0.1.
 - Each test gets a new target in its own window and closes it at the end. A tab inside an existing window gets no
   compositor frames while hidden, so screenshots and wheel scrolling stall for up to 5 seconds, in headless mode too.
@@ -456,6 +490,22 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Registration | through the `claude` CLI only; with no `claude` or with `--no-register` the commands are printed and the exit code is 0 |
 | Uninstall | unregisters first, failures are warnings, then removes the root only when it holds the pagevow manifest |
 | Stdin | read with a 1 MiB limit, ignored on a terminal, never prompts |
+
+### Decisions of phase 5, part 1
+
+| Topic | Decision |
+|---|---|
+| Data directory | `<os.UserCacheDir()>/pagevow`; the browser installs and their record live under `browser/` |
+| Pin | version `154.0.8037.92`, one size and SHA-256 per platform in the code; the version is never taken from the network |
+| Install record | `installed.json` next to the versions, written atomically with mode 0600 |
+| Already installed | `install --browser` reports it and downloads nothing; `--force` replaces the tree |
+| Running browser | the install refuses, before any download, while a browser record of `pagevow start` is alive; the hint is `pagevow stop` |
+| Old versions | a new pinned version installs next to the old one; nothing deletes old trees |
+| Output | `[info] downloading ...` line, a progress line every 10 percent only on a terminal, then `[ok] installed ... at <path>`; `--json` prints `version`, `platform`, `executable`, `already_installed` and nothing else on stdout |
+| `--model` | the flag exists and fails with `not implemented yet` and exit code 2 |
+| `doctor` | `browser:installed` reports the recorded build, warns when it differs from the pin or cannot be used, and warns when there is neither a record nor a system browser; the missing browser fix names `pagevow install --browser` |
+| `status` | the Browser section shows `installed` with the version and path, or `no (pagevow install --browser)` |
+| HTTP client | 15 minute overall timeout, at most 3 redirects; the address of the archives can be replaced by the container for tests only |
 
 ## 17. Open questions
 

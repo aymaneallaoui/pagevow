@@ -4,11 +4,11 @@ pagevow runs browser tests written as goals. A decision model drives a real Chro
 verifier checks the final page, and every test leaves PNG screenshots. A Claude Code plugin runs the suite after a
 coding task and sends failures back to Claude.
 
-Status: phase 4. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
+Status: phase 5, in progress. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
 screenshots. `pagevow start`, `stop`, `status` and `doctor` manage the local model servers, the local text helper and a
-browser. `pagevow hook stop` and `pagevow plugin` provide the Claude Code Stop hook and plugin. `install` and `update`
-are not implemented yet; those commands print `not implemented yet (phase N)` and exit with code 2. The design is in
-[docs/SPEC.md](docs/SPEC.md).
+browser. `pagevow hook stop` and `pagevow plugin` provide the Claude Code Stop hook and plugin. `pagevow install --browser`
+downloads a pinned Chrome for Testing. `update` is not implemented yet; it prints `not implemented yet (phase 5)` and
+exits with code 2. The design is in [docs/SPEC.md](docs/SPEC.md).
 
 ## Install from source
 
@@ -25,6 +25,21 @@ make build      # writes bin/pagevow
 make install    # installs into GOBIN
 ```
 
+## Install the browser
+
+```
+pagevow install --browser          # downloads Chrome for Testing 154.0.8037.92, about 190 MB
+pagevow install --browser --force  # installs it again
+pagevow install --browser --json   # prints version, platform, executable and already_installed
+```
+
+The download goes to `<user cache directory>/pagevow/browser/<version>/`. pagevow checks the size and the SHA-256 of the
+archive against values that are pinned in the code (Google publishes none) and records the install in
+`<user cache directory>/pagevow/browser/installed.json`. Linux (amd64, arm64), macOS (arm64, amd64) and Windows
+(amd64) have a build; other systems, such as Windows on arm64, do not. `run`, `start` and `doctor` use the installed
+build before any Chromium or Chrome on `PATH`. The command refuses while the browser of `pagevow start` runs: run
+`pagevow stop` first. `status` and `doctor` show the installed version.
+
 ## Commands
 
 | Command | State |
@@ -40,13 +55,14 @@ make install    # installs into GOBIN
 | `pagevow run [--tests FILE] [--ids a,b] [--out DIR] [--screenshots final\|failed\|all] [--retries N] [--timeout SECONDS] [--full-page] [--headed] [--json]` | works: see below |
 | `pagevow hook stop` | works: the Claude Code Stop hook, see below |
 | `pagevow plugin install [--no-register]`, `plugin uninstall`, `plugin path [--json]` | works: manage the Claude Code plugin, see below |
-| `pagevow install`, `update` | phase 5 |
+| `pagevow install --browser [--force] [--json]` | works: downloads and verifies the pinned Chrome for Testing; `--model` is not implemented yet |
+| `pagevow update` | phase 5 |
 
 ## Running tests
 
 `pagevow run` reads `pagevow.yaml` in the current directory (also `browser-tests.yaml` and
 `.claude/browser-tests.yaml`) or the file given with `--tests`. Before any test it checks that the decision backend
-answers, that the text helper answers when it is a loopback URL, and that a Chromium or Chrome is installed; a problem
+answers, that the text helper answers when it is a loopback URL, and that a Chromium or Chrome is available (`pagevow install --browser` or one on `PATH`); a problem
 is printed with the way to fix it and the exit code is 2. A model server for the `local` and `cascade` backends must
 already be running: start it with `pagevow start`.
 
@@ -120,7 +136,7 @@ it off. A backend or browser that is not reachable never blocks: the hook says w
 |---|---|---|
 | `model-<port>` | `uv run --extra serve python -m kev.serve --run <run> --port <port>` in `server.kev_dir` | backend `local`, or a loopback leg of `cascade` |
 | `text-helper-<port>` | `llama-server -hfr <repo> -hff <file> --alias <alias> --host 127.0.0.1 --port <port> ...` | `text_helper.local.enabled` is true and `text_helper.url` is a loopback URL |
-| `browser-<port>` | your Chromium or Chrome, headless unless `browser.headless` is false | always, unless `--no-browser` |
+| `browser-<port>` | the browser from `pagevow install --browser`, else your Chromium or Chrome; headless unless `browser.headless` is false | always, unless `--no-browser` |
 
 The order is models (largest first, each one waited for), the text helper, the browser. `start` is idempotent: a
 process that is already running and answers is reported as `already running`. A port that answers but has no record

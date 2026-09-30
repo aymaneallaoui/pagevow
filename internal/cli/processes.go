@@ -28,6 +28,9 @@ type LookPath func(string) (string, error)
 // GOOS names the operating system the commands assume.
 type GOOS string
 
+// GOARCH names the processor architecture the commands assume.
+type GOARCH string
+
 // Processes is what the lifecycle commands need from the local process layer.
 type Processes interface {
 	List() ([]server.Record, error)

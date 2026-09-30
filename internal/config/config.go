@@ -206,6 +206,11 @@ func ProfilesDir(userCacheDir func() (string, error)) (string, error) {
 	return cacheSubdir(userCacheDir, "profiles")
 }
 
+// BrowserDir returns the directory of the Chrome for Testing installs under the user cache directory.
+func BrowserDir(userCacheDir func() (string, error)) (string, error) {
+	return cacheSubdir(userCacheDir, "browser")
+}
+
 // ManagedProfileDir returns the profile directory of the browser that pagevow start manages.
 func ManagedProfileDir(userCacheDir func() (string, error)) (string, error) {
 	dir, err := ProfilesDir(userCacheDir)

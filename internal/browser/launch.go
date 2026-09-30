@@ -121,7 +121,7 @@ func buildArgs(opts LaunchOptions, goos string) []string {
 func Launch(ctx context.Context, opts LaunchOptions) (*Process, error) {
 	execPath := opts.ExecPath
 	if execPath == "" {
-		found, err := FindExecutable()
+		found, err := FindExecutable("")
 		if err != nil {
 			return nil, fmt.Errorf("launch browser: %w", err)
 		}

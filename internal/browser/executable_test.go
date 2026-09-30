@@ -2,6 +2,7 @@ package browser
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -92,4 +93,62 @@ func TestFindExecutableNotFound(t *testing.T) {
 		_, err := fakeFinder(goos, nil, nil, nil).find()
 		assert.ErrorIs(t, err, ErrExecutableNotFound, goos)
 	}
+}
+
+func installedBrowser(t *testing.T) (dir, executable string) {
+	t.Helper()
+	dir = t.TempDir()
+	executable = filepath.Join(dir, PinnedVersion, "chrome-linux64", "chrome")
+	require.NoError(t, os.MkdirAll(filepath.Dir(executable), 0o700))
+	require.NoError(t, os.WriteFile(executable, []byte("x"), 0o700))
+	require.NoError(t, writeRecord(dir, Installed{Version: PinnedVersion, Platform: "linux64", Executable: executable}))
+	return dir, executable
+}
+
+func TestFindExecutablePrefersTheInstalledBrowserOverPathAndSystemLocations(t *testing.T) {
+	dir, executable := installedBrowser(t)
+	f := fakeFinder("linux",
+		map[string]string{"chromium": "/p/chromium"},
+		[]string{"/usr/bin/chromium"}, nil)
+	f.browserDir = dir
+
+	got, err := f.find()
+
+	require.NoError(t, err)
+	assert.Equal(t, executable, got)
+}
+
+func TestFindExecutableFallsBackWhenTheRecordedFileIsGone(t *testing.T) {
+	dir, executable := installedBrowser(t)
+	require.NoError(t, os.Remove(executable))
+	f := fakeFinder("linux", map[string]string{"chromium": "/p/chromium"}, nil, nil)
+	f.browserDir = dir
+
+	got, err := f.find()
+
+	require.NoError(t, err)
+	assert.Equal(t, "/p/chromium", got)
+}
+
+func TestFindExecutableIgnoresARecordThatPointsOutsideTheDirectory(t *testing.T) {
+	dir := t.TempDir()
+	outside := filepath.Join(t.TempDir(), "chrome")
+	require.NoError(t, os.WriteFile(outside, []byte("x"), 0o700))
+	require.NoError(t, writeRecord(dir, Installed{Version: PinnedVersion, Executable: outside}))
+	f := fakeFinder("linux", nil, nil, nil)
+	f.browserDir = dir
+
+	_, err := f.find()
+
+	assert.ErrorIs(t, err, ErrExecutableNotFound)
+}
+
+func TestFindExecutableWithoutARecordUsesTheSystemBrowser(t *testing.T) {
+	f := fakeFinder("linux", map[string]string{"google-chrome": "/p/google-chrome"}, nil, nil)
+	f.browserDir = t.TempDir()
+
+	got, err := f.find()
+
+	require.NoError(t, err)
+	assert.Equal(t, "/p/google-chrome", got)
 }

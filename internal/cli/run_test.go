@@ -416,7 +416,7 @@ func TestRunPreflightNamesAMissingBrowser(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, 2, cli.ExitCode(err))
 	assert.Contains(t, stderr, "No Chromium or Google Chrome was found.")
-	assert.Contains(t, stderr, "Install one of them")
+	assert.Contains(t, stderr, "Install one with: pagevow install --browser")
 	assert.Empty(t, e.launcher.specs)
 }
 

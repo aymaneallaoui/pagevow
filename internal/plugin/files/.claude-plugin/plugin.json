@@ -1,0 +1,9 @@
+{
+  "name": "pagevow",
+  "version": "{{VERSION}}",
+  "description": "Browser tests written as goals, run by pagevow, with a Stop hook that blocks Claude while the suite fails.",
+  "author": {
+    "name": "pagevow"
+  },
+  "license": "MIT"
+}

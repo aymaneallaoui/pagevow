@@ -4,7 +4,7 @@ pagevow runs browser tests written as goals. A decision model drives a real Chro
 verifier checks the final page, and every test leaves PNG screenshots. A Claude Code plugin runs the suite after a
 coding task and sends failures back to Claude.
 
-Status: phase 5, nearly done. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
+Status: phase 5 is done and `v0.1.0` is released. The Linux path is verified live, while macOS and Windows are compiled and released but not yet run. `pagevow run` drives a headless Chromium with a decision backend, verifies each final page and writes
 screenshots. `pagevow start`, `stop`, `status` and `doctor` manage the local model servers, the local text helper and a
 browser. `pagevow hook stop` and `pagevow plugin` provide the Claude Code Stop hook and plugin. `pagevow install --browser`
 downloads a pinned Chrome for Testing, and `pagevow update` replaces the binary with the latest GitHub release. goreleaser

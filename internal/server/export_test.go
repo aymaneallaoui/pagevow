@@ -16,3 +16,8 @@ var MatchArgs = func(args []string, first, contains string) (firstIs, has bool) 
 	info := procInfo{Args: args}
 	return info.firstArgIs(first), info.hasArg(contains)
 }
+
+// GuardMessage exposes the guard message of one sample to the tests.
+var GuardMessage = func(g Guard, name string, sample GPU) string {
+	return g.breachMessage(name, sample)
+}

@@ -214,6 +214,32 @@ func TestGuardLeavesAHealthyChildAlone(t *testing.T) {
 	assert.Empty(t, found)
 }
 
+func TestGuardTreatsATemperatureOfZeroAsNoReading(t *testing.T) {
+	gpu := &scriptedGPU{readings: []gpuReading{{gpu: server.GPU{TotalMiB: 16384, FreeMiB: 4000, Unified: true}}}}
+	s := runSupervise(t, guardSpec(t, 8220), gpu)
+	rec := waitForRecord(t, s.store, s.spec.Name)
+	require.Eventually(t, func() bool { return gpu.sampled() >= 5 }, 5*time.Second, 10*time.Millisecond)
+	assert.True(t, server.ChildAlive(rec))
+
+	s.cancel()
+	assert.Zero(t, s.wait(t).code)
+	found, err := s.store.Tripped()
+	require.NoError(t, err)
+	assert.Empty(t, found)
+}
+
+func TestGuardStopsTheChildWhenFreeUnifiedMemoryFallsToTheLimit(t *testing.T) {
+	gpu := &scriptedGPU{readings: []gpuReading{{gpu: server.GPU{TotalMiB: 16384, FreeMiB: 1400, Unified: true}}}}
+	s := runSupervise(t, guardSpec(t, 8221), gpu)
+
+	result := s.wait(t)
+	assert.Equal(t, server.GuardExitCode, result.code)
+	found, err := s.store.Tripped()
+	require.NoError(t, err)
+	require.Len(t, found, 1)
+	assert.Equal(t, "guard: stopped model-8221: free memory 1400 MiB fell to the limit of 1500 MiB (free 1400 MiB)", found[0].Message)
+}
+
 func TestGuardIgnoresASingleFailedSample(t *testing.T) {
 	gpu := &scriptedGPU{readings: []gpuReading{
 		{err: errors.New("boom")},

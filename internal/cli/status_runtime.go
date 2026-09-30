@@ -87,7 +87,7 @@ func (a *app) collectRuntime(ctx context.Context, cfg config.Config, report *sta
 	go func() {
 		defer wg.Done()
 		if reading, err := gpu.Read(ctx); err == nil {
-			report.GPU = &gpuState{TotalMiB: reading.TotalMiB, UsedMiB: reading.UsedMiB, FreeMiB: reading.FreeMiB, TemperatureC: reading.TempC}
+			report.GPU = &gpuState{TotalMiB: reading.TotalMiB, UsedMiB: reading.UsedMiB, FreeMiB: reading.FreeMiB, TemperatureC: reading.TempC, Unified: reading.Unified}
 		}
 	}()
 	swept := sweepRecords(ctx, procs)
@@ -167,7 +167,7 @@ func probeHealth(ctx context.Context, procs Processes, targets []healthTarget) [
 	return states
 }
 
-func renderRuntime(out *ui.Printer, report statusReport) {
+func renderRuntime(out *ui.Printer, report statusReport, platform server.Platform) {
 	out.Blank()
 	out.Heading("Processes")
 	if len(report.Processes) == 0 {
@@ -195,15 +195,7 @@ func renderRuntime(out *ui.Printer, report statusReport) {
 		}
 	}
 	out.Blank()
-	out.Heading("GPU")
-	if report.GPU == nil {
-		out.Line("unknown (nvidia-smi is not available)")
-	} else {
-		out.Pairs([]ui.Pair{
-			{Key: "memory", Value: fmt.Sprintf("%d MiB free, %d MiB used, %d MiB total", report.GPU.FreeMiB, report.GPU.UsedMiB, report.GPU.TotalMiB)},
-			{Key: "temperature", Value: fmt.Sprintf("%d C", report.GPU.TemperatureC)},
-		})
-	}
+	renderMemory(out, report.GPU, platform)
 	out.Blank()
 	out.Heading("Versions")
 	versions := []ui.Pair{{Key: "pagevow", Value: report.Versions["pagevow"]}}
@@ -217,6 +209,30 @@ func renderRuntime(out *ui.Printer, report statusReport) {
 		for _, t := range report.Tripped {
 			out.Status(ui.Warn, "%s", t.Message)
 		}
+	}
+}
+
+func renderMemory(out *ui.Printer, gpu *gpuState, platform server.Platform) {
+	switch {
+	case gpu == nil && platform.MLX():
+		out.Heading("Memory")
+		out.Line("unknown (sysctl could not be read)")
+	case gpu == nil:
+		out.Heading("GPU")
+		out.Line("unknown (nvidia-smi is not available)")
+	case gpu.Unified:
+		out.Heading("Memory")
+		pairs := []ui.Pair{{Key: "unified", Value: fmt.Sprintf("%d MiB free, %d MiB used, %d MiB total", gpu.FreeMiB, gpu.UsedMiB, gpu.TotalMiB)}}
+		if gpu.TemperatureC != 0 {
+			pairs = append(pairs, ui.Pair{Key: "temperature", Value: fmt.Sprintf("%d C", gpu.TemperatureC)})
+		}
+		out.Pairs(pairs)
+	default:
+		out.Heading("GPU")
+		out.Pairs([]ui.Pair{
+			{Key: "memory", Value: fmt.Sprintf("%d MiB free, %d MiB used, %d MiB total", gpu.FreeMiB, gpu.UsedMiB, gpu.TotalMiB)},
+			{Key: "temperature", Value: fmt.Sprintf("%d C", gpu.TemperatureC)},
+		})
 	}
 }
 

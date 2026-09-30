@@ -290,17 +290,162 @@ func TestStartDoesNotStartARemoteCascadeLeg(t *testing.T) {
 }
 
 func TestStartOnAnotherSystemExplainsAndStillStartsTheBrowser(t *testing.T) {
+	for _, platform := range [][2]string{{"darwin", "amd64"}, {"windows", "amd64"}} {
+		t.Run(platform[0]+"/"+platform[1], func(t *testing.T) {
+			h := newHarness(t)
+			h.goos, h.arch = platform[0], platform[1]
+			h.mustRun("use", "local")
+
+			stdout, _, err := h.runSplit(context.Background(), "start")
+
+			require.Error(t, err)
+			assert.Equal(t, 2, cli.ExitCode(err))
+			assert.Contains(t, stdout, "local model serving is supported on Linux with an NVIDIA GPU and on macOS with Apple Silicon; use backend jev or custom on this system")
+			assert.Empty(t, h.procs.spawned)
+			assert.Len(t, h.managed.launched, 1)
+		})
+	}
+}
+
+func TestStartGatesTheLocalModelByPlatform(t *testing.T) {
+	linuxEnv := []string{"KEV_LOAD_IN_4BIT=0", "KEV_LOAD_IN_8BIT=0", "KEV_CUDA_GRAPHS=0", "KEV_MAX_BATCH=1", "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"}
+	tests := []struct {
+		goos, arch string
+		env        []string
+	}{
+		{"linux", "amd64", linuxEnv},
+		{"linux", "arm64", linuxEnv},
+		{"darwin", "arm64", []string{"KEV_BACKEND=mlx", "KEV_LOAD_IN_4BIT=0", "KEV_LOAD_IN_8BIT=0"}},
+		{"darwin", "amd64", nil},
+		{"windows", "amd64", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.goos+"/"+tt.arch, func(t *testing.T) {
+			h := newHarness(t)
+			h.kevCheckout()
+			h.goos, h.arch = tt.goos, tt.arch
+			h.mustRun("use", "local", "--model", "jev-4b", "--mode", "bf16")
+
+			stdout, stderr, err := h.runSplit(context.Background(), "start", "--no-browser")
+
+			if tt.env == nil {
+				require.Error(t, err)
+				assert.Contains(t, stdout, "use backend jev or custom on this system")
+				assert.Empty(t, h.procs.spawned)
+				return
+			}
+			require.NoError(t, err, stderr)
+			require.Len(t, h.procs.spawned, 1)
+			assert.Equal(t, tt.env, h.procs.spawned[0].Env)
+			assert.NotContains(t, stdout, "Apple Silicon")
+		})
+	}
+}
+
+func TestStartOnAppleSiliconRefusesNF4AndInt8WithTheMacOSMessage(t *testing.T) {
+	for _, mode := range []string{"nf4", "int8"} {
+		t.Run(mode, func(t *testing.T) {
+			h := newHarness(t)
+			h.kevCheckout()
+			h.appleSilicon()
+			h.setConfig(map[string]any{"backend": "local", "backends.local.mode": mode})
+
+			stdout, _, err := h.runSplit(context.Background(), "start")
+
+			require.Error(t, err)
+			assert.Equal(t, 2, cli.ExitCode(err))
+			assert.Contains(t, stdout, "local model: mode "+mode+" is not available on macOS: MLX serves bf16; choose --mode bf16 or, for models of 1B or less, default")
+			assert.Empty(t, h.procs.spawned)
+			assert.Empty(t, h.managed.launched)
+		})
+	}
+}
+
+func TestStartOnAppleSiliconAcceptsBF16AndDefault(t *testing.T) {
+	for _, tc := range []struct{ model, mode string }{{"jev-4b", "bf16"}, {"jev-08b-d1a", "bf16"}, {"jev-08b-d1a", "default"}} {
+		t.Run(tc.model+" "+tc.mode, func(t *testing.T) {
+			h := newHarness(t)
+			h.kevCheckout()
+			h.appleSilicon()
+			h.mustRun("use", "local", "--model", tc.model, "--mode", tc.mode)
+
+			_, stderr, err := h.runSplit(context.Background(), "start", "--no-browser")
+
+			require.NoError(t, err, stderr)
+			require.Len(t, h.procs.spawned, 1)
+			assert.Contains(t, h.procs.spawned[0].Env, "KEV_BACKEND=mlx")
+		})
+	}
+}
+
+func TestStartOnAppleSiliconStartsTheLargerMLXModelFirst(t *testing.T) {
 	h := newHarness(t)
-	h.goos = "darwin"
-	h.mustRun("use", "local")
+	h.kevCheckout()
+	h.appleSilicon()
+	h.mustRun("use", "cascade", "--primary-model", "jev-08b-d1a", "--primary-mode", "bf16", "--verifier-model", "jev-4b", "--verifier-mode", "bf16")
+
+	_, stderr, err := h.runSplit(context.Background(), "start", "--no-browser")
+
+	require.NoError(t, err, stderr)
+	assert.Equal(t, []string{"spawn model-8010", "wait model-8010", "spawn model-8009", "wait model-8009"}, h.procs.eventLog())
+}
+
+func TestStartOnAppleSiliconRefusesDefaultForA4BModelWithoutNamingQuantisedModes(t *testing.T) {
+	h := newHarness(t)
+	h.kevCheckout()
+	h.appleSilicon()
+	h.mustRun("use", "local", "--model", "jev-4b", "--mode", "default")
 
 	stdout, _, err := h.runSplit(context.Background(), "start")
 
 	require.Error(t, err)
 	assert.Equal(t, 2, cli.ExitCode(err))
-	assert.Contains(t, stdout, "local model serving is supported on Linux with an NVIDIA GPU; use backend jev or custom on this system")
+	assert.Contains(t, stdout, "local model: mode default is only allowed for models of 1B or less on macOS; choose bf16")
+	assert.NotContains(t, stdout, "nf4")
+	assert.NotContains(t, stdout, "int8")
 	assert.Empty(t, h.procs.spawned)
-	assert.Len(t, h.managed.launched, 1)
+}
+
+func TestStartOnAppleSiliconSumsTheMacOSPeaksWithTheTextHelper(t *testing.T) {
+	h := newHarness(t)
+	h.kevCheckout()
+	h.appleSilicon()
+	h.mustRun("use", "local", "--model", "jev-4b", "--mode", "bf16")
+	h.setConfig(map[string]any{"text_helper.url": "http://127.0.0.1:8081/v1", "text_helper.local.enabled": true})
+	h.gpu.reading.FreeMiB = 15359
+
+	stdout, _, err := h.runSplit(context.Background(), "start", "--no-browser")
+
+	require.Error(t, err)
+	assert.Contains(t, stdout, "needed 15.0 GiB (model peaks 13.5 GiB plus margin 1.5 GiB); quit other programs to free memory, or choose a model of 1B or less")
+	assert.NotContains(t, stdout, "--mode nf4")
+	assert.Empty(t, h.procs.spawned)
+
+	h.gpu.reading.FreeMiB = 15360
+	_, stderr, err := h.runSplit(context.Background(), "start", "--no-browser")
+	require.NoError(t, err, stderr)
+	assert.Len(t, h.procs.spawned, 2)
+}
+
+func TestStartOnAppleSiliconNeedsSixteenGiBForAModelAbove1B(t *testing.T) {
+	h := newHarness(t)
+	kev := h.kevCheckout()
+	h.appleSilicon()
+	h.gpu.reading = server.GPU{TotalMiB: 8192, UsedMiB: 1192, FreeMiB: 7000, Unified: true}
+	require.NoError(t, os.MkdirAll(filepath.Join(kev, "runs", "mystery"), 0o750))
+
+	for _, model := range []string{"jev-4b", "mystery"} {
+		h.mustRun("use", "local", "--model", model, "--mode", "bf16")
+		stdout, _, err := h.runSplit(context.Background(), "start", "--no-browser")
+		require.Error(t, err, model)
+		assert.Contains(t, stdout, "not enough memory for a model above 1B: this Mac has 8.0 GiB of memory in total and a model above 1B needs at least 16 GiB; choose a model of 1B or less, or use backend jev or custom", model)
+		assert.Empty(t, h.procs.spawned, model)
+	}
+
+	h.mustRun("use", "local", "--model", "jev-08b-d1a", "--mode", "default")
+	_, stderr, err := h.runSplit(context.Background(), "start", "--no-browser")
+	require.NoError(t, err, stderr)
+	assert.Len(t, h.procs.spawned, 1)
 }
 
 func TestStartStopsWhatItStartedWhenTheProcessDoesNotBecomeReadyAndShowsTheLogTail(t *testing.T) {

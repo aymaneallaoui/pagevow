@@ -1,0 +1,151 @@
+name: mlx-live
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mlx:
+    name: mlx (macos-latest)
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      CHECKPOINT: jaredpalmer/kev-0.8b
+      REVISION: 9a45d25eb2ab761841196625383fa1dff0e56c1e
+    steps:
+      - name: paths
+        run: |
+          {
+            echo "KEV_DIR=${RUNNER_TEMP}/kev"
+            echo "RUN_DIR=${RUNNER_TEMP}/kev-0.8b"
+            echo "CONFIG=${RUNNER_TEMP}/pagevow.yaml"
+          } >> "${GITHUB_ENV}"
+
+      - name: probe the memory readers
+        run: |
+          uname -a
+          sysctl hw.memsize hw.pagesize vm.page_free_count vm.page_speculative_count vm.page_purgeable_count || true
+          sysctl iogpu.wired_limit_mb || true
+          echo "sysctl -n as pagevow calls it:"
+          /usr/sbin/sysctl -n hw.memsize hw.pagesize vm.page_free_count vm.page_speculative_count vm.page_purgeable_count
+          vm_stat
+          memory_pressure | tail -n 1 || true
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+
+      - name: build pagevow
+        run: go build -o bin/pagevow ./cmd/pagevow
+
+      - name: clone kev
+        run: |
+          git clone --depth 1 https://github.com/jaredpalmer/kev "${KEV_DIR}"
+          git -C "${KEV_DIR}" log -1 --format='kev %H %cs'
+
+      - name: install the kev serve extra
+        run: |
+          cd "${KEV_DIR}"
+          uv sync --extra serve
+          uv run --extra serve python -c "import mlx.core as mx; print('metal', mx.metal.is_available()); print(mx.device_info() if hasattr(mx, 'device_info') else mx.metal.device_info())" || true
+
+      - name: download the public 0.8B checkpoint and its base model
+        run: |
+          cd "${KEV_DIR}"
+          uv run --extra serve python - <<'PY'
+          import json, os, pathlib
+          from huggingface_hub import snapshot_download
+          run_dir = os.environ["RUN_DIR"]
+          snapshot_download(os.environ["CHECKPOINT"], revision=os.environ["REVISION"], local_dir=run_dir)
+          base = json.loads(pathlib.Path(run_dir, "adapter_config.json").read_text())["base_model_name_or_path"]
+          print("base model", base)
+          snapshot_download(base)
+          PY
+          ls -la "${RUN_DIR}"
+
+      - name: write the config
+        run: |
+          cat > "${CONFIG}" <<EOF
+          server:
+            kev_dir: ${KEV_DIR}
+            start_timeout_seconds: 900
+          EOF
+          cat "${CONFIG}"
+
+      - name: use local
+        run: bin/pagevow --config "${CONFIG}" use local --model "${RUN_DIR}" --mode default
+
+      - name: doctor
+        run: |
+          code=0
+          bin/pagevow --config "${CONFIG}" doctor || code=$?
+          echo "doctor exit code: ${code}"
+
+      - name: free the file cache before the memory check
+        run: |
+          sudo purge
+          /usr/sbin/sysctl -n hw.memsize hw.pagesize vm.page_free_count vm.page_speculative_count vm.page_purgeable_count
+
+      - name: start
+        run: bin/pagevow --config "${CONFIG}" start --no-browser
+
+      - name: the model server runs through MLX
+        run: |
+          curl -sf http://127.0.0.1:8009/v1/models | tee "${RUNNER_TEMP}/models.json"
+          echo
+          jq -e '.models[0].backend == "mlx"' "${RUNNER_TEMP}/models.json"
+
+      - name: status
+        run: bin/pagevow --config "${CONFIG}" status --json
+
+      - name: stop
+        run: bin/pagevow --config "${CONFIG}" stop
+
+      - name: no model server is left
+        run: |
+          sleep 2
+          ! pgrep -fl kev.serve
+
+      - name: kill the supervisor and look for an orphan
+        run: |
+          bin/pagevow --config "${CONFIG}" start --no-browser
+          supervisor="$(bin/pagevow --config "${CONFIG}" status --json | jq -r '.processes[] | select(.name == "model-8009") | .pid')"
+          echo "supervisor pid: ${supervisor}"
+          test -n "${supervisor}"
+          kill -9 "${supervisor}"
+          sleep 5
+          echo "kev.serve after the supervisor was killed:"
+          pgrep -fl kev.serve || echo "none"
+          code=0
+          bin/pagevow --config "${CONFIG}" stop || code=$?
+          echo "stop exit code: ${code}"
+          bin/pagevow --config "${CONFIG}" status || true
+          sleep 2
+          if pgrep -fl kev.serve; then
+            echo "result: kev.serve survived the supervisor and pagevow stop"
+          else
+            echo "result: no kev.serve is left"
+          fi
+
+      - name: log of the model server
+        if: always()
+        run: cat "${HOME}/Library/Caches/pagevow/logs/model-8009.log" || true
+
+      - name: clean up
+        if: always()
+        run: |
+          bin/pagevow --config "${CONFIG}" stop || true
+          pkill -f kev.serve || true

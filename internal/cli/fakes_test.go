@@ -303,6 +303,12 @@ func (h *harness) kevCheckout() string {
 	return kev
 }
 
+// appleSilicon turns the harness into a Mac with Apple Silicon and 32 GiB of unified memory.
+func (h *harness) appleSilicon() {
+	h.goos, h.arch = "darwin", "arm64"
+	h.gpu.reading, h.gpu.err = server.GPU{TotalMiB: 32768, UsedMiB: 12768, FreeMiB: 20000, Unified: true}, nil
+}
+
 func (h *harness) writeBrokenConfig() {
 	h.t.Helper()
 	require.NoError(h.t, os.MkdirAll(filepath.Dir(h.configPath), 0o750))

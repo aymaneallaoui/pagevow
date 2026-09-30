@@ -27,12 +27,13 @@ var (
 	ErrInsufficientMemory = errors.New("not enough free GPU memory")
 )
 
-// GPU is one reading of the first GPU, in MiB and degrees Celsius.
+// GPU is one reading of the first GPU, in MiB and degrees Celsius; on a Mac it is the unified memory and TempC is 0.
 type GPU struct {
 	TotalMiB int
 	UsedMiB  int
 	FreeMiB  int
 	TempC    int
+	Unified  bool
 }
 
 // GPUSource reads the GPU; the supervisor and the CLI take it as an interface.

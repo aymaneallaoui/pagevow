@@ -54,10 +54,11 @@ type healthState struct {
 }
 
 type gpuState struct {
-	TotalMiB     int `json:"total_mib"`
-	UsedMiB      int `json:"used_mib"`
-	FreeMiB      int `json:"free_mib"`
-	TemperatureC int `json:"temperature_c"`
+	TotalMiB     int  `json:"total_mib"`
+	UsedMiB      int  `json:"used_mib"`
+	FreeMiB      int  `json:"free_mib"`
+	TemperatureC int  `json:"temperature_c"`
+	Unified      bool `json:"unified"`
 }
 
 type trippedState struct {
@@ -94,12 +95,16 @@ func (a *app) newStatusCmd() *cobra.Command {
 			if asJSON {
 				return writeJSON(cmd, report)
 			}
+			platform, err := a.platformOf()
+			if err != nil {
+				return err
+			}
 			out, err := a.printer(cmd.OutOrStdout())
 			if err != nil {
 				return err
 			}
 			renderStatus(out, cfg, report, resolver)
-			renderRuntime(out, report)
+			renderRuntime(out, report, platform)
 			return out.Err()
 		},
 	}

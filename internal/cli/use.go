@@ -12,6 +12,7 @@ import (
 
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
+	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 )
 
@@ -96,6 +97,9 @@ func (a *app) runUse(cmd *cobra.Command, name string) error {
 		return err
 	}
 	if err := a.fillRequired(cmd, name, spec, cfg, updates); err != nil {
+		return err
+	}
+	if err := a.refuseUnavailableModes(cmd, name, spec); err != nil {
 		return err
 	}
 	if err := config.Save(path, updates); err != nil {
@@ -210,6 +214,40 @@ func (a *app) fillRequired(cmd *cobra.Command, name string, spec backendSpec, cf
 			return err
 		}
 		updates[req.key] = value
+	}
+	return nil
+}
+
+// refuseUnavailableModes refuses, before the config file changes, a mode that this platform cannot serve for a model server pagevow would start.
+func (a *app) refuseUnavailableModes(cmd *cobra.Command, name string, spec backendSpec) error {
+	platform, err := a.platformOf()
+	if err != nil {
+		return err
+	}
+	if !platform.LocalServing() {
+		return nil
+	}
+	flags := map[string]*pflag.Flag{}
+	for flagName, key := range spec.flagKeys {
+		if flag := cmd.Flags().Lookup(flagName); flag != nil && flag.Changed {
+			flags[key] = flag
+		}
+	}
+	cfg, _, err := a.loadConfigWithFlags(flags)
+	if err != nil {
+		return err
+	}
+	cfg.Backend = name
+	legs, _ := modelLegs(cfg)
+	for _, leg := range legs {
+		err := server.CheckMode(platform, leg.mode)
+		switch {
+		case err == nil:
+		case name == config.BackendCascade:
+			return fmt.Errorf("%s: %w", leg.label, err)
+		default:
+			return err
+		}
 	}
 	return nil
 }

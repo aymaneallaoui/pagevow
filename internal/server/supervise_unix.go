@@ -223,8 +223,8 @@ func (s *supervisor) watch(ctx context.Context, gpu GPUSource, breach chan<- str
 			}
 		default:
 			failed = 0
-			if reason := s.spec.Guard.breach(sample); reason != "" {
-				breach <- fmt.Sprintf("guard: stopped %s: %s (temp %d C, free %d MiB)", s.spec.Name, reason, sample.TempC, sample.FreeMiB)
+			if message := s.spec.Guard.breachMessage(s.spec.Name, sample); message != "" {
+				breach <- message
 				return
 			}
 		}
@@ -234,21 +234,4 @@ func (s *supervisor) watch(ctx context.Context, gpu GPUSource, breach chan<- str
 		case <-ticker.C:
 		}
 	}
-}
-
-func (g Guard) interval() time.Duration {
-	if g.IntervalMS <= 0 {
-		return defaultGuardInterval
-	}
-	return time.Duration(g.IntervalMS) * time.Millisecond
-}
-
-func (g Guard) breach(sample GPU) string {
-	if g.MaxTempC > 0 && sample.TempC >= g.MaxTempC {
-		return fmt.Sprintf("temperature %d C reached the limit of %d C", sample.TempC, g.MaxTempC)
-	}
-	if sample.FreeMiB <= g.MinFreeMiB {
-		return fmt.Sprintf("free GPU memory %d MiB fell to the limit of %d MiB", sample.FreeMiB, g.MinFreeMiB)
-	}
-	return ""
 }

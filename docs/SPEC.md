@@ -487,6 +487,7 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Other systems | macOS and Windows refuse a local model with a message that names `jev` and `custom`; the browser still starts |
 | Spec files | a spec with an environment entry whose name ends in `_KEY`, `_TOKEN` or `_SECRET` is rejected |
 | Agent skills | `.claude/skills/` and `CLAUDE.md` guide coding agents and reviews; they are not part of the binary or of release archives |
+| Cascade live check | verified on 2026-09-30 on a 16 GiB GPU: `pagevow start` launched jev-4b nf4 on 8009 and jev-08b-d1a default on 8010, largest first, then the text helper and the browser; the demo suite ran with the verifier consulted. With the local text helper on GPU layers the guard refused (14.0 GiB peaks plus 1.5 GiB margin against 14.4 GiB free), so the check ran with `text_helper.local.gpu_layers: 0` |
 
 ### Decisions of phase 4
 
@@ -546,5 +547,4 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 1. TypeSafe terms on training models from API output decide whether the local checkpoints may be distributed.
    Until checked, pagevow ships no model and `install --model` takes a path or a private Hugging Face repository.
 2. Windows local model serving is not planned; Windows uses `jev` or `custom`.
-3. Cascade on local models has not run through `pagevow start` on a real GPU; only backend `local` with `nf4` has.
-4. Windows and macOS code paths compile but have not run on those systems.
+3. Windows and macOS code paths compile but have not run on those systems; `install --browser` and `update` were verified live on Linux only.

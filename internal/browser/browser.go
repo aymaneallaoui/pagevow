@@ -13,6 +13,7 @@ import (
 	cdpbrowser "github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
@@ -185,6 +186,12 @@ func setDownloadBehavior(ctx context.Context, dir string) error {
 }
 
 func (s *Session) openPage(ctx context.Context, url string) error {
+	if err := s.call(ctx, network.Enable().Do); err != nil {
+		return fmt.Errorf("enable network: %w", err)
+	}
+	if err := s.call(ctx, network.SetCacheDisabled(true).Do); err != nil {
+		return fmt.Errorf("disable cache: %w", err)
+	}
 	metrics := emulation.SetDeviceMetricsOverride(int64(s.viewport.Width), int64(s.viewport.Height), 1, false)
 	err := s.call(ctx, metrics.Do)
 	if err != nil {

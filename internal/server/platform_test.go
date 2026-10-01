@@ -113,3 +113,10 @@ func TestFitsFloorNeedsSixteenGiBInTotal(t *testing.T) {
 	require.ErrorIs(t, err, server.ErrMemoryFloor)
 	assert.Contains(t, err.Error(), "this Mac has 7.0 GiB of memory in total")
 }
+
+func TestFitsFloorAcceptsExactlyTheFloorAndRefusesOneMiBLess(t *testing.T) {
+	floor := server.MLXFloorGiB * 1024
+
+	assert.NoError(t, server.FitsFloor(server.GPU{TotalMiB: floor}))
+	assert.ErrorIs(t, server.FitsFloor(server.GPU{TotalMiB: floor - 1}), server.ErrMemoryFloor)
+}

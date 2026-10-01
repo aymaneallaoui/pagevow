@@ -258,11 +258,14 @@ launch are summed, the local text helper counts 2.0 GiB when it uses GPU layers,
 the sum does not fit, nothing is launched.
 
 Unified memory on macOS: on Apple Silicon the reader runs `/usr/sbin/sysctl -n hw.memsize hw.pagesize
-vm.page_free_count vm.page_speculative_count vm.page_purgeable_count` once. Total is `hw.memsize`, free is the free,
-speculative and purgeable pages times the page size, used is total minus free, and the temperature is 0 (no
-unprivileged source). `status` prints a `Memory` section without a temperature and keeps the JSON keys of `gpu`
-(`total_mib`, `used_mib`, `free_mib`, `temperature_c`) with `unified: true`; `doctor` reports `unified memory: N MiB
-free of M MiB` under the same check ids. The peaks on macOS are estimates until they are measured on a real Mac:
+vm.page_free_count vm.page_speculative_count vm.page_purgeable_count vm.page_pageable_external_count` once. Total is
+`hw.memsize`. Free is what macOS can reclaim: the free, speculative, purgeable and file-backed (pageable external)
+pages times the page size, capped at the total. Used is total minus free, and the temperature is 0 (no unprivileged
+source). `status` prints a `Memory` section without a temperature and keeps the JSON keys of `gpu` (`total_mib`,
+`used_mib`, `free_mib`, `temperature_c`) with `unified: true`; it adds `gpu.components` (`free_mib`,
+`speculative_mib`, `purgeable_mib`, `file_backed_mib`, each rounded down) so the formula can be checked against a real
+Mac. `doctor` reports `unified memory: N MiB free of M MiB` under the same check ids. The peaks on macOS are
+estimates until they are measured on a real Mac:
 
 | Model on MLX | Estimated peak |
 |---|---|
@@ -277,8 +280,10 @@ the total.
 GPU guard: while a model runs, its supervisor samples the GPU once per second and stops the model when the
 temperature reaches `server.gpu_max_temp_c` or free memory falls to `server.gpu_min_free_mib`. It exits with code 99
 and leaves the reason in the log and in `<state dir>/<name>.tripped`, which `status` and `doctor` show. Five failed
-samples in a row end the watch and leave the model running. A temperature of 0 is no reading and never trips the guard,
-so on macOS only free memory is watched.
+samples in a row end the watch and leave the model running. A temperature of 0 is no reading and never trips the guard.
+The free memory limit does not apply to unified memory until the reclaimable share is measured on a real Mac: the
+supervisor logs `guard: free memory guard is off on unified memory until measured` once, so on macOS the guard
+watches nothing yet.
 
 ## 10. Stop hook
 
@@ -575,10 +580,12 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Platform gate | a local model (backend `local`, the loopback legs of `cascade`) is allowed on Linux and on darwin/arm64; darwin/amd64 and Windows refuse it with `local model serving is supported on Linux with an NVIDIA GPU and on macOS with Apple Silicon; use backend jev or custom on this system`; the local text helper keeps its own rule (refused on Windows only) |
 | Backend | kev's own MLX path (`kev.serve` with `KEV_BACKEND=mlx`) serves the model; `mlx_lm.server` cannot serve the pointer head and is not used |
 | Modes | `nf4` and `int8` are refused on macOS by `use`, `start` and `doctor`; `bf16` and `default` are accepted and `default` keeps the 1B rule; on macOS `ModelCommand` never sets `KEV_LOAD_IN_4BIT` or `KEV_LOAD_IN_8BIT` to 1 |
-| Memory reader | `server.UnifiedMemory` (darwin only) runs one `sysctl -n` call; the parser is untagged and tested on every system; `status` and `doctor` say memory instead of GPU and omit the temperature |
+| Memory reader | `server.UnifiedMemory` (darwin only) runs one `sysctl -n` call; the parser is untagged and tested on every system; free is the free, speculative, purgeable and file-backed pages (`vm.page_pageable_external_count`), and `status --json` shows the four parts in `gpu.components`; `status` and `doctor` say memory instead of GPU and omit the temperature |
+| Guard on a Mac | the `server.gpu_min_free_mib` limit is not applied to unified memory and the supervisor logs that once; the temperature limit stays off because the reading is 0; the "not available" line names the memory reader instead of `nvidia-smi` on macOS |
+| Mode and port review | `use` plans every loopback leg and refuses to save when a leg cannot be planned (a URL without a port, two legs on one port) or when any leg has a mode that macOS cannot serve, naming every bad leg in one error; `doctor` offers one command for both cascade legs when both modes are unavailable |
 | Peaks | 11.5 GiB above 1B (and for an unknown size), 3.0 GiB for 1B or less, the text helper 2.0 GiB, margin 1.5 GiB; estimates until measured on a real Mac |
 | Floor | a model above 1B needs 16 GiB of memory in total |
-| Workflow | `.github/workflows/mlx-live.yml` (`workflow_dispatch`, `contents: read`, `macos-latest`, 30 minutes) probes `sysctl` and `vm_stat`, clones kev, runs `uv sync --extra serve`, starts the public checkpoint in mode `default`, checks `backend == "mlx"` on `/v1/models`, stops it and checks that no `kev.serve` is left, then kills the supervisor with SIGKILL and reports whether `kev.serve` survives `pagevow stop` (informational; recorded here after the first run) |
+| Workflow | `.github/workflows/mlx-live.yml` (`workflow_dispatch`, `contents: read`, `macos-latest`, 30 minutes) probes `sysctl` and `vm_stat`, clones kev at a pinned commit, runs `uv sync --extra serve`, starts the public checkpoint in mode `default`, checks `backend == "mlx"` on `/v1/models`, prints `status --json` memory before `start` and after five `/v1/systemone` requests so the free memory formula can be compared with real state, stops it and checks that no `kev.serve` is left, then kills the supervisor with SIGKILL and fails when `kev.serve` survives `pagevow stop` |
 | Public checkpoint | `jaredpalmer/kev-0.8b` at revision `9a45d25eb2ab761841196625383fa1dff0e56c1e` is used only in that workflow; pagevow ships no model |
 
 ## 17. Open questions
@@ -588,6 +595,8 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 2. Windows local model serving is not planned; Windows uses `jev` or `custom`.
 3. Windows and macOS code paths compile, and the offline test suite runs on both in CI (`ci.yml`, `test` job). `install --browser` and
    `update` were verified live on Linux only; the manual `live` workflow (`live.yml`) runs them on Linux, macOS and Windows.
-4. The macOS peaks and the free memory formula (free, speculative and purgeable pages) are not measured yet. macOS keeps
-   file pages as inactive memory, which this formula does not count as free, so a busy Mac may be refused although it
-   could run the model; the first `mlx-live` run and a real Mac decide whether the formula or the guard limit change.
+4. The macOS peaks and the free memory formula are not measured yet. Free memory counts the free, speculative,
+   purgeable and file-backed pages, which is what macOS can reclaim, but how much of it a model load really gets is
+   unknown, so the `server.gpu_min_free_mib` guard is off on unified memory until measured. The `mlx-live` workflow
+   prints the components before `start` and after a few requests; the first run on a real Mac decides the formula, the
+   peaks and whether the guard limit comes back.

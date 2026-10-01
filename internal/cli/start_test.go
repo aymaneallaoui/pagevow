@@ -698,14 +698,14 @@ func TestStartWithNothingToStartSaysSo(t *testing.T) {
 func TestStartRefusesTwoModelServersOnOnePortAndAUrlWithoutAPort(t *testing.T) {
 	h := newHarness(t)
 	h.kevCheckout()
-	h.mustRun("use", "cascade", "--primary", "http://127.0.0.1:8009", "--verifier", "http://127.0.0.1:8009")
+	h.setConfig(map[string]any{"backend": "cascade", "backends.cascade.primary": "http://127.0.0.1:8009", "backends.cascade.verifier": "http://127.0.0.1:8009"})
 
 	stdout, _, err := h.runSplit(context.Background(), "start", "--no-browser")
 	require.Error(t, err)
 	assert.Contains(t, stdout, "port 8009 is also used by the other model server")
 	assert.Empty(t, h.procs.spawned)
 
-	h.mustRun("use", "local", "--url", "http://127.0.0.1")
+	h.setConfig(map[string]any{"backend": "local", "backends.local.url": "http://127.0.0.1"})
 	stdout, _, err = h.runSplit(context.Background(), "start", "--no-browser")
 	require.Error(t, err)
 	assert.Contains(t, stdout, "needs an explicit port")

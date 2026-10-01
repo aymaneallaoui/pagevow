@@ -34,6 +34,15 @@ type GPU struct {
 	FreeMiB  int
 	TempC    int
 	Unified  bool
+	Parts    MemoryParts
+}
+
+// MemoryParts are the page counts, each rounded down to MiB, that add up to the free unified memory of a Mac; they are zero on other readings.
+type MemoryParts struct {
+	FreeMiB        int
+	SpeculativeMiB int
+	PurgeableMiB   int
+	FileBackedMiB  int
 }
 
 // GPUSource reads the GPU; the supervisor and the CLI take it as an interface.

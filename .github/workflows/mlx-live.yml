@@ -15,6 +15,7 @@ jobs:
       run:
         shell: bash
     env:
+      KEV_COMMIT: d1faa4142bbcbc4849c548fcd67cd99f7ff7c056
       CHECKPOINT: jaredpalmer/kev-0.8b
       REVISION: 9a45d25eb2ab761841196625383fa1dff0e56c1e
     steps:
@@ -29,10 +30,10 @@ jobs:
       - name: probe the memory readers
         run: |
           uname -a
-          sysctl hw.memsize hw.pagesize vm.page_free_count vm.page_speculative_count vm.page_purgeable_count || true
+          sysctl hw.memsize hw.pagesize vm.page_free_count vm.page_speculative_count vm.page_purgeable_count vm.page_pageable_external_count || true
           sysctl iogpu.wired_limit_mb || true
           echo "sysctl -n as pagevow calls it:"
-          /usr/sbin/sysctl -n hw.memsize hw.pagesize vm.page_free_count vm.page_speculative_count vm.page_purgeable_count
+          /usr/sbin/sysctl -n hw.memsize hw.pagesize vm.page_free_count vm.page_speculative_count vm.page_purgeable_count vm.page_pageable_external_count
           vm_stat
           memory_pressure | tail -n 1 || true
 
@@ -53,7 +54,10 @@ jobs:
 
       - name: clone kev
         run: |
-          git clone --depth 1 https://github.com/jaredpalmer/kev "${KEV_DIR}"
+          git init "${KEV_DIR}"
+          git -C "${KEV_DIR}" remote add origin https://github.com/jaredpalmer/kev
+          git -C "${KEV_DIR}" fetch --depth 1 origin "${KEV_COMMIT}"
+          git -C "${KEV_DIR}" checkout "${KEV_COMMIT}"
           git -C "${KEV_DIR}" log -1 --format='kev %H %cs'
 
       - name: install the kev serve extra
@@ -94,10 +98,9 @@ jobs:
           bin/pagevow --config "${CONFIG}" doctor || code=$?
           echo "doctor exit code: ${code}"
 
-      - name: free the file cache before the memory check
+      - name: memory before start
         run: |
-          sudo purge
-          /usr/sbin/sysctl -n hw.memsize hw.pagesize vm.page_free_count vm.page_speculative_count vm.page_purgeable_count
+          bin/pagevow --config "${CONFIG}" status --json | jq '{memory: .gpu}'
 
       - name: start
         run: bin/pagevow --config "${CONFIG}" start --no-browser
@@ -107,6 +110,18 @@ jobs:
           curl -sf http://127.0.0.1:8009/v1/models | tee "${RUNNER_TEMP}/models.json"
           echo
           jq -e '.models[0].backend == "mlx"' "${RUNNER_TEMP}/models.json"
+
+      - name: memory after a few requests
+        run: |
+          for i in 1 2 3 4 5; do
+            curl -s -o /dev/null -w "systemone request ${i}: %{http_code} in %{time_total}s\n" \
+              -X POST http://127.0.0.1:8009/v1/systemone \
+              -H 'Authorization: Bearer local' -H 'Content-Type: application/json' \
+              --data-binary @internal/backend/testdata/request_bytes/long_label_and_unicode.json || true
+          done
+          bin/pagevow --config "${CONFIG}" status --json | jq '{memory: .gpu}'
+          vm_stat
+          memory_pressure | tail -n 1 || true
 
       - name: status
         run: bin/pagevow --config "${CONFIG}" status --json
@@ -135,10 +150,10 @@ jobs:
           bin/pagevow --config "${CONFIG}" status || true
           sleep 2
           if pgrep -fl kev.serve; then
-            echo "result: kev.serve survived the supervisor and pagevow stop"
-          else
-            echo "result: no kev.serve is left"
+            echo "kev.serve survived the supervisor and pagevow stop"
+            exit 1
           fi
+          echo "no kev.serve is left"
 
       - name: log of the model server
         if: always()

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/server"
@@ -43,12 +44,22 @@ func (l modelLeg) bf16Fix(backend string) string {
 	return fmt.Sprintf("pagevow use %s %s bf16", backend, l.modeFlag)
 }
 
+// bf16FixAll is the one command that switches every leg of legs to mode bf16.
+func bf16FixAll(backend string, legs []modelLeg) string {
+	flags := make([]string, 0, len(legs))
+	for _, leg := range legs {
+		flags = append(flags, leg.modeFlag+" bf16")
+	}
+	slices.Sort(flags)
+	return fmt.Sprintf("pagevow use %s %s", backend, strings.Join(flags, " "))
+}
+
 func (l modelLeg) recordName() string { return server.RecordName(server.KindModel, l.port) }
 
 func (l modelLeg) readyURL() (string, error) { return server.ModelsURL(l.url) }
 
-// modelLegs lists the model servers the active backend needs on this machine, largest peak first.
-func modelLegs(cfg config.Config) ([]modelLeg, error) {
+// loopbackLegs lists the model servers of the active backend that pagevow would start, in the order of the configuration.
+func loopbackLegs(cfg config.Config) []modelLeg {
 	var candidates []modelLeg
 	switch cfg.Backend {
 	case config.BackendLocal:
@@ -60,11 +71,13 @@ func modelLegs(cfg config.Config) ([]modelLeg, error) {
 			modelLeg{label: "cascade primary", url: c.Primary, model: c.PrimaryModel, mode: c.PrimaryMode, modeFlag: "--primary-mode"},
 			modelLeg{label: "cascade verifier", url: c.Verifier, model: c.VerifierModel, mode: c.VerifierMode, modeFlag: "--verifier-mode"})
 	}
+	return slices.DeleteFunc(candidates, func(leg modelLeg) bool { return !config.IsLoopbackURL(leg.url) })
+}
+
+// modelLegs lists the model servers the active backend needs on this machine, largest peak first.
+func modelLegs(cfg config.Config) ([]modelLeg, error) {
 	var legs []modelLeg
-	for _, leg := range candidates {
-		if !config.IsLoopbackURL(leg.url) {
-			continue
-		}
+	for _, leg := range loopbackLegs(cfg) {
 		port, err := portOfURL(leg.url)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", leg.label, err)

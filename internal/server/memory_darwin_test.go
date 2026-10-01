@@ -30,7 +30,10 @@ func TestUnifiedMemoryAsksSysctlOnceWithADeadline(t *testing.T) {
 	assert.Equal(t, "/usr/sbin/sysctl", gotName)
 	assert.Equal(t, server.UnifiedMemoryArgs(), gotArgs)
 	assert.WithinDuration(t, time.Now().Add(3*time.Second), deadline, time.Second)
-	assert.Equal(t, server.GPU{TotalMiB: 16384, UsedMiB: 15084, FreeMiB: 1300, Unified: true}, got)
+	assert.Equal(t, server.GPU{
+		TotalMiB: 16384, UsedMiB: 14684, FreeMiB: 1700, Unified: true,
+		Parts: server.MemoryParts{FreeMiB: 1000, SpeculativeMiB: 200, PurgeableMiB: 100, FileBackedMiB: 400},
+	}, got)
 }
 
 func TestUnifiedMemoryWrapsARunnerFailure(t *testing.T) {

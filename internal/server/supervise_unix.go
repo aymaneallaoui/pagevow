@@ -205,6 +205,7 @@ func (s *supervisor) watch(ctx context.Context, gpu GPUSource, breach chan<- str
 	ticker := time.NewTicker(s.spec.Guard.interval())
 	defer ticker.Stop()
 	failed := 0
+	noted := false
 	for {
 		sampleCtx, cancel := context.WithTimeout(ctx, sampleTimeout)
 		sample, err := gpu.Read(sampleCtx)
@@ -213,7 +214,7 @@ func (s *supervisor) watch(ctx context.Context, gpu GPUSource, breach chan<- str
 		case ctx.Err() != nil:
 			return
 		case errors.Is(err, ErrNoGPUTool):
-			s.logf("guard: nvidia-smi not found; the GPU watch for %s is off", s.spec.Name)
+			s.logf("%s", noReaderMessage(runtime.GOOS, s.spec.Name))
 			return
 		case err != nil:
 			failed++
@@ -223,6 +224,10 @@ func (s *supervisor) watch(ctx context.Context, gpu GPUSource, breach chan<- str
 			}
 		default:
 			failed = 0
+			if sample.Unified && !noted {
+				s.logf("%s", unifiedGuardNote)
+				noted = true
+			}
 			if message := s.spec.Guard.breachMessage(s.spec.Name, sample); message != "" {
 				breach <- message
 				return

@@ -59,6 +59,15 @@ type gpuState struct {
 	FreeMiB      int  `json:"free_mib"`
 	TemperatureC int  `json:"temperature_c"`
 	Unified      bool `json:"unified"`
+
+	Components *memoryComponents `json:"components,omitempty"`
+}
+
+type memoryComponents struct {
+	FreeMiB        int `json:"free_mib"`
+	SpeculativeMiB int `json:"speculative_mib"`
+	PurgeableMiB   int `json:"purgeable_mib"`
+	FileBackedMiB  int `json:"file_backed_mib"`
 }
 
 type trippedState struct {

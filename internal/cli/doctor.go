@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -304,7 +305,7 @@ func (d *doctor) localServing() {
 	var peaks []float64
 	large := false
 	for _, leg := range legs {
-		d.checkLeg(kevDir, leg)
+		d.checkLeg(kevDir, leg, d.bf16Fix(legs, leg))
 		if _, running := d.live[leg.recordName()]; !running {
 			peak, legLarge := leg.memory(d.platform, kevDir)
 			peaks = append(peaks, peak)
@@ -330,7 +331,15 @@ func (d *doctor) kevCheckout(kevDir string) bool {
 	return true
 }
 
-func (d *doctor) checkLeg(kevDir string, leg modelLeg) {
+// bf16Fix is the command that moves leg to bf16, or every leg at once when each of them has a mode that this platform cannot serve.
+func (d *doctor) bf16Fix(legs []modelLeg, leg modelLeg) string {
+	if len(legs) > 1 && !slices.ContainsFunc(legs, func(l modelLeg) bool { return server.CheckMode(d.platform, l.mode) == nil }) {
+		return bf16FixAll(d.cfg.Backend, legs)
+	}
+	return leg.bf16Fix(d.cfg.Backend)
+}
+
+func (d *doctor) checkLeg(kevDir string, leg modelLeg, bf16Fix string) {
 	prefix := "local:" + leg.recordName()
 	if variable := quantisationVariable(leg.mode); variable != "" && d.platform.OS != "darwin" {
 		text, err := os.ReadFile(filepath.Join(kevDir, "kev", "checkpoint.py")) //nolint:gosec // the path is inside the configured kev directory
@@ -352,10 +361,10 @@ func (d *doctor) checkLeg(kevDir string, leg modelLeg) {
 	_, err := server.ModelCommand(d.platform, kevDir, leg.model, leg.mode, leg.port)
 	switch {
 	case errors.Is(err, server.ErrModeUnavailable):
-		d.add(prefix+":mode", levelFail, leg.bf16Fix(d.cfg.Backend), "%v", err)
+		d.add(prefix+":mode", levelFail, bf16Fix, "%v", err)
 		return
 	case errors.Is(err, server.ErrDefaultModeUnsafe) && d.platform.MLX():
-		d.add(prefix+":mode", levelFail, leg.bf16Fix(d.cfg.Backend), "mode default is not allowed for %s: it is only allowed for models of 1B or less", leg.model)
+		d.add(prefix+":mode", levelFail, bf16Fix, "mode default is not allowed for %s: it is only allowed for models of 1B or less", leg.model)
 		return
 	case errors.Is(err, server.ErrDefaultModeUnsafe):
 		d.add(prefix+":mode", levelFail, "use nf4, int8 or bf16", "mode default is not allowed for %s: it keeps CUDA graphs on and needs more GPU memory than is safe for this model", leg.model)

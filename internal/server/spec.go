@@ -128,16 +128,13 @@ func (g Guard) interval() time.Duration {
 }
 
 // breach returns why sample breaks the limits of g, or an empty string; a temperature of 0 is no reading.
+// The free memory limit does not apply to unified memory, whose reclaimable share is not measured yet.
 func (g Guard) breach(sample GPU) string {
 	if g.MaxTempC > 0 && sample.TempC > 0 && sample.TempC >= g.MaxTempC {
 		return fmt.Sprintf("temperature %d C reached the limit of %d C", sample.TempC, g.MaxTempC)
 	}
-	if sample.FreeMiB <= g.MinFreeMiB {
-		memory := "free GPU memory"
-		if sample.Unified {
-			memory = "free memory"
-		}
-		return fmt.Sprintf("%s %d MiB fell to the limit of %d MiB", memory, sample.FreeMiB, g.MinFreeMiB)
+	if !sample.Unified && sample.FreeMiB <= g.MinFreeMiB {
+		return fmt.Sprintf("free GPU memory %d MiB fell to the limit of %d MiB", sample.FreeMiB, g.MinFreeMiB)
 	}
 	return ""
 }
@@ -152,3 +149,12 @@ func (g Guard) breachMessage(name string, sample GPU) string {
 	}
 	return fmt.Sprintf("guard: stopped %s: %s (temp %d C, free %d MiB)", name, reason, sample.TempC, sample.FreeMiB)
 }
+
+func noReaderMessage(goos, name string) string {
+	if goos == "darwin" {
+		return fmt.Sprintf("guard: memory reader not available; the memory watch for %s is off", name)
+	}
+	return fmt.Sprintf("guard: nvidia-smi not found; the GPU watch for %s is off", name)
+}
+
+const unifiedGuardNote = "guard: free memory guard is off on unified memory until measured"

@@ -299,6 +299,7 @@ func (s *starter) plan() ([]startTarget, []startedProcess) {
 			timeout: time.Duration(s.cfg.Server.StartTimeoutSeconds) * time.Second, peakGiB: peak, large: large,
 		})
 	}
+	// Largest peak first, so the memory check fails on the biggest model before anything starts.
 	slices.SortStableFunc(targets, func(a, b startTarget) int { return cmp.Compare(b.peakGiB, a.peakGiB) })
 
 	helper, err := localTextHelperOf(s.cfg)

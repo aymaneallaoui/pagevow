@@ -38,6 +38,12 @@ type statusJSON struct {
 		FreeMiB      int  `json:"free_mib"`
 		TemperatureC int  `json:"temperature_c"`
 		Unified      bool `json:"unified"`
+		Components   *struct {
+			FreeMiB        int `json:"free_mib"`
+			SpeculativeMiB int `json:"speculative_mib"`
+			PurgeableMiB   int `json:"purgeable_mib"`
+			FileBackedMiB  int `json:"file_backed_mib"`
+		} `json:"components"`
 	} `json:"gpu"`
 	Versions     map[string]string `json:"versions"`
 	Tripped      []struct{ Name, Message string }
@@ -147,11 +153,13 @@ func TestStatusShowsGPUWhenKnown(t *testing.T) {
 	assert.Equal(t, 20480, report.GPU.FreeMiB)
 	assert.Equal(t, 51, report.GPU.TemperatureC)
 	assert.False(t, report.GPU.Unified)
+	assert.Nil(t, report.GPU.Components)
 }
 
 func TestStatusShowsUnifiedMemoryOnAppleSiliconWithStableKeys(t *testing.T) {
 	h := newHarness(t)
 	h.appleSilicon()
+	h.gpu.reading.Parts = server.MemoryParts{FreeMiB: 15000, SpeculativeMiB: 1000, PurgeableMiB: 500, FileBackedMiB: 3500}
 
 	report, raw := statusOf(t, h)
 
@@ -160,13 +168,19 @@ func TestStatusShowsUnifiedMemoryOnAppleSiliconWithStableKeys(t *testing.T) {
 	assert.Equal(t, 12768, report.GPU.UsedMiB)
 	assert.Equal(t, 20000, report.GPU.FreeMiB)
 	assert.True(t, report.GPU.Unified)
-	for _, key := range []string{`"total_mib": 32768`, `"used_mib": 12768`, `"free_mib": 20000`, `"temperature_c": 0`, `"unified": true`} {
+	require.NotNil(t, report.GPU.Components)
+	assert.Equal(t, 15000, report.GPU.Components.FreeMiB)
+	assert.Equal(t, 1000, report.GPU.Components.SpeculativeMiB)
+	assert.Equal(t, 500, report.GPU.Components.PurgeableMiB)
+	assert.Equal(t, 3500, report.GPU.Components.FileBackedMiB)
+	for _, key := range []string{`"total_mib": 32768`, `"used_mib": 12768`, `"free_mib": 20000`, `"temperature_c": 0`, `"unified": true`, `"file_backed_mib": 3500`} {
 		assert.Contains(t, raw, key)
 	}
 
 	plain := h.mustRun("status")
 	assert.Contains(t, plain, "Memory")
 	assert.Contains(t, plain, "20000 MiB free, 12768 MiB used, 32768 MiB total")
+	assert.Contains(t, plain, "15000 MiB free + 1000 speculative + 500 purgeable + 3500 file-backed")
 	assert.NotContains(t, plain, "temperature")
 	assert.NotContains(t, plain, "GPU")
 }

@@ -76,3 +76,34 @@ func TestUseCascadeOnAppleSiliconAcceptsAQuantisedModeForARemoteLeg(t *testing.T
 	assert.Equal(t, "cascade", cfg.Backend)
 	assert.Equal(t, "nf4", cfg.Backends.Cascade.VerifierMode)
 }
+
+func TestUseCascadeOnAppleSiliconNamesEveryLegWithAQuantisedMode(t *testing.T) {
+	h := newHarness(t)
+	h.appleSilicon()
+	h.mustRun("use", "jev")
+
+	_, err := h.run("use", "cascade", "--primary-mode", "int8", "--verifier-mode", "nf4")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cascade primary: mode int8 is not available on macOS")
+	assert.Contains(t, err.Error(), "cascade verifier: mode nf4 is not available on macOS")
+	assert.Equal(t, "jev", h.loadConfig().Backend)
+}
+
+func TestUseLocalOnAppleSiliconRefusesALoopbackURLWithoutAPortAndKeepsTheOldConfig(t *testing.T) {
+	h := newHarness(t)
+	h.appleSilicon()
+	h.mustRun("use", "jev")
+
+	_, err := h.run("use", "local", "--url", "http://127.0.0.1", "--mode", "nf4")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "mode nf4 is not available on macOS")
+	assert.Contains(t, err.Error(), "needs an explicit port")
+	assert.Equal(t, "jev", h.loadConfig().Backend)
+
+	_, err = h.run("use", "local", "--url", "http://127.0.0.1", "--mode", "bf16")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "needs an explicit port")
+	assert.Equal(t, "jev", h.loadConfig().Backend)
+}

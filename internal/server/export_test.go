@@ -21,3 +21,6 @@ var MatchArgs = func(args []string, first, contains string) (firstIs, has bool) 
 var GuardMessage = func(g Guard, name string, sample GPU) string {
 	return g.breachMessage(name, sample)
 }
+
+// NoReaderMessage exposes the guard line for a missing memory reader to the tests.
+var NoReaderMessage = noReaderMessage

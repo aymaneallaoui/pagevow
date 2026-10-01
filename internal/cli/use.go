@@ -218,7 +218,7 @@ func (a *app) fillRequired(cmd *cobra.Command, name string, spec backendSpec, cf
 	return nil
 }
 
-// refuseUnavailableModes refuses, before the config file changes, a mode that this platform cannot serve for a model server pagevow would start.
+// refuseUnavailableModes refuses, before the config file changes, every mode that this platform cannot serve and every model server that cannot be planned.
 func (a *app) refuseUnavailableModes(cmd *cobra.Command, name string, spec backendSpec) error {
 	platform, err := a.platformOf()
 	if err != nil {
@@ -238,18 +238,21 @@ func (a *app) refuseUnavailableModes(cmd *cobra.Command, name string, spec backe
 		return err
 	}
 	cfg.Backend = name
-	legs, _ := modelLegs(cfg)
-	for _, leg := range legs {
+	var problems []error
+	for _, leg := range loopbackLegs(cfg) {
 		err := server.CheckMode(platform, leg.mode)
 		switch {
 		case err == nil:
 		case name == config.BackendCascade:
-			return fmt.Errorf("%s: %w", leg.label, err)
+			problems = append(problems, fmt.Errorf("%s: %w", leg.label, err))
 		default:
-			return err
+			problems = append(problems, err)
 		}
 	}
-	return nil
+	if _, err := modelLegs(cfg); err != nil {
+		problems = append(problems, err)
+	}
+	return errors.Join(problems...)
 }
 
 func validateURL(flag, value string) error {

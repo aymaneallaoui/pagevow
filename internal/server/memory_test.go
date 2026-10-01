@@ -9,30 +9,35 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/server"
 )
 
-const sixteenGiBMac = "17179869184\n16384\n64000\n12800\n6400\n"
+const sixteenGiBMac = "17179869184\n16384\n64000\n12800\n6400\n25600\n"
 
-func TestUnifiedMemoryArgsAskForTheFiveValuesInOneCall(t *testing.T) {
+func TestUnifiedMemoryArgsAskForTheSixValuesInOneCall(t *testing.T) {
 	assert.Equal(t, []string{
 		"-n", "hw.memsize", "hw.pagesize", "vm.page_free_count", "vm.page_speculative_count", "vm.page_purgeable_count",
+		"vm.page_pageable_external_count",
 	}, server.UnifiedMemoryArgs())
 }
 
-func TestParseUnifiedMemoryCountsFreeSpeculativeAndPurgeablePages(t *testing.T) {
+func TestParseUnifiedMemoryCountsWhatMacOSCanReclaim(t *testing.T) {
 	got, err := server.ParseUnifiedMemory(sixteenGiBMac)
 	require.NoError(t, err)
-	assert.Equal(t, server.GPU{TotalMiB: 16384, UsedMiB: 15084, FreeMiB: 1300, TempC: 0, Unified: true}, got)
+	want := server.GPU{
+		TotalMiB: 16384, UsedMiB: 14684, FreeMiB: 1700, TempC: 0, Unified: true,
+		Parts: server.MemoryParts{FreeMiB: 1000, SpeculativeMiB: 200, PurgeableMiB: 100, FileBackedMiB: 400},
+	}
+	assert.Equal(t, want, got)
 }
 
 func TestParseUnifiedMemoryAcceptsSpacesAndCarriageReturns(t *testing.T) {
-	got, err := server.ParseUnifiedMemory(" 17179869184\r\n16384\r\n 64000\r\n12800\r\n6400\r\n")
+	got, err := server.ParseUnifiedMemory(" 17179869184\r\n16384\r\n 64000\r\n12800\r\n6400\r\n 25600\r\n")
 	require.NoError(t, err)
-	assert.Equal(t, 1300, got.FreeMiB)
+	assert.Equal(t, 1700, got.FreeMiB)
 }
 
 func TestParseUnifiedMemoryNeverReportsMoreFreeThanTotal(t *testing.T) {
-	got, err := server.ParseUnifiedMemory("1073741824\n16384\n100000\n0\n0\n")
+	got, err := server.ParseUnifiedMemory("1073741824\n16384\n100000\n0\n0\n0\n")
 	require.NoError(t, err)
-	assert.Equal(t, server.GPU{TotalMiB: 1024, UsedMiB: 0, FreeMiB: 1024, Unified: true}, got)
+	assert.Equal(t, server.GPU{TotalMiB: 1024, UsedMiB: 0, FreeMiB: 1024, Unified: true, Parts: server.MemoryParts{FreeMiB: 1562}}, got)
 }
 
 func TestParseUnifiedMemoryRejectsMalformedOutput(t *testing.T) {
@@ -41,12 +46,12 @@ func TestParseUnifiedMemoryRejectsMalformedOutput(t *testing.T) {
 		out  string
 		want string
 	}{
-		{"a word", "17179869184\n16384\nlots\n12800\n6400\n", `vm.page_free_count is "lots"`},
-		{"a negative count", "17179869184\n16384\n64000\n-1\n6400\n", `vm.page_speculative_count is "-1"`},
-		{"a sysctl error line", "17179869184\n16384\n64000\n12800\nsysctl: unknown oid 'vm.page_purgeable_count'\n", "vm.page_purgeable_count"},
-		{"no memory size", "0\n16384\n64000\n12800\n6400\n", "must not be 0"},
-		{"no page size", "17179869184\n0\n64000\n12800\n6400\n", "must not be 0"},
-		{"an overflow", "17179869184\n16384\n18446744073709551615\n1\n0\n", "overflow"},
+		{"a word", "17179869184\n16384\nlots\n12800\n6400\n25600\n", `vm.page_free_count is "lots"`},
+		{"a negative count", "17179869184\n16384\n64000\n-1\n6400\n25600\n", `vm.page_speculative_count is "-1"`},
+		{"a sysctl error line", "17179869184\n16384\n64000\n12800\n6400\nsysctl: unknown oid 'vm.page_pageable_external_count'\n", "vm.page_pageable_external_count"},
+		{"no memory size", "0\n16384\n64000\n12800\n6400\n25600\n", "must not be 0"},
+		{"no page size", "17179869184\n0\n64000\n12800\n6400\n25600\n", "must not be 0"},
+		{"an overflow", "17179869184\n16384\n18446744073709551615\n1\n0\n0\n", "overflow"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -59,11 +64,11 @@ func TestParseUnifiedMemoryRejectsMalformedOutput(t *testing.T) {
 
 func TestParseUnifiedMemoryRejectsMissingOrExtraLines(t *testing.T) {
 	for name, out := range map[string]string{
-		"empty":      "",
-		"one line":   "17179869184\n",
-		"four lines": "17179869184\n16384\n64000\n12800\n",
-		"blank line": "17179869184\n16384\n\n12800\n6400\n",
-		"six lines":  sixteenGiBMac + "7\n",
+		"empty":       "",
+		"one line":    "17179869184\n",
+		"five lines":  "17179869184\n16384\n64000\n12800\n6400\n",
+		"blank line":  "17179869184\n16384\n\n12800\n6400\n25600\n",
+		"seven lines": sixteenGiBMac + "7\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := server.ParseUnifiedMemory(out)

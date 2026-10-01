@@ -87,7 +87,7 @@ func (a *app) collectRuntime(ctx context.Context, cfg config.Config, report *sta
 	go func() {
 		defer wg.Done()
 		if reading, err := gpu.Read(ctx); err == nil {
-			report.GPU = &gpuState{TotalMiB: reading.TotalMiB, UsedMiB: reading.UsedMiB, FreeMiB: reading.FreeMiB, TemperatureC: reading.TempC, Unified: reading.Unified}
+			report.GPU = gpuStateOf(reading)
 		}
 	}()
 	swept := sweepRecords(ctx, procs)
@@ -212,6 +212,17 @@ func renderRuntime(out *ui.Printer, report statusReport, platform server.Platfor
 	}
 }
 
+func gpuStateOf(reading server.GPU) *gpuState {
+	state := &gpuState{TotalMiB: reading.TotalMiB, UsedMiB: reading.UsedMiB, FreeMiB: reading.FreeMiB, TemperatureC: reading.TempC, Unified: reading.Unified}
+	if reading.Unified {
+		parts := reading.Parts
+		state.Components = &memoryComponents{
+			FreeMiB: parts.FreeMiB, SpeculativeMiB: parts.SpeculativeMiB, PurgeableMiB: parts.PurgeableMiB, FileBackedMiB: parts.FileBackedMiB,
+		}
+	}
+	return state
+}
+
 func renderMemory(out *ui.Printer, gpu *gpuState, platform server.Platform) {
 	switch {
 	case gpu == nil && platform.MLX():
@@ -223,6 +234,9 @@ func renderMemory(out *ui.Printer, gpu *gpuState, platform server.Platform) {
 	case gpu.Unified:
 		out.Heading("Memory")
 		pairs := []ui.Pair{{Key: "unified", Value: fmt.Sprintf("%d MiB free, %d MiB used, %d MiB total", gpu.FreeMiB, gpu.UsedMiB, gpu.TotalMiB)}}
+		if c := gpu.Components; c != nil {
+			pairs = append(pairs, ui.Pair{Key: "counted free", Value: fmt.Sprintf("%d MiB free + %d speculative + %d purgeable + %d file-backed", c.FreeMiB, c.SpeculativeMiB, c.PurgeableMiB, c.FileBackedMiB)})
+		}
 		if gpu.TemperatureC != 0 {
 			pairs = append(pairs, ui.Pair{Key: "temperature", Value: fmt.Sprintf("%d C", gpu.TemperatureC)})
 		}

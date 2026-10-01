@@ -377,6 +377,22 @@ func TestDoctorOnAppleSiliconRefusesQuantisedModesWithABF16Fix(t *testing.T) {
 	}
 }
 
+func TestDoctorOnAppleSiliconFixesBothCascadeLegsWithOneCommand(t *testing.T) {
+	h := newHarness(t)
+	h.kevCheckout()
+	h.appleSilicon()
+	h.setConfig(map[string]any{"backend": "cascade", "backends.cascade.primary_mode": "nf4", "backends.cascade.verifier_mode": "int8"})
+
+	report, err := doctorOf(t, h)
+
+	require.Error(t, err)
+	for _, id := range []string{"local:model-8009:mode", "local:model-8010:mode"} {
+		c := report.check(t, id)
+		assert.Equal(t, "fail", c.Level)
+		assert.Equal(t, "pagevow use cascade --primary-mode bf16 --verifier-mode bf16", c.Fix)
+	}
+}
+
 func TestDoctorOnAppleSiliconRefusesDefaultForA4BModelWithABF16Fix(t *testing.T) {
 	h := newHarness(t)
 	h.kevCheckout()

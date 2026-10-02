@@ -110,11 +110,11 @@ func (a *app) runPluginInstall(cmd *cobra.Command) error {
 	}
 	ctx := commandContext(cmd)
 
-	changed, err := plugin.Install(ctx, plugin.Options{
-		Root:        root,
-		Version:     info.Version,
-		HookCommand: plugin.ShellQuote(binary) + " hook stop",
-	})
+	hookCommand, err := plugin.HookCommand(binary)
+	if err != nil {
+		return err
+	}
+	changed, err := plugin.Install(ctx, plugin.Options{Root: root, Version: info.Version, HookCommand: hookCommand})
 	if err != nil {
 		return err
 	}

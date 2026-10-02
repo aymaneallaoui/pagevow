@@ -173,7 +173,7 @@ func Install(ctx context.Context, opts Options) (changed bool, err error) {
 	if err := ctx.Err(); err != nil {
 		return false, fmt.Errorf("install plugin into %s: %w", root, err)
 	}
-	if err := swapTree(root, files); err != nil {
+	if err := swapTree(root, files, os.Rename); err != nil {
 		return false, fmt.Errorf("install plugin into %s: %w", root, err)
 	}
 	return true, nil
@@ -253,7 +253,7 @@ func sameTree(root string, want map[string][]byte) bool {
 	return err == nil && seen == len(want)
 }
 
-func swapTree(root string, files map[string][]byte) error {
+func swapTree(root string, files map[string][]byte, rename func(oldPath, newPath string) error) error {
 	if err := os.MkdirAll(filepath.Dir(root), 0o750); err != nil {
 		return fmt.Errorf("create parent directory: %w", err)
 	}
@@ -273,15 +273,18 @@ func swapTree(root string, files map[string][]byte) error {
 	_, statErr := os.Lstat(root)
 	hadRoot := statErr == nil
 	if hadRoot {
-		if err := os.Rename(root, old); err != nil {
+		if err := rename(root, old); err != nil {
 			return fmt.Errorf("move the old tree aside: %w", err)
 		}
 	}
-	if err := os.Rename(tmp, root); err != nil {
+	if err := rename(tmp, root); err != nil {
+		err = fmt.Errorf("move the new tree into place: %w", err)
 		if hadRoot {
-			_ = os.Rename(old, root)
+			if restoreErr := rename(old, root); restoreErr != nil {
+				err = errors.Join(err, fmt.Errorf("restore the previous plugin from %s: %w", old, restoreErr))
+			}
 		}
-		return fmt.Errorf("move the new tree into place: %w", err)
+		return err
 	}
 	if hadRoot {
 		if err := os.RemoveAll(old); err != nil {
@@ -437,6 +440,18 @@ func Installed(root string) bool {
 // PluginDir returns the directory of the plugin inside the marketplace root.
 func PluginDir(root string) string { //nolint:revive // name fixed by the phase 4 plan
 	return filepath.Join(root, pluginSubdir)
+}
+
+// HookCommand returns the Stop hook command for the binary at path, or an error when the path cannot be quoted safely.
+func HookCommand(binary string) (string, error) {
+	return hookCommand(binary, runtime.GOOS == "windows")
+}
+
+func hookCommand(binary string, windows bool) (string, error) {
+	if windows && strings.ContainsAny(binary, "$`%") {
+		return "", fmt.Errorf("the pagevow binary path %q contains $, ` or %%, which a double quoted Windows command would expand; move the binary to another directory", binary)
+	}
+	return shellQuote(binary, windows) + " hook stop", nil
 }
 
 // ShellQuote quotes a path for the hooks.json command on POSIX and Windows shells.

@@ -569,6 +569,65 @@ func TestPluginDir(t *testing.T) {
 	assert.Equal(t, filepath.Join("root", "plugin"), PluginDir("root"))
 }
 
+func TestHookCommandRefusesExpandingCharactersOnWindows(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		path    string
+		windows bool
+		want    string
+		refused bool
+	}{
+		{name: "windows plain", path: `C:\Tools\pagevow.exe`, windows: true, want: `"C:\Tools\pagevow.exe" hook stop`},
+		{name: "windows dollar", path: `C:\$tools\pagevow.exe`, windows: true, refused: true},
+		{name: "windows backtick", path: "C:\\a`b\\pagevow.exe", windows: true, refused: true},
+		{name: "windows percent", path: `C:\%USERPROFILE%\pagevow.exe`, windows: true, refused: true},
+		{name: "posix dollar is quoted literally", path: "/tmp/$HOME/pagevow", want: `'/tmp/$HOME/pagevow' hook stop`},
+		{name: "posix percent", path: "/tmp/%x%/pagevow", want: `'/tmp/%x%/pagevow' hook stop`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := hookCommand(tt.path, tt.windows)
+
+			if tt.refused {
+				require.Error(t, err)
+				assert.Empty(t, got)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestSwapTreeNamesTheStrandedTreeWhenTheRestoreFails(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "claude-plugin")
+	require.NoError(t, os.MkdirAll(root, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "keep.txt"), []byte("old"), 0o600))
+	failNew := errors.New("new tree refused")
+	failRestore := errors.New("restore refused")
+	calls := 0
+	rename := func(oldPath, newPath string) error {
+		calls++
+		switch calls {
+		case 1:
+			return os.Rename(oldPath, newPath)
+		case 2:
+			return failNew
+		default:
+			return failRestore
+		}
+	}
+
+	err := swapTree(root, map[string][]byte{"a.txt": []byte("new")}, rename)
+
+	require.ErrorIs(t, err, failNew)
+	require.ErrorIs(t, err, failRestore)
+	assert.Contains(t, err.Error(), root+".old-")
+	assert.Equal(t, 3, calls)
+}
+
 func TestShellQuote(t *testing.T) {
 	t.Parallel()
 

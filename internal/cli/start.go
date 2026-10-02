@@ -205,7 +205,7 @@ func (s *starter) failureSummary() string {
 
 // run starts what is missing and reports whether anything requested is not running.
 func (s *starter) run() bool {
-	live := s.removeStale()
+	live, orphaned := s.removeStale()
 	targets, unsupported := s.plan()
 	for _, entry := range unsupported {
 		s.finish(entry)
@@ -216,7 +216,7 @@ func (s *starter) run() bool {
 			fresh = append(fresh, t)
 		}
 	}
-	if problems := s.preflight(fresh); len(problems) > 0 {
+	if problems := s.preflight(fresh, orphaned); len(problems) > 0 {
 		s.report.Problems = problems
 		for _, problem := range problems {
 			if s.out != nil {
@@ -238,7 +238,7 @@ func (s *starter) run() bool {
 	return !s.report.OK
 }
 
-func (s *starter) removeStale() map[string]server.Record {
+func (s *starter) removeStale() (live map[string]server.Record, orphaned []server.Record) {
 	swept := sweepRecords(s.ctx, s.procs)
 	if swept.ListErr != nil {
 		s.warn("some process records could not be read: %v", swept.ListErr)
@@ -252,11 +252,11 @@ func (s *starter) removeStale() map[string]server.Record {
 			s.out.Status(ui.Info, "removed stale record %s: its process is gone", rec.Name)
 		}
 	}
-	live := map[string]server.Record{}
+	live = map[string]server.Record{}
 	for _, rec := range swept.Live {
 		live[rec.Name] = rec
 	}
-	return live
+	return live, swept.Orphaned
 }
 
 // plan turns the configuration into the processes to run, largest model first; unsupported ones come back as failed entries.
@@ -338,8 +338,14 @@ func (s *starter) planHelper(helper *localTextHelper, targets []startTarget, uns
 	return append(targets, target), unsupported
 }
 
-func (s *starter) preflight(fresh []startTarget) []string {
+// preflight collects every reason not to launch; a target whose name or port an orphan holds is refused, since only stop signals an orphan.
+func (s *starter) preflight(fresh []startTarget, orphaned []server.Record) []string {
 	problems := slices.Clone(s.report.Problems)
+	for _, rec := range orphaned {
+		if !slices.ContainsFunc(fresh, func(t startTarget) bool { return t.name == rec.Name || t.port == rec.Port }) {
+			s.warn("%s; it holds port %d and memory until pagevow stop ends it", orphanText(rec.Name, rec.PID, rec.ChildPID), rec.Port)
+		}
+	}
 	var peaks []float64
 	large := false
 	for _, t := range fresh {
@@ -348,7 +354,12 @@ func (s *starter) preflight(fresh []startTarget) []string {
 				problems = append(problems, fmt.Sprintf("%s was not found on PATH: %s", t.command.Argv[0], installHint(t.command.Argv[0])))
 			}
 		}
-		if s.procs.PortInUse(s.ctx, t.port) {
+		orphan := slices.IndexFunc(orphaned, func(rec server.Record) bool { return rec.Name == t.name || rec.Port == t.port })
+		switch {
+		case orphan >= 0:
+			rec := orphaned[orphan]
+			problems = append(problems, fmt.Sprintf("%s; run pagevow stop first (%s, port %d)", orphanText(rec.Name, rec.PID, rec.ChildPID), t.name, t.port))
+		case s.procs.PortInUse(s.ctx, t.port):
 			problems = append(problems, fmt.Sprintf("port %d is in use by a process that pagevow did not start; stop it or change the port in the config (%s)", t.port, t.name))
 		}
 		if t.peakGiB > 0 {

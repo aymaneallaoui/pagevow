@@ -38,7 +38,9 @@ type processState struct {
 	Name          string `json:"name"`
 	Kind          string `json:"kind"`
 	PID           int    `json:"pid"`
+	ChildPID      int    `json:"child_pid,omitempty"`
 	Port          int    `json:"port"`
+	State         string `json:"state"`
 	Alive         bool   `json:"alive"`
 	Ready         bool   `json:"ready"`
 	UptimeSeconds int64  `json:"uptime_seconds"`

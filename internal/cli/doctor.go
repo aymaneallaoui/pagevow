@@ -204,13 +204,17 @@ func (d *doctor) records() {
 	for _, rec := range swept.Live {
 		d.live[rec.Name] = rec
 	}
+	for _, rec := range swept.Orphaned {
+		d.live[rec.Name] = rec
+		d.add("records", levelWarn, "pagevow stop", "%s", orphanText(rec.Name, rec.PID, rec.ChildPID))
+	}
 	for _, failure := range swept.Failed {
 		d.add("records", levelFail, "remove "+filepath.Join(d.procs.StateDir(), failure.Name+".json")+" by hand", "the stale record %s could not be removed: %v", failure.Name, failure.Err)
 	}
 	for _, rec := range swept.Gone {
 		d.add("records", levelWarn, "", "removed the stale record %s: its process is gone", rec.Name)
 	}
-	if len(swept.Failed) == 0 && len(swept.Gone) == 0 {
+	if len(swept.Failed) == 0 && len(swept.Gone) == 0 && len(swept.Orphaned) == 0 {
 		d.add("records", levelOK, "", "no stale process records (%d running)", len(d.live))
 	}
 }

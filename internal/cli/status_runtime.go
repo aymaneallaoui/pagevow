@@ -91,7 +91,7 @@ func (a *app) collectRuntime(ctx context.Context, cfg config.Config, report *sta
 		}
 	}()
 	swept := sweepRecords(ctx, procs)
-	report.Processes = processStates(ctx, procs, swept.Live, swept.Gone, now())
+	report.Processes = processStates(ctx, procs, swept, now())
 	for _, rec := range swept.Gone {
 		report.StaleRemoved = append(report.StaleRemoved, rec.Name)
 	}
@@ -112,25 +112,43 @@ func (a *app) collectRuntime(ctx context.Context, cfg config.Config, report *sta
 	return nil
 }
 
-func processStates(ctx context.Context, procs Processes, live, gone []server.Record, now time.Time) []processState {
-	states := make([]processState, 0, len(live)+len(gone))
-	for _, rec := range live {
-		states = append(states, processState{
-			Name: rec.Name, Kind: string(rec.Kind), PID: rec.PID, Port: rec.Port, Alive: true, Log: rec.Log,
-			UptimeSeconds: max(int64(now.Sub(rec.StartedAt).Seconds()), 0),
-		})
+const (
+	stateReady    = "ready"
+	stateStarting = "starting"
+	stateOrphaned = "orphaned"
+	stateGone     = "gone"
+)
+
+func processStates(ctx context.Context, procs Processes, swept sweep, now time.Time) []processState {
+	running := slices.Concat(swept.Live, swept.Orphaned)
+	states := make([]processState, 0, len(running)+len(swept.Gone))
+	for i, rec := range running {
+		state := processState{
+			Name: rec.Name, Kind: string(rec.Kind), PID: rec.PID, ChildPID: rec.ChildPID, Port: rec.Port, Log: rec.Log,
+			Alive: i < len(swept.Live), UptimeSeconds: max(int64(now.Sub(rec.StartedAt).Seconds()), 0),
+		}
+		if !state.Alive {
+			state.State = stateOrphaned
+		}
+		states = append(states, state)
 	}
 	var wg sync.WaitGroup
-	for i, rec := range live {
+	for i, rec := range running {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			states[i].Ready = answered(procs.Probe(ctx, readyURLOf(rec)))
+			if states[i].State == "" {
+				states[i].State = stateStarting
+				if states[i].Ready {
+					states[i].State = stateReady
+				}
+			}
 		}()
 	}
 	wg.Wait()
-	for _, rec := range gone {
-		states = append(states, processState{Name: rec.Name, Kind: string(rec.Kind), PID: rec.PID, Port: rec.Port, Log: rec.Log})
+	for _, rec := range swept.Gone {
+		states = append(states, processState{Name: rec.Name, Kind: string(rec.Kind), PID: rec.PID, ChildPID: rec.ChildPID, Port: rec.Port, State: stateGone, Log: rec.Log})
 	}
 	slices.SortFunc(states, func(a, b processState) int { return strings.Compare(a.Name, b.Name) })
 	return states
@@ -175,9 +193,14 @@ func renderRuntime(out *ui.Printer, report statusReport, platform server.Platfor
 	} else {
 		rows := make([][]string, 0, len(report.Processes))
 		for _, p := range report.Processes {
-			rows = append(rows, []string{p.Name, fmt.Sprint(p.PID), fmt.Sprint(p.Port), processWord(p), uptimeText(p), p.Log})
+			rows = append(rows, []string{p.Name, fmt.Sprint(p.PID), fmt.Sprint(p.Port), p.State, uptimeText(p), p.Log})
 		}
 		out.Table([]string{"NAME", "PID", "PORT", "STATE", "UPTIME", "LOG"}, rows)
+	}
+	for _, p := range report.Processes {
+		if p.State == stateOrphaned {
+			out.Status(ui.Warn, "%s; fix: pagevow stop", orphanText(p.Name, p.PID, p.ChildPID))
+		}
 	}
 	for _, name := range report.StaleRemoved {
 		out.Status(ui.Info, "removed stale record %s: its process is gone", name)
@@ -250,18 +273,8 @@ func renderMemory(out *ui.Printer, gpu *gpuState, platform server.Platform) {
 	}
 }
 
-func processWord(p processState) string {
-	switch {
-	case !p.Alive:
-		return "gone"
-	case p.Ready:
-		return "ready"
-	}
-	return "starting"
-}
-
 func uptimeText(p processState) string {
-	if !p.Alive {
+	if p.State == stateGone {
 		return "-"
 	}
 	return (time.Duration(p.UptimeSeconds) * time.Second).String()

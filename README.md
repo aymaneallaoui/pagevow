@@ -190,14 +190,17 @@ become ready, and that process is stopped again. `--json` prints one JSON docume
 
 `pagevow stop` stops the browser, the text helper and the models in that order, then removes stale records. It only
 signals a process whose recorded identity still matches. A model server gets SIGTERM and 10 seconds, then SIGKILL for
-its process group; the browser gets SIGTERM and 5 seconds. The managed browser profile
+its process group; the browser gets SIGTERM and 5 seconds. When the supervisor of a model server or text helper is gone
+while the program it started still runs (an orphan, possible on macOS after the supervisor was killed), `stop` sends
+those signals to the program's process group itself and prints `<name> stopped (supervisor was gone)`. The managed browser profile
 (`<user cache directory>/pagevow/profiles/managed`) stays on disk. Nothing to stop is exit code 0; a process that could
 not be stopped is exit code 2.
 
-`pagevow status` also lists the recorded processes (pid, port, whether alive and ready, uptime, log), asks each
+`pagevow status` also lists the recorded processes (pid, port, state `ready`, `starting`, `orphaned` or `gone`, uptime, log), asks each
 destination of the active backend for `/v1/models` with a 2 second timeout, shows GPU memory and temperature when
 `nvidia-smi` answers (on a Mac with Apple Silicon the unified memory, without a temperature), the pagevow version and the browser version, and the messages left by the GPU guard. It exits
-with 0 also when something is down. `--json` adds the keys `processes`, `health`, `gpu` (omitted when unknown; `unified`
+with 0 also when something is down. `--json` adds the keys `processes` (each with `state`, `alive`, `ready` and, for a
+model server or text helper, `child_pid`), `health`, `gpu` (omitted when unknown; `unified`
 is true on a Mac, where `components` lists the free, speculative, purgeable and file-backed MiB; elsewhere `unified` is omitted),
 `versions`, `tripped` and `stale_removed` to the existing ones.
 
@@ -269,8 +272,10 @@ in a row end the watch and leave the process running.
 Logs are appended to `<user cache directory>/pagevow/logs/<name>.log` (mode 0600). Records are one JSON file per
 process in `<user cache directory>/pagevow/run/<name>.json` (directory 0700, files 0600, written atomically). A record
 holds names, pids, ports, the command, times and paths, never a key. A record is alive only while the pid exists, its
-start time is the recorded one and its command line still fits; otherwise it is stale, and `start`, `stop`, `status`
-and `doctor` remove it and say so.
+start time is the recorded one and its command line still fits. A model server or text helper record whose supervisor
+is gone while its program still runs (same pid, start time, process group and command) is orphaned: `status` and
+`doctor` show it with the fix `pagevow stop`, `start` refuses to reuse its port, and `stop` ends it. Any other record is
+stale, and `start`, `stop`, `status` and `doctor` remove it and say so.
 
 ## Configuration
 

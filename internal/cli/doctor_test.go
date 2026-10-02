@@ -271,6 +271,24 @@ func TestDoctorRemovesStaleRecordsAndWarnsButDoesNotFail(t *testing.T) {
 	assert.Equal(t, []string{"model-8010"}, h.procs.stopped)
 }
 
+func TestDoctorWarnsAboutAnOrphanWithTheFixStopAndKeepsItsRecord(t *testing.T) {
+	h := newHarness(t)
+	healthyLocalSetup(h)
+	h.procs.addRecord(server.Record{Name: "model-8010", Kind: server.KindModel, PID: 3071, ChildPID: 3072, Port: 8010})
+	h.procs.markOrphaned("model-8010")
+
+	report, err := doctorOf(t, h)
+
+	require.NoError(t, err)
+	c := report.check(t, "records")
+	assert.Equal(t, "warn", c.Level)
+	assert.Equal(t, "pagevow stop", c.Fix)
+	assert.Equal(t, "model-8010 runs without its supervisor: the supervisor (pid 3071) is gone and the program it started (pid 3072) still runs", c.Finding)
+	assert.Empty(t, h.procs.stopped, "doctor never stops an orphan")
+	_, kept := h.procs.records["model-8010"]
+	assert.True(t, kept)
+}
+
 func TestDoctorWarnsAboutLeftoverGuardMessages(t *testing.T) {
 	h := newHarness(t)
 	healthyLocalSetup(h)

@@ -53,6 +53,24 @@ func TestStopRemovesStaleRecordsWithoutCountingThemAsFailures(t *testing.T) {
 	assert.Contains(t, stdout, "model-8009: its process was already gone, record removed")
 }
 
+func TestStopEndsAnOrphanAndSaysItsSupervisorWasGone(t *testing.T) {
+	h := newHarness(t)
+	h.procs.addRecord(server.Record{Name: "model-8009", Kind: server.KindModel, PID: 3071, ChildPID: 3072})
+	h.procs.markOrphaned("model-8009")
+
+	stdout, stderr, err := h.runSplit(context.Background(), "stop")
+
+	require.NoError(t, err, stderr)
+	assert.Equal(t, []string{"model-8009"}, h.procs.stopped)
+	assert.Contains(t, stdout, "[ok] model-8009 stopped (supervisor was gone)")
+	assert.NotContains(t, stdout, "already gone")
+
+	h.procs.addRecord(server.Record{Name: "model-8009", Kind: server.KindModel, PID: 3071, ChildPID: 3072})
+	raw, stderr, err := h.runSplit(context.Background(), "stop", "--json")
+	require.NoError(t, err, stderr)
+	assert.Contains(t, raw, `"result": "stopped, supervisor was gone"`)
+}
+
 func TestStopExits2WhenAProcessCannotBeStoppedAndStillStopsTheRest(t *testing.T) {
 	h := newHarness(t)
 	h.procs.addRecord(server.Record{Name: "browser-9333", Kind: server.KindBrowser, PID: 14})

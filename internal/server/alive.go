@@ -65,19 +65,53 @@ func (s *Store) Alive(rec Record) bool {
 	return rec.ProfileDir != "" && info.hasArg("--user-data-dir="+rec.ProfileDir)
 }
 
+// State says what still runs of a record.
+type State int
+
+// The states of a record.
+const (
+	// StateGone means nothing the record names runs any more, so the record is stale.
+	StateGone State = iota
+	// StateRunning means the recorded process passes the alive check.
+	StateRunning
+	// StateOrphaned means the supervisor is gone while the program it started, or a member of its group, still runs.
+	StateOrphaned
+)
+
+// State reports whether rec is running, orphaned or gone; only a record that is gone may be removed without a signal.
+func (s *Store) State(rec Record) State {
+	switch {
+	case s.Alive(rec):
+		return StateRunning
+	case orphanLives(rec):
+		return StateOrphaned
+	}
+	return StateGone
+}
+
 // ChildAlive reports whether the managed program of a supervised record is still the process that was started.
 func ChildAlive(rec Record) bool {
 	if !rec.Kind.supervised() || !usablePID(rec.ChildPID) {
 		return false
 	}
-	info := inspect(rec.ChildPID)
-	if !info.running() {
+	return childMatches(rec, inspect(rec.ChildPID))
+}
+
+func childMatches(rec Record, info procInfo) bool {
+	if !usablePID(rec.ChildPID) || !info.running() {
 		return false
 	}
 	if rec.ChildStartTicks != 0 && info.TicksKnown && info.StartTicks != rec.ChildStartTicks {
 		return false
 	}
-	return info.PGID == 0 || rec.ChildPGID == 0 || info.PGID == rec.ChildPGID
+	if info.PGID != 0 && rec.ChildPGID != 0 && info.PGID != rec.ChildPGID {
+		return false
+	}
+	if !info.CmdlineKnown {
+		return true
+	}
+	// A script started through its shebang shows the interpreter first and the recorded program as an argument.
+	return len(rec.Command) > 0 && (info.firstArgIs(rec.Command[0]) || info.hasArg(rec.Command[0]))
 }
 
 // StartTicks returns the start time of pid in the unit the record stores; it is 0 where the system has none.

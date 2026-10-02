@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	resultStopped      = "stopped"
-	resultStaleRemoved = "stale record removed"
-	resultFailed       = "failed"
+	resultStopped       = "stopped"
+	resultOrphanStopped = "stopped, supervisor was gone"
+	resultStaleRemoved  = "stale record removed"
+	resultFailed        = "failed"
 )
 
 type stoppedProcess struct {
@@ -36,7 +37,8 @@ func (a *app) newStopCmd() *cobra.Command {
 		Use:   "stop",
 		Short: "Stop everything pagevow started",
 		Long: "Stop the browser, the text helper and the model servers that pagevow start recorded, in that order, and remove stale records.\n" +
-			"A process is only signalled when its recorded identity still matches. The managed browser profile stays on disk.\n\n" +
+			"A process is only signalled when its recorded identity still matches. A model server or text helper whose supervisor is gone\n" +
+			"is stopped through its own process group. The managed browser profile stays on disk.\n\n" +
 			"Exit codes: 0 everything is stopped, 2 a process could not be stopped.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error { return a.runStop(cmd) },
@@ -81,6 +83,8 @@ func (a *app) runStop(cmd *cobra.Command) error {
 			report.OK = false
 		case result == server.WasStale:
 			entry.Result = resultStaleRemoved
+		case result == server.WasOrphaned:
+			entry.Result = resultOrphanStopped
 		default:
 			entry.Result = resultStopped
 		}
@@ -131,6 +135,8 @@ func printStopped(out *ui.Printer, entry stoppedProcess) {
 	switch entry.Result {
 	case resultStopped:
 		out.Status(ui.OK, "%s stopped (pid %d)", entry.Name, entry.PID)
+	case resultOrphanStopped:
+		out.Status(ui.OK, "%s stopped (supervisor was gone)", entry.Name)
 	case resultStaleRemoved:
 		out.Status(ui.Info, "%s: its process was already gone, record removed", entry.Name)
 	default:

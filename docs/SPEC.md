@@ -229,13 +229,34 @@ on Linux, writes the record, watches the GPU, and removes the record when the pr
 supervisor; `start` launches it detached with the profile `<cache>/pagevow/profiles/managed`.
 
 Records: one file per process (`model-<port>`, `text-helper-<port>`, `browser-<port>`), written atomically with mode
-0600. A record is alive when the pid exists, its start time equals the recorded one, and its command line fits the
-kind. Any other record is stale and is removed by `start`, `stop`, `status` and `doctor`.
+0600. A record is in one of three states:
+
+- alive: the recorded pid (the supervisor, or the browser) exists, its start time equals the recorded one, and its
+  command line fits the kind;
+- orphaned: a model server or text helper record whose supervisor fails the alive check while its program still
+  runs: the child pid exists with `child_start_ticks`, the recorded process group and a command line that starts with
+  (or, for a script started through its shebang, contains) the recorded program, or a live member of the recorded group
+  is tied to the record (parent, session, or on macOS the start time rule of the phase 3 decisions). A record without
+  `child_start_ticks`, or whose group id is 1 or the group of pagevow itself, is never orphaned;
+- stale: neither. Only a stale record is removed without a signal, by `start`, `stop`, `status` and `doctor`.
+
+An orphan happens on macOS, which has no parent-death signal, when the supervisor dies without stopping its program
+(SIGKILL, a crash). `stop` ends it and reports `<name> stopped (supervisor was gone)` (JSON result
+`stopped, supervisor was gone`). `status` keeps the record and shows the state `orphaned` in the table and in the
+`state` key of `processes`, with a warning that names both pids and the fix `pagevow stop`. `doctor` warns under the
+check id `records` with the fix `pagevow stop`. `start` never signals an orphan: a target whose record name or port an
+orphan holds is a problem that names `pagevow stop` and nothing is launched; an orphan on another port is a warning.
+`install --model` refuses to replace a run directory that an orphaned model server uses. The `processes` entries of
+`status --json` carry `state` (`ready`, `starting`, `orphaned` or `gone`) and `child_pid` (omitted when 0) besides
+`alive`, which stays the alive check of the recorded pid.
 
 Stop sequence: SIGTERM to the supervisor, which sends SIGTERM to the program's process group, waits 10 seconds, sends
 SIGKILL to the group, removes the record and exits. When the supervisor still runs after 15 seconds, `stop` kills
-the group and the supervisor itself. A group is signalled only when it can be tied to the record. Order: browser,
-text helper, models.
+the group and the supervisor itself. When the supervisor is gone (an orphaned record), or a tied group member is
+still left after the supervisor ended, `stop` does the supervisor's part itself: SIGTERM to the recorded process
+group, 10 seconds, SIGKILL to the group, 5 seconds, and only then removes the record. Before each signal the group is
+checked again, so a group is signalled only while it can be tied to the record, and the supervisor pid is never
+signalled once it fails the alive check. Order: browser, text helper, models.
 
 Modes: `nf4` and `int8` load the model quantised; `nf4`, `int8` and `bf16` turn CUDA graphs off, set the batch size
 to 1 and use expandable allocator segments. pagevow sets these variables itself; values in the environment of
@@ -628,7 +649,10 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Mode and port review | `use` plans every loopback leg and refuses to save when a leg cannot be planned (a URL without a port, two legs on one port) or when any leg has a mode that macOS cannot serve, naming every bad leg in one error; `doctor` offers one command for both cascade legs when both modes are unavailable |
 | Peaks | 11.5 GiB above 1B (and for an unknown size), 3.0 GiB for 1B or less, the text helper 2.0 GiB, margin 1.5 GiB; estimates until measured on a real Mac |
 | Floor | a model above 1B needs 16 GiB of memory in total |
-| Workflow | `.github/workflows/mlx-live.yml` (`workflow_dispatch`, `contents: read`, `macos-latest`, 30 minutes) probes `sysctl` and `vm_stat`, clones kev at a pinned commit, runs `uv sync --extra serve`, starts the public checkpoint in mode `default`, checks `backend == "mlx"` on `/v1/models`, prints `status --json` memory before `start` and after five `/v1/systemone` requests so the free memory formula can be compared with real state, stops it and checks that no `kev.serve` is left, then kills the supervisor with SIGKILL and fails when `kev.serve` survives `pagevow stop` |
+| Workflow | `.github/workflows/mlx-live.yml` (`workflow_dispatch`, `contents: read`, `macos-latest`, 30 minutes) probes `sysctl` and `vm_stat`, clones kev at a pinned commit, runs `uv sync --extra serve`, starts the public checkpoint in mode `default`, checks `backend == "mlx"` on `/v1/models`, prints `status --json` memory before `start` and after five `/v1/systemone` requests so the free memory formula can be compared with real state, stops it and checks that no `kev.serve` is left, then kills the supervisor with SIGKILL, prints `status --json` (the record shows `state: orphaned`) and fails when `kev.serve` survives `pagevow stop` |
+| Orphan rule | evidence of the first `mlx-live` run on 2026-10-02 (macos-latest, arm64): after `kill -9` of the supervisor (pid 3071), `uv run ... kev.serve` (pid 3072, the group leader) and its Python child (pid 3077) kept running and kept port 8009; `pagevow stop` then reported `its process was already gone, record removed`, `status` printed `Processes: none recorded` while the local server still answered HTTP 200, and both processes survived. A record whose supervisor is dead is now orphaned, not stale, while its child or a tied group member lives (section 9); `stop` ends the group with SIGTERM, 10 seconds, SIGKILL and removes the record; `status`, `doctor` and `start` keep the record and point at `pagevow stop`. On Linux the parent-death signal kills the program with its supervisor, so the rule only acts there when the program left a member behind |
+| Orphans on Windows | `Spawn` and `Supervise` are not supported on Windows, so there is no supervised record and no orphan; the browser record names the browser itself and `stop` ends its tree with `taskkill /T /F`. `orphanLives` is false there and `terminateGroup` returns `ErrUnsupported` |
+| First MLX measurement | the same run: `pagevow start` reached ready in 18 s with `backend: mlx`, `device: mps`, `dtype: bfloat16` for `jaredpalmer/kev-0.8b` on a runner with 14336 MiB in total. Counted free memory was 7916 MiB before `start` (1277 free + 13 purgeable + 6625 file-backed, 625 speculative inside file-backed) and 5852 MiB after five `/v1/systemone` requests (209 + 5 + 5636, 72 speculative), so the 0.8B model cost about 2.0 GiB of counted free memory against the 3.0 GiB estimate. The estimate stays until a real Mac and the 4B model are measured; one CI run on a shared runner is not enough to lower it |
 | Public checkpoint | `jaredpalmer/kev-0.8b` at revision `9a45d25eb2ab761841196625383fa1dff0e56c1e`, with its base model `Qwen/Qwen3.5-0.8B-Base` at revision `dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68`, is used only in that workflow; pagevow ships no model |
 
 ## 17. Open questions
@@ -642,4 +666,5 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
    file-backed pages (speculative pages are inside the file-backed count), but how much of it a model load really
    gets is unknown, so the `server.gpu_min_free_mib` guard is off on unified memory until measured. The `mlx-live` workflow
    prints the components before `start` and after a few requests; the first run on a real Mac decides the formula, the
-   peaks and whether the guard limit comes back.
+   peaks and whether the guard limit comes back. The first CI run (2026-10-02, phase 6 decisions) measured about 2.0 GiB
+   of counted free memory for the 0.8B model against the 3.0 GiB estimate.

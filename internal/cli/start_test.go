@@ -189,6 +189,44 @@ func TestStartRefusesAPortInUseByAProcessWithoutARecordBeforeLaunchingAnything(t
 	assert.Empty(t, h.managed.launched)
 }
 
+func TestStartRefusesAPortHeldByAnOrphanAndPointsAtStop(t *testing.T) {
+	h := newHarness(t)
+	h.kevCheckout()
+	h.mustRun("use", "local")
+	h.procs.addRecord(server.Record{Name: "model-8009", Kind: server.KindModel, PID: 3071, ChildPID: 3072, Port: 8009})
+	h.procs.markOrphaned("model-8009")
+	h.procs.portsInUse[8009] = true
+
+	stdout, _, err := h.runSplit(context.Background(), "start")
+
+	require.Error(t, err)
+	assert.Equal(t, 2, cli.ExitCode(err))
+	assert.Contains(t, stdout, "model-8009 runs without its supervisor: the supervisor (pid 3071) is gone and the program it started (pid 3072) still runs; run pagevow stop first (model-8009, port 8009)")
+	assert.NotContains(t, stdout, "did not start")
+	assert.Empty(t, h.procs.spawned)
+	assert.Empty(t, h.procs.stopped, "start never signals an orphan")
+	assert.Empty(t, h.managed.launched)
+}
+
+func TestStartWarnsAboutAnOrphanOnAnotherPortAndStartsTheRest(t *testing.T) {
+	h := newHarness(t)
+	h.mustRun("use", "custom", "--url", "http://127.0.0.1:8080")
+	h.procs.addRecord(server.Record{Name: "model-8010", Kind: server.KindModel, PID: 3071, ChildPID: 3072, Port: 8010})
+	h.procs.markOrphaned("model-8010")
+
+	stdout, stderr, err := h.runSplit(context.Background(), "start", "--json")
+
+	require.NoError(t, err, stderr)
+	var report startJSON
+	require.NoError(t, json.Unmarshal([]byte(stdout), &report), stdout)
+	require.Len(t, report.Warnings, 1)
+	assert.Contains(t, report.Warnings[0], "model-8010 runs without its supervisor")
+	assert.Contains(t, report.Warnings[0], "until pagevow stop ends it")
+	assert.Empty(t, report.StaleRemoved)
+	assert.Empty(t, h.procs.stopped)
+	assert.Len(t, h.managed.launched, 1)
+}
+
 func TestStartRefusesWhenTheModelDoesNotFitAndNothingIsLaunched(t *testing.T) {
 	h := newHarness(t)
 	h.kevCheckout()

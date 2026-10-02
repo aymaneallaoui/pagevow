@@ -19,7 +19,9 @@ type statusJSON struct {
 		Name          string `json:"name"`
 		Kind          string `json:"kind"`
 		PID           int    `json:"pid"`
+		ChildPID      int    `json:"child_pid"`
 		Port          int    `json:"port"`
+		State         string `json:"state"`
 		Alive         bool   `json:"alive"`
 		Ready         bool   `json:"ready"`
 		UptimeSeconds int64  `json:"uptime_seconds"`
@@ -120,6 +122,52 @@ func TestStatusListsProcessesWithReadinessAndUptime(t *testing.T) {
 	assert.Equal(t, []string{"model-8010"}, report.StaleRemoved)
 	assert.Equal(t, "HeadlessChrome/140.0.1", report.Versions["browser"])
 	assert.Equal(t, []string{"model-8010"}, h.procs.stopped)
+}
+
+func TestStatusShowsAnOrphanInsteadOfRemovingItsRecord(t *testing.T) {
+	h := newHarness(t)
+	h.procs.addRecord(server.Record{
+		Name: "model-8009", Kind: server.KindModel, PID: 3071, ChildPID: 3072, Port: 8009,
+		StartedAt: h.now.Add(-time.Minute), ReadyURL: "http://127.0.0.1:8009/v1/models",
+	})
+	h.procs.markOrphaned("model-8009")
+	h.procs.answer("http://127.0.0.1:8009/v1/models", 200)
+
+	report, _ := statusOf(t, h)
+
+	require.Len(t, report.Processes, 1)
+	orphan := report.Processes[0]
+	assert.Equal(t, "orphaned", orphan.State)
+	assert.False(t, orphan.Alive, "the supervisor is gone")
+	assert.True(t, orphan.Ready)
+	assert.Equal(t, 3071, orphan.PID)
+	assert.Equal(t, 3072, orphan.ChildPID)
+	assert.EqualValues(t, 60, orphan.UptimeSeconds)
+	assert.Empty(t, report.StaleRemoved)
+	assert.Empty(t, h.procs.stopped, "status never stops an orphan")
+
+	plain, stderr, err := h.runSplit(context.Background(), "status")
+	require.NoError(t, err, stderr)
+	assert.Contains(t, plain, "orphaned")
+	assert.Contains(t, plain, "[warn] model-8009 runs without its supervisor: the supervisor (pid 3071) is gone and the program it started (pid 3072) still runs; fix: pagevow stop")
+	assert.NotContains(t, plain, "none recorded")
+}
+
+func TestStatusStateNamesReadyStartingAndGone(t *testing.T) {
+	h := newHarness(t)
+	h.procs.addRecord(server.Record{Name: "model-8009", Kind: server.KindModel, PID: 11, Port: 8009, ReadyURL: "http://127.0.0.1:8009/v1/models"})
+	h.procs.answer("http://127.0.0.1:8009/v1/models", 200)
+	h.procs.addRecord(server.Record{Name: "model-8010", Kind: server.KindModel, PID: 12, Port: 8010, ReadyURL: "http://127.0.0.1:8010/v1/models"})
+	h.procs.addRecord(server.Record{Name: "model-8011", Kind: server.KindModel, PID: 13, Port: 8011})
+	h.procs.markDead("model-8011")
+
+	report, _ := statusOf(t, h)
+
+	states := map[string]string{}
+	for _, p := range report.Processes {
+		states[p.Name] = p.State
+	}
+	assert.Equal(t, map[string]string{"model-8009": "ready", "model-8010": "starting", "model-8011": "gone"}, states)
 }
 
 func TestStatusHealthShowsHTTPStatusForEveryDestinationWithoutTheNetwork(t *testing.T) {

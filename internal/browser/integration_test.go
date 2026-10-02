@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -146,7 +147,7 @@ func js(t *testing.T, s *Session, expression string) string {
 	t.Helper()
 	ctx, cancel := s.bind(testContext(t))
 	defer cancel()
-	value, err := evaluate(ctx, expression, false)
+	value, err := evaluate(ctx, cdp.FrameID(s.targetID), expression, false)
 	require.NoError(t, err)
 	var text string
 	if err := json.Unmarshal(value, &text); err != nil {

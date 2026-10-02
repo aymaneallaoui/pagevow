@@ -503,6 +503,61 @@ func TestStopPassRemovesSymlinkedCounterWithoutFollowing(t *testing.T) {
 	assert.Equal(t, "keep\n", string(data))
 }
 
+func TestStopRefusesASymlinkedOutputDirectory(t *testing.T) {
+	h := newHarness(t)
+	elsewhere := filepath.Join(h.root, "elsewhere")
+	require.NoError(t, os.MkdirAll(elsewhere, 0o750))
+	if err := os.Symlink(elsewhere, filepath.Join(h.dir, hook.OutDirName)); err != nil {
+		t.Skipf("symlinks are not available: %v", err)
+	}
+	h.queuePass()
+
+	assert.Equal(t, 1, h.stop("s"))
+
+	assert.Contains(t, h.stderr.String(), "not a real directory")
+	assert.Empty(t, h.runner.specs, "nothing may run when the output directory is redirected")
+	entries, err := os.ReadDir(elsewhere)
+	require.NoError(t, err)
+	assert.Empty(t, entries, "nothing may be written where the link points")
+}
+
+func TestStopRefusesAnOutputDirectoryThatIsAFile(t *testing.T) {
+	h := newHarness(t)
+	require.NoError(t, os.WriteFile(filepath.Join(h.dir, hook.OutDirName), []byte("x"), 0o600))
+	h.queuePass()
+	assert.Equal(t, 1, h.stop("s"))
+	assert.Contains(t, h.stderr.String(), "not a real directory")
+}
+
+func TestStopSaysSoWhenTheSuitePassedOnAPaidService(t *testing.T) {
+	h := newHarness(t)
+	h.runner.results = []hook.RunResult{{ExitCode: 0, Report: &runner.Report{PaidServices: []string{"decision model at https://api.example.test"}}}}
+
+	assert.Equal(t, 0, h.stop("s"))
+
+	assert.Equal(t, "Browser tests used a paid service: decision model at https://api.example.test; it may bill per request.\n", h.stderr.String())
+}
+
+func TestStopSaysSoWhenTheSuiteFailedOnAPaidService(t *testing.T) {
+	h := newHarness(t)
+	report := h.failingReport()
+	report.PaidServices = []string{"decision model at https://api.example.test", "text helper at https://text.example.test"}
+	h.runner.results = []hook.RunResult{{ExitCode: 1, Report: report}}
+
+	assert.Equal(t, 2, h.stop("s"))
+
+	out := h.stderr.String()
+	assert.Contains(t, out, "Browser tests used a paid service: decision model at https://api.example.test and text helper at https://text.example.test; it may bill per request.\n")
+	assert.Contains(t, out, "Browser tests failed.")
+}
+
+func TestStopSaysNothingAboutCostWhenNoServiceIsPaid(t *testing.T) {
+	h := newHarness(t)
+	h.runner.results = []hook.RunResult{{ExitCode: 0, Report: &runner.Report{}}}
+	assert.Equal(t, 0, h.stop("s"))
+	assert.Empty(t, h.stderr.String())
+}
+
 func TestProjectDir(t *testing.T) {
 	getwd := func() (string, error) { return "/wd", nil }
 	failing := func() (string, error) { return "", errors.New("no wd") }

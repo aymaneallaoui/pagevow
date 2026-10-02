@@ -18,7 +18,7 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/secret"
 )
 
-// Phases timed inside a step. Snapshot, model, execute and wait are always reported; text only when it ran.
+// Phases timed inside a step; text is reported only when it ran and the others always.
 const (
 	PhaseSnapshot = "snapshot"
 	PhaseModel    = "model"
@@ -34,7 +34,7 @@ const MinSecretLength = secret.MinLength
 
 func basePhases() []string { return []string{PhaseSnapshot, PhaseModel, PhaseExecute, PhaseWait} }
 
-// Options configure a Recorder. An empty Dir turns writing off; every other behaviour is unchanged.
+// Options configure a Recorder, and an empty Dir turns writing off.
 type Options struct {
 	Dir  string
 	URL  string
@@ -55,8 +55,7 @@ type Retry struct {
 	Raw     *string `json:"raw,omitempty"`
 }
 
-// StepInput is one model decision. Request, Answers, Usage and Cascade are written as given; a nil Usage is written
-// as null.
+// StepInput is one model decision whose Request, Answers, Usage and Cascade are written as given, a nil Usage as null.
 type StepInput struct {
 	Goal         string
 	Request      any
@@ -73,7 +72,7 @@ type phaseTime struct {
 	duration time.Duration
 }
 
-// Recorder writes the trace of one run. It is not safe for concurrent use.
+// Recorder writes the trace of one run and is not safe for concurrent use.
 type Recorder struct {
 	dir     string
 	runID   string
@@ -135,7 +134,7 @@ func (r *Recorder) TracePath() string { return r.path(".jsonl") }
 // MetaPath returns the path of the meta file, or "" when writing is off.
 func (r *Recorder) MetaPath() string { return r.path(".meta.json") }
 
-// Err returns the first write error, if any; recording never fails a run.
+// Err returns the first write error, if any, and recording never fails a run.
 func (r *Recorder) Err() error { return r.err }
 
 func (r *Recorder) path(suffix string) string {
@@ -172,7 +171,7 @@ func (r *Recorder) Phase(name string) (stop func()) {
 	}
 }
 
-// Timed runs fn as a phase. When fn returns an error the phase stays marked as failed for EndStep.
+// Timed runs fn as a phase and keeps the phase marked as failed for EndStep when fn returns an error.
 func (r *Recorder) Timed(name string, fn func() error) error {
 	started := r.clock()
 	r.phase = name
@@ -257,8 +256,7 @@ func milliseconds(d time.Duration) int {
 	return int(math.RoundToEven(float64(d) / float64(time.Millisecond)))
 }
 
-// Step records a model decision. It is written when the step ends, or at once when no step is open and no text
-// is awaited.
+// Step records a model decision, written when the step ends or at once when no step is open and no text is awaited.
 func (r *Recorder) Step(in StepInput) {
 	r.flush()
 	r.steps++
@@ -329,7 +327,7 @@ func (r *Recorder) Stats() Stats {
 	return stats
 }
 
-// Finish closes the open step, writes the pending decision and the meta file. Only the first call writes a meta.
+// Finish closes the open step, writes the pending decision and writes the meta file on its first call only.
 func (r *Recorder) Finish(status string, elapsedMS int, opts ...FinishOption) {
 	r.EndStep(nil)
 	r.flush()
@@ -351,7 +349,7 @@ func (r *Recorder) Finish(status string, elapsedMS int, opts ...FinishOption) {
 	r.writeMeta()
 }
 
-// SetVerified records the verifier verdict: nil for unknown. After Finish it rewrites the meta file.
+// SetVerified records the verifier verdict, nil for unknown, and rewrites the meta file after Finish.
 func (r *Recorder) SetVerified(verdict *bool) {
 	r.verified = nil
 	if verdict != nil {

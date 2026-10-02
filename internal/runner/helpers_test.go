@@ -85,6 +85,7 @@ type world struct {
 	built    map[string]int
 
 	captureFails func(call int) bool
+	captureDelay time.Duration
 	openErr      error
 	closeErr     error
 	observeErr   func(call int) error
@@ -125,6 +126,12 @@ func (w *world) NewSession(_ context.Context, url string) (runner.Session, error
 		return w.decorate(s), nil
 	}
 	return s, nil
+}
+
+type sessionFunc func(ctx context.Context, url string) (runner.Session, error)
+
+func (f sessionFunc) NewSession(ctx context.Context, url string) (runner.Session, error) {
+	return f(ctx, url)
 }
 
 func (w *world) Decide(ctx context.Context, in backend.Input) (backend.Decision, error) {
@@ -213,9 +220,11 @@ func (s *fakeSession) Act(context.Context, page.Action, page.State, string) erro
 
 func (s *fakeSession) Capture(_ context.Context, format string, fullPage bool) ([]byte, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.captures = append(s.captures, capture{format: format, fullPage: fullPage, page: s.current().URL})
-	if fails := s.world.captureFails; fails != nil && fails(len(s.captures)) {
+	call := len(s.captures)
+	s.mu.Unlock()
+	time.Sleep(s.world.captureDelay)
+	if fails := s.world.captureFails; fails != nil && fails(call) {
 		return nil, errors.New(captureHang)
 	}
 	return []byte(pngBytes), nil

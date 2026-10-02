@@ -34,6 +34,8 @@ func (a *attempt) captureStep(ctx context.Context) {
 	if a.runner.opts.Screenshots == ScreenshotsFinal || a.stopSteps || ctx.Err() != nil {
 		return
 	}
+	a.budget.pause()
+	defer a.budget.resume()
 	name := fmt.Sprintf("step-%04d.png", len(a.res.Screenshots.Steps))
 	path, ok := a.capture(ctx, name, false)
 	if !ok {

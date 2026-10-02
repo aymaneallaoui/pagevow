@@ -47,8 +47,7 @@ type SessionOptions struct {
 	Viewport Viewport
 	// CallTimeout bounds every single browser call of the session; zero means 10 seconds.
 	CallTimeout time.Duration
-	// DownloadDir receives the files the page downloads; empty denies every download.
-	// The setting is browser-wide and applies from the moment the session opens.
+	// DownloadDir receives the files the page downloads, browser-wide from the moment the session opens; empty denies every download.
 	DownloadDir string
 }
 

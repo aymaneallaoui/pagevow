@@ -109,7 +109,7 @@ func runWithBlockedDirectory(t *testing.T, w *world, blocked string, tests ...te
 	t.Helper()
 	out := filepath.Join(t.TempDir(), "out")
 	opened := 0
-	factory := runner.SessionFactoryFunc(func(ctx context.Context, url string) (runner.Session, error) {
+	factory := sessionFunc(func(ctx context.Context, url string) (runner.Session, error) {
 		opened++
 		if opened == 1 {
 			runs, err := filepath.Glob(filepath.Join(out, "*"))
@@ -168,7 +168,7 @@ func TestABrokenDirectoryOfAnUnverifiedTestIsUnverified(t *testing.T) {
 
 func TestTheTimeoutAlsoBoundsOpeningTheSession(t *testing.T) {
 	w := newWorld(t).script("https://app.test/", passing())
-	factory := runner.SessionFactoryFunc(func(ctx context.Context, _ string) (runner.Session, error) {
+	factory := sessionFunc(func(ctx context.Context, _ string) (runner.Session, error) {
 		<-ctx.Done()
 		return nil, ctx.Err()
 	})
@@ -205,7 +205,7 @@ func TestAnInterruptWhileOpeningTheSessionIsNotATimeout(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	w := newWorld(t)
-	factory := runner.SessionFactoryFunc(func(ctx context.Context, _ string) (runner.Session, error) {
+	factory := sessionFunc(func(ctx context.Context, _ string) (runner.Session, error) {
 		cancel()
 		<-ctx.Done()
 		return nil, ctx.Err()

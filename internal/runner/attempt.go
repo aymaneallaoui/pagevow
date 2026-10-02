@@ -34,6 +34,7 @@ type attempt struct {
 	res       Result
 	started   time.Time
 	stopSteps bool
+	budget    *budgetContext
 }
 
 func (r *Runner) runAttempt(ctx context.Context, dir string, test testsfile.Test, number int) (Result, error) {
@@ -73,8 +74,9 @@ func (r *Runner) runAttempt(ctx context.Context, dir string, test testsfile.Test
 
 func (a *attempt) execute(ctx context.Context) agent.Outcome {
 	r := a.runner
-	attemptCtx, cancel := context.WithTimeout(ctx, r.opts.Timeout)
+	attemptCtx, cancel := withBudget(ctx, r.opts.Timeout)
 	defer cancel()
+	a.budget = attemptCtx
 	session, err := r.deps.Sessions.NewSession(attemptCtx, a.test.URL)
 	if err != nil {
 		return a.failed(attemptCtx, fmt.Errorf("open session: %w", err))
@@ -220,6 +222,9 @@ func (a *attempt) conclude(ctx context.Context, outcome agent.Outcome) {
 	}
 	if res.Passed && a.runner.opts.Screenshots == ScreenshotsFailed {
 		a.dropSteps()
+	}
+	if err := a.rec.Err(); err != nil {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("the trace is incomplete: %v", err))
 	}
 	if _, err := os.Stat(a.rec.TracePath()); err == nil {
 		path := a.rec.TracePath()

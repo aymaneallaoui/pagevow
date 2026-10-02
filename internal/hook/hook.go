@@ -33,7 +33,6 @@ const (
 	unknownSession   = "unknown"
 	maxInputBytes    = 1 << 20
 	skippedTailLines = 12
-	dirMode          = 0o750
 	fileMode         = 0o600
 
 	exitAllow = 0
@@ -134,7 +133,7 @@ func Stop(ctx context.Context, cfg Config, in Input) int {
 		return exitFail
 	}
 	outDir := filepath.Join(dir, OutDirName)
-	if err := os.MkdirAll(outDir, dirMode); err != nil {
+	if err := runner.EnsureRealDir(outDir); err != nil {
 		say(cfg.Stderr, "Browser tests skipped: could not create %s: %v\n", outDir, err)
 		return exitFail
 	}
@@ -161,8 +160,10 @@ func Stop(ctx context.Context, cfg Config, in Input) int {
 	}
 	switch res.ExitCode {
 	case runner.ExitPassed:
+		warnPaid(cfg.Stderr, res)
 		return st.passed(cfg.Stderr)
 	case runner.ExitFailed:
+		warnPaid(cfg.Stderr, res)
 		return st.failed(cfg, res)
 	default:
 		say(cfg.Stderr, "%s", skippedText(res))
@@ -286,6 +287,13 @@ func writeState(path, content string) error {
 		return fmt.Errorf("write hook state: %w", err)
 	}
 	return nil
+}
+
+func warnPaid(w io.Writer, res RunResult) {
+	if res.Report == nil || len(res.Report.PaidServices) == 0 {
+		return
+	}
+	say(w, "Browser tests used a paid service: %s; it may bill per request.\n", strings.Join(res.Report.PaidServices, " and "))
 }
 
 func warnState(w io.Writer, err error) {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/chromedp/cdproto"
 	"github.com/chromedp/cdproto/cdp"
+	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
@@ -31,6 +32,7 @@ const (
 	enterKeyCode       = 13
 	captureFormatPNG   = "png"
 	captureFormatJPEG  = "jpeg"
+	isolatedWorldName  = "pagevow"
 )
 
 var (
@@ -47,6 +49,7 @@ type Session struct {
 	browser          cdp.Executor
 	callTimeout      time.Duration
 	downloadsAllowed bool
+	script           func(ctx context.Context, expression string, awaitPromise bool) (json.RawMessage, error)
 
 	crashCtx      context.Context
 	markCrashed   context.CancelFunc
@@ -78,7 +81,11 @@ func newSession(ctx context.Context, cancel context.CancelFunc, cfg sessionConfi
 	if callTimeout <= 0 {
 		callTimeout = defaultCallTimeout
 	}
+	frame := cdp.FrameID(cfg.targetID)
 	return &Session{
+		script: func(ctx context.Context, expression string, awaitPromise bool) (json.RawMessage, error) {
+			return evaluate(ctx, frame, expression, awaitPromise)
+		},
 		ctx:              ctx,
 		cancel:           cancel,
 		viewport:         cfg.viewport,
@@ -165,28 +172,38 @@ func (s *Session) setCurrent(id string) {
 	s.current = id
 }
 
-func evaluate(ctx context.Context, expression string, awaitPromise bool) (json.RawMessage, error) {
+func evaluate(ctx context.Context, frame cdp.FrameID, expression string, awaitPromise bool) (json.RawMessage, error) {
 	var value json.RawMessage
 	err := chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
-		result, exception, err := runtime.Evaluate(expression).
-			WithReturnByValue(true).WithAwaitPromise(awaitPromise).Do(ctx)
-		if err != nil {
-			return err
-		}
-		if exception != nil {
-			return fmt.Errorf("%w: %s", errException, exception.Text)
-		}
-		value = append(json.RawMessage(nil), result.Value...)
-		return nil
+		var err error
+		value, err = evaluateInWorld(ctx, frame, expression, awaitPromise)
+		return err
 	}))
 	return value, err
+}
+
+// evaluateInWorld runs the expression in the isolated world of the frame, so page scripts cannot read or replace its state.
+func evaluateInWorld(ctx context.Context, frame cdp.FrameID, expression string, awaitPromise bool) (json.RawMessage, error) {
+	world, err := cdppage.CreateIsolatedWorld(frame).WithWorldName(isolatedWorldName).Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("create isolated world: %w", err)
+	}
+	result, exception, err := runtime.Evaluate(expression).
+		WithContextID(world).WithReturnByValue(true).WithAwaitPromise(awaitPromise).Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if exception != nil {
+		return nil, fmt.Errorf("%w: %s", errException, exception.Text)
+	}
+	return append(json.RawMessage(nil), result.Value...), nil
 }
 
 func (s *Session) eval(ctx context.Context, expression string, awaitPromise bool) (json.RawMessage, error) {
 	var value json.RawMessage
 	err := s.call(ctx, func(ctx context.Context) error {
 		var err error
-		value, err = evaluate(ctx, expression, awaitPromise)
+		value, err = s.script(ctx, expression, awaitPromise)
 		return err
 	})
 	return value, err

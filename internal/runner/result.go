@@ -95,6 +95,8 @@ type Report struct {
 	Totals      Totals       `json:"totals"`
 	Tests       []TestReport `json:"tests"`
 	Interrupted bool         `json:"interrupted,omitempty"`
+	// PaidServices lists the paid services the run used, so a caller that hides stderr can still say so.
+	PaidServices []string `json:"paid,omitempty"`
 }
 
 func (r *Report) finalize() {

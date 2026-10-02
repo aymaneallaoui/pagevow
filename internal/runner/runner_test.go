@@ -471,6 +471,113 @@ func TestPathsInResultsAndReportsAreAbsolute(t *testing.T) {
 	assert.Equal(t, report.RunDir, saved.RunDir)
 }
 
+func TestSlowStepScreenshotsDoNotSpendTheTimeoutBudget(t *testing.T) {
+	w := newWorld(t).script("https://app.test/", passing())
+	w.captureDelay = 700 * time.Millisecond
+	w.captureFails = func(call int) bool { return call == 1 }
+	r, _ := newRunner(t, w, func(o *runner.Options) { o.Timeout = 400 * time.Millisecond; o.Screenshots = runner.ScreenshotsAll })
+
+	report := mustRun(t, r, loadTests(t)["home"])
+
+	result := report.Tests[0].Last()
+	assert.Equal(t, "DONE", result.Status)
+	assert.True(t, result.Passed)
+	assert.NotEmpty(t, result.ScreenshotErrors, "the failing step screenshot is still reported")
+}
+
+func TestTheBudgetStillEndsAnAttemptThatIsSlowOutsideScreenshots(t *testing.T) {
+	w := newWorld(t).script("https://app.test/", passing())
+	w.captureDelay = 100 * time.Millisecond
+	w.onDecide = func(ctx context.Context, _ backend.Input) (backend.Decision, bool, error) {
+		<-ctx.Done()
+		return backend.Decision{}, true, ctx.Err()
+	}
+	r, _ := newRunner(t, w, func(o *runner.Options) { o.Timeout = 300 * time.Millisecond; o.Screenshots = runner.ScreenshotsAll })
+
+	start := time.Now()
+	report := mustRun(t, r, loadTests(t)["home"])
+
+	assert.Equal(t, "timeout", report.Tests[0].Last().Status)
+	assert.Less(t, time.Since(start), 5*time.Second)
+}
+
+func TestAnIncompleteTraceIsWarnedAboutAndNeverChangesTheVerdict(t *testing.T) {
+	w := newWorld(t).script("https://app.test/", longRun())
+	var out string
+	w.onDecide = func(context.Context, backend.Input) (backend.Decision, bool, error) {
+		traces, err := filepath.Glob(filepath.Join(out, "*", "*", "*.jsonl"))
+		require.NoError(t, err)
+		for _, path := range traces {
+			require.NoError(t, os.Remove(path))
+			require.NoError(t, os.Mkdir(path, 0o700))
+		}
+		return backend.Decision{}, false, nil
+	}
+	r, dir := newRunner(t, w, nil)
+	out = dir
+
+	report := mustRun(t, r, loadTests(t)["home"])
+
+	result := report.Tests[0].Last()
+	assert.True(t, result.Passed)
+	assert.Equal(t, 1, report.Totals.TestsWithWarnings)
+	require.NotEmpty(t, result.Warnings)
+	assert.Contains(t, result.Warnings[len(result.Warnings)-1], "the trace is incomplete: ")
+	assert.Contains(t, report.Text(), "warning: the trace is incomplete: ")
+}
+
+func TestRunRefusesASymlinkedOutputDirectory(t *testing.T) {
+	root := t.TempDir()
+	elsewhere := filepath.Join(root, "elsewhere")
+	require.NoError(t, os.Mkdir(elsewhere, 0o750))
+	out := filepath.Join(root, "out")
+	if err := os.Symlink(elsewhere, out); err != nil {
+		t.Skipf("symlinks are not available: %v", err)
+	}
+	w := newWorld(t).script("https://app.test/", passing())
+	r, _ := newRunner(t, w, func(o *runner.Options) { o.OutDir = out })
+
+	_, err := r.Run(context.Background(), []testsfile.Test{loadTests(t)["home"]})
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "not a real directory")
+	entries, readErr := os.ReadDir(elsewhere)
+	require.NoError(t, readErr)
+	assert.Empty(t, entries)
+}
+
+func TestEnsureRealDirCreatesMissingParentsAndAcceptsAnExistingDirectory(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "a", "b", "out")
+	require.NoError(t, runner.EnsureRealDir(path))
+	require.NoError(t, runner.EnsureRealDir(path))
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	assert.True(t, info.IsDir())
+}
+
+func TestThePaidServicesAreRecordedInTheReport(t *testing.T) {
+	w := newWorld(t).script("https://app.test/", passing())
+	r, _ := newRunner(t, w, func(o *runner.Options) { o.PaidServices = []string{"decision model at https://api.example.test"} })
+
+	report := mustRun(t, r, loadTests(t)["home"])
+
+	assert.Equal(t, []string{"decision model at https://api.example.test"}, report.PaidServices)
+	var saved struct {
+		Paid []string `json:"paid"`
+	}
+	readJSON(t, filepath.Join(report.RunDir, "report.json"), &saved)
+	assert.Equal(t, report.PaidServices, saved.Paid)
+}
+
+func TestAFreeRunLeavesThePaidFieldOutOfTheReport(t *testing.T) {
+	w := newWorld(t).script("https://app.test/", passing())
+	r, _ := newRunner(t, w, nil)
+	report := mustRun(t, r, loadTests(t)["home"])
+	data, err := os.ReadFile(filepath.Join(report.RunDir, "report.json"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), `"paid"`)
+}
+
 func TestTimeoutEndsTheAttemptWithStatusTimeout(t *testing.T) {
 	w := newWorld(t).script("https://app.test/", passing())
 	w.onDecide = func(ctx context.Context, _ backend.Input) (backend.Decision, bool, error) {

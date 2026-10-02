@@ -33,17 +33,9 @@ type Session interface {
 	Close(ctx context.Context) error
 }
 
-// SessionFactory opens a session on a start URL; every attempt gets a fresh one. NewSession must return when ctx ends.
+// SessionFactory opens a fresh session on a start URL for every attempt, and NewSession returns when ctx ends.
 type SessionFactory interface {
 	NewSession(ctx context.Context, url string) (Session, error)
-}
-
-// SessionFactoryFunc adapts a function to SessionFactory.
-type SessionFactoryFunc func(ctx context.Context, url string) (Session, error)
-
-// NewSession calls f.
-func (f SessionFactoryFunc) NewSession(ctx context.Context, url string) (Session, error) {
-	return f(ctx, url)
 }
 
 // ScreenshotPolicy says which step screenshots a run keeps.
@@ -92,6 +84,8 @@ type Options struct {
 	VetoCache bool
 	// Secrets are replaced by *** in every trace file.
 	Secrets []string
+	// PaidServices names the paid services the run talks to; they are recorded in the report.
+	PaidServices []string
 }
 
 // Deps are the collaborators of a Runner; Text, Clock and Rand are optional.
@@ -147,7 +141,7 @@ func (r *Runner) Run(ctx context.Context, tests []testsfile.Test) (Report, error
 	if err != nil {
 		return Report{}, err
 	}
-	report := Report{RunDir: runDir, TestsFile: r.opts.TestsFile, Tests: []TestReport{}}
+	report := Report{RunDir: runDir, TestsFile: r.opts.TestsFile, Tests: []TestReport{}, PaidServices: r.opts.PaidServices}
 	var runErr error
 	plans := planDirectories(tests, r.opts.Retries)
 	for i, test := range tests {
@@ -175,12 +169,30 @@ func (r *Runner) Run(ctx context.Context, tests []testsfile.Test) (Report, error
 	return report, runErr
 }
 
+// EnsureRealDir creates the directory and its missing parents, and refuses a final path component that is a symlink or a file, so a link planted in a project cannot redirect what is written.
+func EnsureRealDir(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), dirMode); err != nil {
+		return err
+	}
+	if err := os.Mkdir(path, dirMode); err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("%s is not a real directory (symlink or file)", path)
+	}
+	return nil
+}
+
 func (r *Runner) createRunDir() (string, error) {
 	parent, err := filepath.Abs(r.opts.OutDir)
 	if err != nil {
 		return "", fmt.Errorf("resolve output directory: %w", err)
 	}
-	if err := os.MkdirAll(parent, dirMode); err != nil {
+	if err := EnsureRealDir(parent); err != nil {
 		return "", fmt.Errorf("create output directory: %w", err)
 	}
 	stamp := r.deps.Clock().UTC().Format(runDirLayout)

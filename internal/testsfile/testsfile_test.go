@@ -131,7 +131,6 @@ func TestDemoTestChecksAFinalPage(t *testing.T) {
 		byID[test.ID] = test
 	}
 	nav := byID["nav-to-catalog"]
-	assert.False(t, nav.NeedsInitial())
 
 	good := page.State{URL: "http://localhost:3000/catalog.html", Text: "Catalog\nShowing 12 of 12 books"}
 	res, err := nav.Check(good, nil)
@@ -153,11 +152,10 @@ func TestCheckWithoutVerifierFails(t *testing.T) {
 	_, err := Test{ID: "loose", Goal: "g"}.Check(page.State{}, nil)
 	assert.ErrorContains(t, err, `"loose"`)
 	assert.False(t, Test{}.Verified())
-	assert.False(t, Test{}.NeedsInitial())
 }
 
 func TestParseAcceptsUnverifiedTestsAndOptionalFields(t *testing.T) {
-	tests, _, err := Parse([]byte("- {id: a, url: http://x.test, goal: 'Go on {date+1}. Stop when done.'}\n- id: 7\n  url: u\n  goal: g\n  tags: [x, y]\n  repeat: 3\n"), today)
+	tests, _, err := Parse([]byte("- {id: a, url: http://x.test, goal: 'Go on {date+1}. Stop when done.'}\n- id: 7\n  url: http://u.test\n  goal: g\n  tags: [x, y]\n  repeat: 3\n"), today)
 	require.NoError(t, err)
 	require.Len(t, tests, 2)
 	assert.False(t, tests[0].Verified())
@@ -190,6 +188,27 @@ func TestParseResolvesTemplatesAndVerifierArguments(t *testing.T) {
 	assert.Equal(t, "2026-10-12", tests[1].Args.(verify.FlightsArgs).Day.Format("2006-01-02"))
 }
 
+func TestParseAcceptsHTTPAndHTTPSURLsAndTrimsThem(t *testing.T) {
+	text := "- {id: a, url: ' HTTP://u.test/a?x=1 ', goal: g}\n- {id: b, url: 'https://u.test:8443/b', goal: g}\n- {id: c, url: 'http://localhost:3000', goal: g}\n"
+	tests, _, err := Parse([]byte(text), today)
+	require.NoError(t, err)
+	require.Len(t, tests, 3)
+	assert.Equal(t, "HTTP://u.test/a?x=1", tests[0].URL)
+	assert.Equal(t, "https://u.test:8443/b", tests[1].URL)
+	assert.Equal(t, "http://localhost:3000", tests[2].URL)
+}
+
+func TestTheURLErrorNeverEchoesTheURL(t *testing.T) {
+	_, _, err := Parse([]byte("- {id: a, url: 'ftp://user:secret@host/x', goal: g}\n"), today)
+	require.Error(t, err)
+	assert.NotContains(t, err.Error(), "secret")
+}
+
+func TestSearchOrderIsTheCurrentNameThenTheLegacyNames(t *testing.T) {
+	assert.Equal(t, []string{"browser-tests.yaml", filepath.Join(".claude", "browser-tests.yaml")}, LegacyNames())
+	assert.Equal(t, append([]string{"pagevow.yaml"}, LegacyNames()...), SearchOrder())
+}
+
 func TestParseEmptyFileHasNoTests(t *testing.T) {
 	for _, text := range []string{"", "# only a comment\n", "[]\n"} {
 		tests, _, err := Parse([]byte(text), today)
@@ -202,37 +221,45 @@ func TestParseReportsEveryValidationError(t *testing.T) {
 	tests := []struct {
 		name, yaml, id, field, contains string
 	}{
-		{"missing id", "- {url: u, goal: g}\n", "", "id", "is required"},
-		{"empty id", "- {id: '', url: u, goal: g}\n", "", "id", "must not be empty"},
-		{"id list", "- {id: [a], url: u, goal: g}\n", "", "id", "must be text"},
+		{"missing id", "- {url: http://u.test, goal: g}\n", "", "id", "is required"},
+		{"empty id", "- {id: '', url: http://u.test, goal: g}\n", "", "id", "must not be empty"},
+		{"id list", "- {id: [a], url: http://u.test, goal: g}\n", "", "id", "must be text"},
 		{"missing url", "- {id: a, goal: g}\n", "a", "url", "is required"},
 		{"empty url", "- {id: a, url: ' ', goal: g}\n", "a", "url", "must not be empty"},
-		{"missing goal", "- {id: a, url: u}\n", "a", "goal", "is required"},
-		{"null goal", "- {id: a, url: u, goal: }\n", "a", "goal", "is required"},
-		{"goal placeholder", "- {id: a, url: u, goal: 'x {month+1}'}\n", "a", "goal", "unknown placeholder '{month+1}'"},
-		{"goal directive", "- {id: a, url: u, goal: 'x {date+1:%c}'}\n", "a", "goal", "unsupported strftime directive %c"},
-		{"tags scalar", "- {id: a, url: u, goal: g, tags: shelf}\n", "a", "tags", "list"},
-		{"tags nested", "- {id: a, url: u, goal: g, tags: [[x]]}\n", "a", "tags", "list"},
-		{"repeat zero", "- {id: a, url: u, goal: g, repeat: 0}\n", "a", "repeat", "positive integer"},
-		{"repeat text", "- {id: a, url: u, goal: g, repeat: many}\n", "a", "repeat", "positive integer"},
-		{"unknown verifier", "- {id: a, url: u, goal: g, verify: pagee}\n", "a", "verify", `unknown verifier "pagee" (known: echo, flights, hn_story, page)`},
-		{"verify list", "- {id: a, url: u, goal: g, verify: [page]}\n", "a", "verify", "name of a verifier"},
-		{"args without verify", "- {id: a, url: u, goal: g, verify_args: {url: x}}\n", "a", "verify_args", "given without verify"},
-		{"args unknown key", "- {id: a, url: u, goal: g, verify: page, verify_args: {urls: x}}\n", "a", "verify_args.urls", "unknown argument"},
-		{"args pattern", "- {id: a, url: u, goal: g, verify: page, verify_args: {url: 'a(?=b)'}}\n", "a", "verify_args.url", "lookaround and backreferences are not supported"},
-		{"args not mapping", "- {id: a, url: u, goal: g, verify: page, verify_args: [x]}\n", "a", "verify_args", "must be a mapping"},
-		{"args field value", "- {id: a, url: u, goal: g, verify: page, verify_args: {fields: {Name: [x]}}}\n", "a", "verify_args.fields.Name", "single value"},
-		{"echo without values", "- {id: a, url: u, goal: g, verify: echo, verify_args: {url: x}}\n", "a", "verify_args.values", "required"},
-		{"hn without args", "- {id: a, url: u, goal: g, verify: hn_story}\n", "a", "verify_args.rank", "required"},
-		{"flights round trip", "- {id: a, url: u, goal: g, verify: flights, verify_args: {origin: A, destination: B, date: 2026-10-12, one_way: false}}\n", "a", "verify_args.return_date", "required when one_way is false"},
-		{"flights date placeholder", "- {id: a, url: u, goal: g, verify: flights, verify_args: {origin: A, destination: B, date: '{date+1:%c}'}}\n", "a", "verify_args.date", "unsupported strftime directive"},
+		{"file scheme", "- {id: a, url: 'file:///home/u/.aws/credentials', goal: g}\n", "a", "url", `scheme "file" is not allowed; use http or https`},
+		{"file scheme in capitals", "- {id: a, url: 'FILE:///etc/passwd', goal: g}\n", "a", "url", `scheme "file" is not allowed`},
+		{"padded file scheme", "- {id: a, url: '  file:///etc/passwd', goal: g}\n", "a", "url", `scheme "file" is not allowed`},
+		{"javascript scheme", "- {id: a, url: 'javascript:alert(1)', goal: g}\n", "a", "url", `scheme "javascript" is not allowed`},
+		{"chrome scheme", "- {id: a, url: 'chrome://version', goal: g}\n", "a", "url", `scheme "chrome" is not allowed`},
+		{"no scheme", "- {id: a, url: example.test/path, goal: g}\n", "a", "url", "must start with http:// or https://"},
+		{"no host", "- {id: a, url: 'https://', goal: g}\n", "a", "url", "must name a host"},
+		{"control character", "- {id: a, url: \"http://u.test/\\x01\", goal: g}\n", "a", "url", "is not a valid URL"},
+		{"missing goal", "- {id: a, url: http://u.test}\n", "a", "goal", "is required"},
+		{"null goal", "- {id: a, url: http://u.test, goal: }\n", "a", "goal", "is required"},
+		{"goal placeholder", "- {id: a, url: http://u.test, goal: 'x {month+1}'}\n", "a", "goal", "unknown placeholder '{month+1}'"},
+		{"goal directive", "- {id: a, url: http://u.test, goal: 'x {date+1:%c}'}\n", "a", "goal", "unsupported strftime directive %c"},
+		{"tags scalar", "- {id: a, url: http://u.test, goal: g, tags: shelf}\n", "a", "tags", "list"},
+		{"tags nested", "- {id: a, url: http://u.test, goal: g, tags: [[x]]}\n", "a", "tags", "list"},
+		{"repeat zero", "- {id: a, url: http://u.test, goal: g, repeat: 0}\n", "a", "repeat", "positive integer"},
+		{"repeat text", "- {id: a, url: http://u.test, goal: g, repeat: many}\n", "a", "repeat", "positive integer"},
+		{"unknown verifier", "- {id: a, url: http://u.test, goal: g, verify: pagee}\n", "a", "verify", `unknown verifier "pagee" (known: echo, flights, hn_story, page)`},
+		{"verify list", "- {id: a, url: http://u.test, goal: g, verify: [page]}\n", "a", "verify", "name of a verifier"},
+		{"args without verify", "- {id: a, url: http://u.test, goal: g, verify_args: {url: x}}\n", "a", "verify_args", "given without verify"},
+		{"args unknown key", "- {id: a, url: http://u.test, goal: g, verify: page, verify_args: {urls: x}}\n", "a", "verify_args.urls", "unknown argument"},
+		{"args pattern", "- {id: a, url: http://u.test, goal: g, verify: page, verify_args: {url: 'a(?=b)'}}\n", "a", "verify_args.url", "lookaround and backreferences are not supported"},
+		{"args not mapping", "- {id: a, url: http://u.test, goal: g, verify: page, verify_args: [x]}\n", "a", "verify_args", "must be a mapping"},
+		{"args field value", "- {id: a, url: http://u.test, goal: g, verify: page, verify_args: {fields: {Name: [x]}}}\n", "a", "verify_args.fields.Name", "single value"},
+		{"echo without values", "- {id: a, url: http://u.test, goal: g, verify: echo, verify_args: {url: x}}\n", "a", "verify_args.values", "required"},
+		{"hn without args", "- {id: a, url: http://u.test, goal: g, verify: hn_story}\n", "a", "verify_args.rank", "required"},
+		{"flights round trip", "- {id: a, url: http://u.test, goal: g, verify: flights, verify_args: {origin: A, destination: B, date: 2026-10-12, one_way: false}}\n", "a", "verify_args.return_date", "required when one_way is false"},
+		{"flights date placeholder", "- {id: a, url: http://u.test, goal: g, verify: flights, verify_args: {origin: A, destination: B, date: '{date+1:%c}'}}\n", "a", "verify_args.date", "unsupported strftime directive"},
 		{"not a mapping", "- just text\n", "", "", "must be a mapping"},
-		{"page without args", "- {id: a, url: u, goal: g, verify: page}\n", "a", "verify_args", "would run no checks"},
-		{"page null args", "- {id: a, url: u, goal: g, verify: page, verify_args: }\n", "a", "verify_args", "would run no checks"},
-		{"page empty mapping", "- {id: a, url: u, goal: g, verify: page, verify_args: {}}\n", "a", "verify_args", "would run no checks"},
-		{"page empty lists", "- {id: a, url: u, goal: g, verify: page, verify_args: {url: [], text: [], fields: {}, values: [], checked: {}}}\n", "a", "verify_args", "would run no checks"},
-		{"echo empty lists", "- {id: a, url: u, goal: g, verify: echo, verify_args: {url: [], values: []}}\n", "a", "verify_args", "would run no checks"},
-		{"word boundary pattern", "- {id: a, url: u, goal: g, verify: page, verify_args: {url: '\\bsum'}}\n", "a", "verify_args.url", `pattern '\bsum'`},
+		{"page without args", "- {id: a, url: http://u.test, goal: g, verify: page}\n", "a", "verify_args", "would run no checks"},
+		{"page null args", "- {id: a, url: http://u.test, goal: g, verify: page, verify_args: }\n", "a", "verify_args", "would run no checks"},
+		{"page empty mapping", "- {id: a, url: http://u.test, goal: g, verify: page, verify_args: {}}\n", "a", "verify_args", "would run no checks"},
+		{"page empty lists", "- {id: a, url: http://u.test, goal: g, verify: page, verify_args: {url: [], text: [], fields: {}, values: [], checked: {}}}\n", "a", "verify_args", "would run no checks"},
+		{"echo empty lists", "- {id: a, url: http://u.test, goal: g, verify: echo, verify_args: {url: [], values: []}}\n", "a", "verify_args", "would run no checks"},
+		{"word boundary pattern", "- {id: a, url: http://u.test, goal: g, verify: page, verify_args: {url: '\\bsum'}}\n", "a", "verify_args.url", `pattern '\bsum'`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -257,7 +284,7 @@ func TestParseReportsEveryValidationError(t *testing.T) {
 }
 
 func TestParseReportsDuplicateIDsAndAllProblemsAtOnce(t *testing.T) {
-	text := "- {id: a, url: u, goal: g}\n- {id: b, goal: g}\n- {id: a, url: u, goal: g}\n"
+	text := "- {id: a, url: http://u.test, goal: g}\n- {id: b, goal: g}\n- {id: a, url: http://u.test, goal: g}\n"
 	_, _, err := Parse([]byte(text), today)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `test "a", field "id": duplicate id, first used by test #1`)
@@ -269,7 +296,7 @@ func TestParseReportsDuplicateIDsAndAllProblemsAtOnce(t *testing.T) {
 }
 
 func TestParseRejectsFilesThatAreNotLists(t *testing.T) {
-	_, _, err := Parse([]byte("id: a\nurl: u\ngoal: g\n"), today)
+	_, _, err := Parse([]byte("id: a\nurl: http://u.test\ngoal: g\n"), today)
 	assert.ErrorContains(t, err, "must be a YAML list")
 	_, _, err = Parse([]byte("- id: [unclosed\n"), today)
 	assert.ErrorContains(t, err, "parse yaml")
@@ -352,7 +379,7 @@ func TestParseIDs(t *testing.T) {
 }
 
 func TestParseWarnsAboutUnknownFieldsAndKeepsTheTest(t *testing.T) {
-	tests, warnings, err := Parse([]byte("- {id: a, url: u, goal: g, verfy: page, owner: me}\n- {id: b, url: u, goal: g}\n"), today)
+	tests, warnings, err := Parse([]byte("- {id: a, url: http://u.test, goal: g, verfy: page, owner: me}\n- {id: b, url: http://u.test, goal: g}\n"), today)
 	require.NoError(t, err)
 	require.Len(t, tests, 2)
 	require.Len(t, warnings, 2)
@@ -362,7 +389,7 @@ func TestParseWarnsAboutUnknownFieldsAndKeepsTheTest(t *testing.T) {
 
 func TestLoadReturnsWarnings(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "pagevow.yaml")
-	require.NoError(t, os.WriteFile(path, []byte("- {id: a, url: u, goal: g, extra: 1}\n"), 0o600))
+	require.NoError(t, os.WriteFile(path, []byte("- {id: a, url: http://u.test, goal: g, extra: 1}\n"), 0o600))
 	tests, warnings, err := Load(path, today)
 	require.NoError(t, err)
 	assert.Len(t, tests, 1)
@@ -370,7 +397,7 @@ func TestLoadReturnsWarnings(t *testing.T) {
 }
 
 func TestAnExplicitStrTagKeepsYesAString(t *testing.T) {
-	text := "- id: a\n  url: u\n  goal: g\n  verify: page\n  verify_args:\n    fields: {Subscribe: !!str yes, Agree: yes}\n"
+	text := "- id: a\n  url: http://u.test\n  goal: g\n  verify: page\n  verify_args:\n    fields: {Subscribe: !!str yes, Agree: yes}\n"
 	tests, _, err := Parse([]byte(text), today)
 	require.NoError(t, err)
 	args, ok := tests[0].Args.(verify.PageArgs)
@@ -383,7 +410,7 @@ func TestAnExplicitStrTagKeepsYesAString(t *testing.T) {
 
 func TestAPartlyEmptyVerifierStillLoads(t *testing.T) {
 	for _, args := range []string{"{text: [hello]}", "{url: x}", "{fields: {A: b}}", "{values: [1]}", "{checked: {A: 1}}"} {
-		text := "- {id: a, url: u, goal: g, verify: page, verify_args: " + args + "}\n"
+		text := "- {id: a, url: http://u.test, goal: g, verify: page, verify_args: " + args + "}\n"
 		_, _, err := Parse([]byte(text), today)
 		assert.NoError(t, err, args)
 	}

@@ -32,7 +32,7 @@ func (t TestReport) SummaryLine() string {
 	if len(t.Attempts) > 1 {
 		tries = fmt.Sprintf("  attempt %d", last.Attempt+1)
 	}
-	return fmt.Sprintf("%-10s %s  steps=%d  %.1fs%s", t.Outcome, t.ID, last.Steps, float64(last.ElapsedMS)/1000, tries)
+	return fmt.Sprintf("%-10s %s  steps=%d  %.1fs%s", t.Outcome, escapeControls(t.ID), last.Steps, float64(last.ElapsedMS)/1000, tries)
 }
 
 // MissingLine says how many screenshots of the last attempt could not be captured, or is empty when none is missing.
@@ -45,7 +45,7 @@ func (t TestReport) MissingLine() string {
 			continue
 		}
 		if missing == 0 {
-			first = e.Error
+			first = escapeControls(e.Error)
 		}
 		missing++
 	}
@@ -59,7 +59,7 @@ func (t TestReport) MissingLine() string {
 func (t TestReport) WarningLines() []string {
 	var lines []string
 	for _, warning := range t.Last().Warnings {
-		lines = append(lines, "  warning: "+warning)
+		lines = append(lines, "  warning: "+escapeControls(warning))
 	}
 	return lines
 }
@@ -68,22 +68,22 @@ func (t TestReport) WarningLines() []string {
 func (t TestReport) FailureBlock() string {
 	last := t.Last()
 	lines := []string{
-		fmt.Sprintf("%s %s", t.Outcome, t.ID),
-		"  goal: " + last.Goal,
-		"  final url: " + orNone(last.FinalURL, "unknown"),
+		fmt.Sprintf("%s %s", t.Outcome, escapeControls(t.ID)),
+		"  goal: " + escapeControls(last.Goal),
+		"  final url: " + escapeControls(orNone(last.FinalURL, "unknown")),
 	}
 	lines = append(lines, "  failed checks:")
 	for _, check := range last.FailedChecks {
-		lines = append(lines, "    - "+check)
+		lines = append(lines, "    - "+escapeControls(check))
 	}
 	if last.Reason != nil {
-		lines = append(lines, "  reason: "+*last.Reason)
+		lines = append(lines, "  reason: "+escapeControls(*last.Reason))
 	}
 	if last.Error != nil {
-		lines = append(lines, "  error: "+*last.Error)
+		lines = append(lines, "  error: "+escapeControls(*last.Error))
 	}
 	if last.ErrorCause != "" {
-		lines = append(lines, "  cause: "+last.ErrorCause)
+		lines = append(lines, "  cause: "+escapeControls(last.ErrorCause))
 	}
 	lines = append(lines, "  final.png: "+orNone(last.Screenshots.Final, "not captured"), "  directory: "+last.Directory)
 	return strings.Join(lines, "\n")

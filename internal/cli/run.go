@@ -59,6 +59,7 @@ type runPlan struct {
 	outDir    string
 	tests     []testsfile.Test
 	warnings  []string
+	paid      []string
 	asJSON    bool
 	fullPage  bool
 	headed    bool
@@ -88,8 +89,9 @@ func (a *app) runTests(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	if services := paidServices(plan.cfg, resolver); len(services) > 0 {
-		notes.Status(ui.Warn, "this run uses a paid service: %s; it may bill per request", strings.Join(services, " and "))
+	plan.paid = paidServices(plan.cfg, resolver)
+	if len(plan.paid) > 0 {
+		notes.Status(ui.Warn, "this run uses a paid service: %s; it may bill per request", strings.Join(plan.paid, " and "))
 	}
 	if err := notes.Err(); err != nil {
 		return err
@@ -202,8 +204,9 @@ func (a *app) execute(ctx context.Context, cmd *cobra.Command, plan runPlan, col
 			DoneMinConf:    plan.cfg.Guards.DoneMinConf,
 			BlockedMinConf: plan.cfg.Guards.BlockedMinConf,
 		},
-		VetoCache: collab.vetoCache,
-		Secrets:   collab.secrets,
+		VetoCache:    collab.vetoCache,
+		Secrets:      collab.secrets,
+		PaidServices: plan.paid,
 	}, runner.Deps{Sessions: handle, Decider: collab.decider, Text: collab.text, Clock: now})
 	if err != nil {
 		return infrastructure(err)

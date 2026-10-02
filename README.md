@@ -206,7 +206,10 @@ One run of one test:
    elements to the decision backend with `POST /v1/systemone`. The answer names one observed element and one
    operation: `CLICK`, `TYPE_TEXT`, `SELECT` or `PRESS_ENTER`, or ends the run with `DONE` or `BLOCKED`. The agent
    acts over CDP and observes again. A browser mutation is never retried; a retry of a test is a new run from the start
-   URL.
+   URL. The scripts that observe and act run in an isolated world of the page, so page scripts cannot change which
+   element an observed id points to. Before typing, pagevow checks that focus is still on the observed field and that
+   the field is not a password, file or hidden input; otherwise it types nothing and the step ends with an unknown
+   outcome.
 4. **Verifier.** When the run ends, the verifier named by the test checks the final page: URL, visible text, field
    values, checked boxes. It does not ask the model.
 5. **Verdict.** `PASS` only when the run ended `DONE` and the verifier returned true. A test without a verifier is
@@ -225,7 +228,7 @@ directory, or the file given with `--tests`. The file is a YAML list of tests:
 | Key | Required | Meaning |
 |---|---|---|
 | `id` | yes | unique name of the test, used for its output directory |
-| `url` | yes | start URL |
+| `url` | yes | start URL; only `http` and `https` are accepted, so `file:`, `javascript:` and `chrome:` URLs are an error |
 | `goal` | yes | what to do and when to stop, in plain words |
 | `tags` | no | list of text values, kept in the report |
 | `verify` | no | verifier name: `page`, `echo`, `hn_story` or `flights` |
@@ -287,14 +290,16 @@ Ctrl+C stops the current test, writes the report for what ran and exits with cod
 exits at once.
 
 A failed test runs again from a fresh session up to `--retries` times (default 1). An `UNVERIFIED` test is never
-retried. `--timeout` covers opening the page as well as the steps. `--screenshots final` keeps only `final.png`,
+retried. `--timeout` covers opening the page as well as the steps, but not the time spent on step screenshots. `--screenshots final` keeps only `final.png`,
 `failed` (the default) also keeps the step screenshots of failing attempts, `all` keeps every one. Nothing is ever
 deleted.
 
 While a test runs, pagevow notes what the page did that the agent did not choose or cannot see: a JavaScript dialog it
 accepted, a download it denied (pagevow never saves downloads), a new tab the page opened, and an iframe from another
-origin or one that holds controls. Each note is a line in `warnings` and is printed under the test line. Warnings never
-change a verdict or an exit code.
+origin or one that holds controls. Each note is a line in `warnings` and is printed under the test line. Text that comes
+from the page is printed with control characters spelled out (`\x1b`), so a page cannot drive your terminal. When the
+step trace could not be written completely, for example because the disk is full, a note says the trace is incomplete.
+Warnings never change a verdict or an exit code.
 
 | Exit code of `run` | Meaning |
 |---|---|
@@ -318,11 +323,12 @@ change a verdict or an exit code.
     <run id>.meta.json
 ```
 
-`<out>` is `--out`, else `.pagevow` next to the tests file. `<run id>` is the local start time plus a random suffix.
+`<out>` is `--out`, else `.pagevow` next to the tests file, and it must be a real directory: a symlink or a file there is
+an error. `<run id>` is the local start time plus a random suffix.
 
 - `report.json` has `run_dir`, `tests_file`, `passed`, `totals` (`tests`, `passed`, `failed`, `unverified`,
-  `missing_screenshots`, `tests_with_warnings`), `tests` (each with `id`, `outcome`, `passed` and `attempts`) and
-  `interrupted` when the run was stopped early.
+  `missing_screenshots`, `tests_with_warnings`), `tests` (each with `id`, `outcome`, `passed` and `attempts`),
+  `interrupted` when the run was stopped early and `paid`, the paid services the run used, when there were any.
 - `result.json` has `id`, `url`, `goal`, `status` (`DONE`, `BLOCKED`, `max_steps`, `timeout` or `error`), `verified`,
   `passed`, `outcome` (`PASS`, `FAIL` or `UNVERIFIED`), `steps`, `elapsed_ms`, `final_url`, `final_title`,
   `failed_checks`, `error`, `error_cause` (only when it adds to `error`), `reason`, `attempt`, `screenshots`, `trace`,
@@ -625,10 +631,15 @@ stdout.
 |---|---|---|
 | `PAGEVOW_HOOK=0`, or no tests file | 0 | none |
 | project unchanged since the last pass | 0 | none |
-| suite passes | 0 | none |
-| suite fails, fewer blocks so far than the limit | 2 | failure report, `final.png` paths, `Browser test block N of M.` |
+| suite passes | 0 | none, or the paid service line below |
+| suite fails, fewer blocks so far than the limit | 2 | the paid service line when it applies, failure report, `final.png` paths, `Browser test block N of M.` |
 | suite fails, limit reached | 1 | the tests still fail and Claude may stop; the counter is reset |
 | backend or browser not reachable, or the run could not start | 1 | what is missing and the command to fix it |
+
+When the suite ran against a paid service, which is a remote backend or text helper with a real key, the hook prints
+`Browser tests used a paid service: <service>; it may bill per request.` on stderr after the run, whether the suite
+passed or failed. It reads the service from the `paid` field of `report.json`. The hook refuses a `.pagevow` that is a
+symlink or a file, because it would write the run directories and state files wherever the link points.
 
 | Variable | Meaning |
 |---|---|

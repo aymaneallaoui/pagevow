@@ -9,6 +9,13 @@ var snapshotScript string
 
 const guardScript = `(() => { const c=window.__jevFast; return c ? [c.pageKey(),c.guard(c.nodes.get(%d))] : null; })()`
 
+const focusScript = `(() => {
+  const e=window.__jevFast?.nodes.get(%d);
+  let active=document.activeElement;
+  while (active?.shadowRoot?.activeElement) active=active.shadowRoot.activeElement;
+  return !!e && active===e && !['password','file','hidden'].includes(e.type);
+})()`
+
 const afterInputScript = `(action => new Promise(resolve => {
   const field=window.__jevFast?.nodes.get(action.node);
   const autocomplete=action.kind==='fill' && field?.getAttribute('role')==='combobox';

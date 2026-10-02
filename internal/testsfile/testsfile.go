@@ -4,6 +4,7 @@ package testsfile
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -45,12 +46,6 @@ func (t Test) Check(final page.State, initial *page.State) (verify.Result, error
 	return res, nil
 }
 
-// NeedsInitial reports whether the test's verifier reads the page the run started from.
-func (t Test) NeedsInitial() bool {
-	v, ok := verify.Lookup(t.Verify)
-	return ok && v.NeedsInitial()
-}
-
 // ValidationError is a problem with one field of one test; Index is the 1-based position in the file.
 type ValidationError struct {
 	Index int
@@ -77,9 +72,14 @@ func (e *ValidationError) Unwrap() error { return e.Err }
 // ErrNotFound is returned by Find when a directory holds no tests file.
 var ErrNotFound = errors.New("no tests file found")
 
+// LegacyNames lists the tests file names that predate pagevow.yaml, relative to the project directory.
+func LegacyNames() []string {
+	return []string{"browser-tests.yaml", filepath.Join(".claude", "browser-tests.yaml")}
+}
+
 // SearchOrder lists the tests file names Find tries, relative to the project directory, in order.
 func SearchOrder() []string {
-	return []string{"pagevow.yaml", "browser-tests.yaml", filepath.Join(".claude", "browser-tests.yaml")}
+	return append([]string{"pagevow.yaml"}, LegacyNames()...)
 }
 
 // Find returns the path of the project's tests file, trying the names of SearchOrder in order.
@@ -98,8 +98,7 @@ func Find(dir string) (string, error) {
 	return "", fmt.Errorf("%w in %s (looked for %s)", ErrNotFound, dir, strings.Join(SearchOrder(), ", "))
 }
 
-// Load reads and validates the tests file at path, resolving date placeholders against today.
-// Warnings name the unknown fields that were ignored.
+// Load reads and validates the tests file at path, resolving date placeholders against today and returning warnings for unknown fields.
 func Load(path string, today time.Time) ([]Test, []string, error) {
 	data, err := os.ReadFile(path) //nolint:gosec // the path is the project's tests file chosen by the user
 	if err != nil {
@@ -112,8 +111,7 @@ func Load(path string, today time.Time) ([]Test, []string, error) {
 	return tests, warnings, nil
 }
 
-// Parse validates tests file content; every problem found is reported, not just the first.
-// An unknown field is a warning, not an error.
+// Parse validates tests file content, reports every problem found, and turns an unknown field into a warning.
 func Parse(data []byte, today time.Time) ([]Test, []string, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
@@ -178,11 +176,19 @@ func parseTest(index int, node *yaml.Node, today time.Time) (Test, []error, []st
 		warnings = append(warnings, fail(key, "unknown field ignored (known: %s)", strings.Join(knownFields(), ", ")).Error())
 	}
 	for _, key := range []string{"id", "url", "goal"} {
-		if text, problem := requiredText(fields[key]); problem != "" {
+		text, problem := requiredText(fields[key])
+		if problem == "" && key == "url" {
+			text = strings.TrimSpace(text)
+			problem = urlProblem(text)
+		}
+		if problem != "" {
 			errs = append(errs, fail(key, "%s", problem))
-		} else if key == "url" {
+			continue
+		}
+		switch key {
+		case "url":
 			test.URL = text
-		} else if key == "goal" {
+		case "goal":
 			test.Goal = text
 		}
 	}
@@ -249,6 +255,21 @@ func parseVerifier(test *Test, fields map[string]*yaml.Node, today time.Time, fa
 	}
 	test.Args = args
 	return nil
+}
+
+func urlProblem(text string) string {
+	u, err := url.Parse(text)
+	switch {
+	case err != nil:
+		return "is not a valid URL"
+	case u.Scheme == "":
+		return "must start with http:// or https://"
+	case !strings.EqualFold(u.Scheme, "http") && !strings.EqualFold(u.Scheme, "https"):
+		return fmt.Sprintf("scheme %q is not allowed; use http or https", u.Scheme)
+	case u.Host == "":
+		return "must name a host"
+	}
+	return ""
 }
 
 func knownFields() []string {

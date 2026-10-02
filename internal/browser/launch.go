@@ -60,7 +60,7 @@ type LaunchOptions struct {
 	ExtraArgs  []string
 	// Detached starts the browser in its own session, without a parent-death signal, and leaves it running when the caller exits.
 	Detached bool
-	// LogPath receives the output of a detached browser; empty discards it. It requires Detached.
+	// LogPath receives the output of a detached browser and requires Detached; empty discards it.
 	LogPath string
 }
 
@@ -215,6 +215,7 @@ func runProcess(cmd *exec.Cmd, tail outputTail, lockThread bool) (*Process, erro
 		stderr: tail,
 	}
 	started := make(chan error, 1)
+	// The Process owns this goroutine: it ends when the child exits, which Stop and exited observe through done. Releasing a detached child would leave Stop unable to see its exit.
 	go func() {
 		if lockThread {
 			// Pdeathsig fires when the thread that forked the child exits, so this goroutine keeps its thread until it has reaped the child.

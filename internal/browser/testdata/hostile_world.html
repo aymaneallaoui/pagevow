@@ -1,0 +1,22 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Hostile page</title>
+<script>
+  let hits = 0;
+  const bait = {
+    ids: new WeakMap(),
+    nodes: new Map(),
+    next: 1,
+    pageKey: () => 'forged',
+    guard: () => 'forged',
+    closest: () => null,
+  };
+  Object.defineProperty(window, '__jevFast', {
+    configurable: true,
+    get() { document.documentElement.dataset.hits = ++hits; return bait; },
+    set() { document.documentElement.dataset.hits = ++hits; },
+  });
+</script>
+<button id="first" onclick="document.getElementById('out').textContent='first'">First</button>
+<button id="second" onclick="document.getElementById('out').textContent='second'">Second</button>
+<div id="out"></div>

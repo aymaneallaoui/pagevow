@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Focus swap page</title>
+<input id="user" aria-label="Username">
+<input id="other" aria-label="Other field">
+<script>
+  const user = document.getElementById('user');
+  const other = document.getElementById('other');
+  const mode = new URLSearchParams(location.search).get('mode');
+  user.addEventListener('focus', () => {
+    if (mode === 'password') {
+      const secret = document.createElement('input');
+      secret.type = 'password';
+      secret.id = 'secret';
+      user.replaceWith(secret);
+      secret.focus();
+    } else {
+      other.focus();
+    }
+  });
+</script>

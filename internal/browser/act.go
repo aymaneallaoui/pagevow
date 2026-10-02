@@ -101,7 +101,7 @@ func (s *Session) inputTo(ctx context.Context, action page.Action, text string) 
 	case page.KindEnter:
 		return s.dispatchEnter(ctx)
 	default:
-		return s.dispatchClick(ctx, target, action.Kind == page.KindFill, text)
+		return s.dispatchClick(ctx, target, action.Node, action.Kind == page.KindFill, text)
 	}
 }
 
@@ -149,7 +149,22 @@ func (s *Session) dispatchEnter(ctx context.Context) error {
 	return s.dispatch(ctx, "dispatch enter key", down, up)
 }
 
-func (s *Session) dispatchClick(ctx context.Context, at point, replaceText bool, text string) error {
+// confirmFocus refuses to type unless the observed field itself holds focus and is not a password, file or hidden input.
+func (s *Session) confirmFocus(ctx context.Context, node int) error {
+	value, err := s.eval(ctx, fmt.Sprintf(focusScript, node), false)
+	if err != nil {
+		if ctx.Err() != nil {
+			return err
+		}
+		return fmt.Errorf("check focus: %w: %w", page.ErrOutcomeUnknown, err)
+	}
+	if string(value) != "true" {
+		return fmt.Errorf("focus left the observed field after the click: %w", page.ErrOutcomeUnknown)
+	}
+	return nil
+}
+
+func (s *Session) dispatchClick(ctx context.Context, at point, node int, replaceText bool, text string) error {
 	press := input.DispatchMouseEvent(input.MousePressed, at.X, at.Y).WithButton(input.Left).WithClickCount(1)
 	release := input.DispatchMouseEvent(input.MouseReleased, at.X, at.Y).WithButton(input.Left).WithClickCount(1)
 	if err := s.dispatch(ctx, "dispatch click", press, release); err != nil {
@@ -157,6 +172,9 @@ func (s *Session) dispatchClick(ctx context.Context, at point, replaceText bool,
 	}
 	if !replaceText {
 		return nil
+	}
+	if err := s.confirmFocus(ctx, node); err != nil {
+		return err
 	}
 	modifier := input.Modifier(modifierControl)
 	if runtime.GOOS == "darwin" {

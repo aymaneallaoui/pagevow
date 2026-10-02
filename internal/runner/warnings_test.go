@@ -105,6 +105,33 @@ func TestWarningsListWhatTheSessionObservedBeforeItCloses(t *testing.T) {
 	assert.Equal(t, want, result.Warnings)
 }
 
+func TestPageSuppliedTextCannotDriveTheTerminal(t *testing.T) {
+	tests := loadTests(t)
+	final := dashboardPage
+	final.Frames = []page.FrameInfo{{URL: "https://ads.test/\x1b[2J", SameOrigin: false}}
+	w := newWorld(t).script("https://app.test/", script{pages: []page.State{startPage, final}, end: "DONE"})
+	withEvents(w, func(e *eventfulSession) {
+		e.dialogs = []browser.DialogEvent{{Type: "alert", Message: "\x1b]0;owned\x07 hi\u202eevil\u009b"}}
+		e.downloads = []browser.DownloadEvent{{URL: "https://app.test/a\x1b[31m", SuggestedFilename: "\x1b[2Jx.pdf"}}
+		e.popups = []browser.PopupEvent{{URL: "https://app.test/\x1b[H"}}
+	})
+	r, _ := newRunner(t, w, nil)
+
+	report := mustRun(t, r, tests["home"])
+
+	text := report.Text()
+	for _, raw := range []string{"\x1b", "\x07", "\u009b", "\u202e"} {
+		assert.NotContains(t, text, raw)
+		for _, warning := range report.Tests[0].Last().Warnings {
+			assert.NotContains(t, warning, raw)
+		}
+	}
+	assert.Contains(t, text, `alert: \x1b]0;owned\x07 hi\u202eevil\x9b`)
+	assert.Contains(t, text, `download denied (https://app.test/a\x1b[31m, \x1b[2Jx.pdf)`)
+	assert.Contains(t, text, `new tab (https://app.test/\x1b[H)`)
+	assert.Contains(t, text, `(https://ads.test/\x1b[2J, 0 controls)`)
+}
+
 func TestFramesOfTheLastObservedPageAreWarnedAbout(t *testing.T) {
 	tests := loadTests(t)
 	final := dashboardPage

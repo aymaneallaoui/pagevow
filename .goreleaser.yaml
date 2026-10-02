@@ -44,6 +44,7 @@ archives:
       - LICENSE
       - NOTICE
       - README.md
+      - REFERENCE.md
 
 checksum:
   name_template: checksums.txt

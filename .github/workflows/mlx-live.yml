@@ -18,6 +18,8 @@ jobs:
       KEV_COMMIT: d1faa4142bbcbc4849c548fcd67cd99f7ff7c056
       CHECKPOINT: jaredpalmer/kev-0.8b
       REVISION: 9a45d25eb2ab761841196625383fa1dff0e56c1e
+      BASE_MODEL: Qwen/Qwen3.5-0.8B-Base
+      BASE_REVISION: dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68
     steps:
       - name: paths
         run: |
@@ -70,13 +72,18 @@ jobs:
         run: |
           cd "${KEV_DIR}"
           uv run --extra serve python - <<'PY'
-          import json, os, pathlib
-          from huggingface_hub import snapshot_download
+          import json, os, pathlib, sys
+          from huggingface_hub import model_info, snapshot_download
           run_dir = os.environ["RUN_DIR"]
           snapshot_download(os.environ["CHECKPOINT"], revision=os.environ["REVISION"], local_dir=run_dir)
           base = json.loads(pathlib.Path(run_dir, "adapter_config.json").read_text())["base_model_name_or_path"]
           print("base model", base)
-          snapshot_download(base)
+          if base != os.environ["BASE_MODEL"]:
+              sys.exit(f"the checkpoint names base model {base}, not {os.environ['BASE_MODEL']}")
+          main = model_info(base).sha
+          if main != os.environ["BASE_REVISION"]:
+              sys.exit(f"{base} main is {main}, not the pinned {os.environ['BASE_REVISION']}")
+          snapshot_download(base, revision=os.environ["BASE_REVISION"])
           PY
           ls -la "${RUN_DIR}"
 

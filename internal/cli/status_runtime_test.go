@@ -145,7 +145,7 @@ func TestStatusShowsGPUWhenKnown(t *testing.T) {
 	h := newHarness(t)
 	h.gpu.reading, h.gpu.err = server.GPU{TotalMiB: 24576, UsedMiB: 4096, FreeMiB: 20480, TempC: 51}, nil
 
-	report, _ := statusOf(t, h)
+	report, raw := statusOf(t, h)
 
 	require.NotNil(t, report.GPU)
 	assert.Equal(t, 24576, report.GPU.TotalMiB)
@@ -154,12 +154,14 @@ func TestStatusShowsGPUWhenKnown(t *testing.T) {
 	assert.Equal(t, 51, report.GPU.TemperatureC)
 	assert.False(t, report.GPU.Unified)
 	assert.Nil(t, report.GPU.Components)
+	assert.NotContains(t, raw, `"unified"`)
+	assert.NotContains(t, raw, `"components"`)
 }
 
 func TestStatusShowsUnifiedMemoryOnAppleSiliconWithStableKeys(t *testing.T) {
 	h := newHarness(t)
 	h.appleSilicon()
-	h.gpu.reading.Parts = server.MemoryParts{FreeMiB: 15000, SpeculativeMiB: 1000, PurgeableMiB: 500, FileBackedMiB: 3500}
+	h.gpu.reading.Parts = server.MemoryParts{FreeMiB: 16000, SpeculativeMiB: 1000, PurgeableMiB: 500, FileBackedMiB: 3500}
 
 	report, raw := statusOf(t, h)
 
@@ -169,7 +171,7 @@ func TestStatusShowsUnifiedMemoryOnAppleSiliconWithStableKeys(t *testing.T) {
 	assert.Equal(t, 20000, report.GPU.FreeMiB)
 	assert.True(t, report.GPU.Unified)
 	require.NotNil(t, report.GPU.Components)
-	assert.Equal(t, 15000, report.GPU.Components.FreeMiB)
+	assert.Equal(t, 16000, report.GPU.Components.FreeMiB)
 	assert.Equal(t, 1000, report.GPU.Components.SpeculativeMiB)
 	assert.Equal(t, 500, report.GPU.Components.PurgeableMiB)
 	assert.Equal(t, 3500, report.GPU.Components.FileBackedMiB)
@@ -180,7 +182,7 @@ func TestStatusShowsUnifiedMemoryOnAppleSiliconWithStableKeys(t *testing.T) {
 	plain := h.mustRun("status")
 	assert.Contains(t, plain, "Memory")
 	assert.Contains(t, plain, "20000 MiB free, 12768 MiB used, 32768 MiB total")
-	assert.Contains(t, plain, "15000 MiB free + 1000 speculative + 500 purgeable + 3500 file-backed")
+	assert.Contains(t, plain, "16000 MiB free + 500 purgeable + 3500 file-backed (1000 speculative, inside file-backed)")
 	assert.NotContains(t, plain, "temperature")
 	assert.NotContains(t, plain, "GPU")
 }

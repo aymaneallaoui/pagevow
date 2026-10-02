@@ -235,7 +235,7 @@ func renderMemory(out *ui.Printer, gpu *gpuState, platform server.Platform) {
 		out.Heading("Memory")
 		pairs := []ui.Pair{{Key: "unified", Value: fmt.Sprintf("%d MiB free, %d MiB used, %d MiB total", gpu.FreeMiB, gpu.UsedMiB, gpu.TotalMiB)}}
 		if c := gpu.Components; c != nil {
-			pairs = append(pairs, ui.Pair{Key: "counted free", Value: fmt.Sprintf("%d MiB free + %d speculative + %d purgeable + %d file-backed", c.FreeMiB, c.SpeculativeMiB, c.PurgeableMiB, c.FileBackedMiB)})
+			pairs = append(pairs, ui.Pair{Key: "counted free", Value: fmt.Sprintf("%d MiB free + %d purgeable + %d file-backed (%d speculative, inside file-backed)", c.FreeMiB, c.PurgeableMiB, c.FileBackedMiB, c.SpeculativeMiB)})
 		}
 		if gpu.TemperatureC != 0 {
 			pairs = append(pairs, ui.Pair{Key: "temperature", Value: fmt.Sprintf("%d C", gpu.TemperatureC)})

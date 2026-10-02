@@ -216,7 +216,7 @@ func TestGuardLeavesAHealthyChildAlone(t *testing.T) {
 }
 
 func TestGuardTreatsATemperatureOfZeroAsNoReading(t *testing.T) {
-	gpu := &scriptedGPU{readings: []gpuReading{{gpu: server.GPU{TotalMiB: 16384, FreeMiB: 4000, Unified: true}}}}
+	gpu := &scriptedGPU{readings: []gpuReading{{gpu: server.GPU{TotalMiB: 16384, FreeMiB: 4000}}}}
 	s := runSupervise(t, guardSpec(t, 8220), gpu)
 	rec := waitForRecord(t, s.store, s.spec.Name)
 	require.Eventually(t, func() bool { return gpu.sampled() >= 5 }, 5*time.Second, 10*time.Millisecond)
@@ -233,17 +233,32 @@ func TestGuardLeavesAChildAloneOnLowUnifiedMemoryAndSaysSoOnce(t *testing.T) {
 	gpu := &scriptedGPU{readings: []gpuReading{{gpu: server.GPU{TotalMiB: 16384, FreeMiB: 400, Unified: true}}}}
 	s := runSupervise(t, guardSpec(t, 8221), gpu)
 	rec := waitForRecord(t, s.store, s.spec.Name)
-	require.Eventually(t, func() bool { return gpu.sampled() >= 5 }, 5*time.Second, 10*time.Millisecond)
+	require.Eventually(t, func() bool { return gpu.sampled() >= 1 }, 5*time.Second, 10*time.Millisecond)
+	assert.Never(t, func() bool { return gpu.sampled() > 1 }, 300*time.Millisecond, 10*time.Millisecond)
 	assert.True(t, server.ChildAlive(rec))
 
 	s.cancel()
 	assert.Zero(t, s.wait(t).code)
+	requireGone(t, rec.ChildPID)
 	found, err := s.store.Tripped()
 	require.NoError(t, err)
 	assert.Empty(t, found)
 	tail, err := server.LogTail(s.spec.Log, 10)
 	require.NoError(t, err)
 	assert.Equal(t, 1, strings.Count(tail, "guard: free memory guard is off on unified memory until measured"))
+}
+
+func TestGuardStillReportsTheChildExitAfterTheUnifiedWatchEnds(t *testing.T) {
+	gpu := &scriptedGPU{readings: []gpuReading{{gpu: server.GPU{TotalMiB: 16384, FreeMiB: 400, Unified: true}}}}
+	spec := modelSpec(t, 8222, "sh", "-c", "sleep 0.3; exit 3")
+	spec.Guard = server.Guard{Enabled: true, MaxTempC: 87, MinFreeMiB: 1500, IntervalMS: 10}
+	s := runSupervise(t, spec, gpu)
+
+	result := s.wait(t)
+
+	require.NoError(t, result.err)
+	assert.Equal(t, 3, result.code)
+	assert.Equal(t, 1, gpu.sampled())
 }
 
 func TestGuardIgnoresASingleFailedSample(t *testing.T) {

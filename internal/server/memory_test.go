@@ -22,7 +22,7 @@ func TestParseUnifiedMemoryCountsWhatMacOSCanReclaim(t *testing.T) {
 	got, err := server.ParseUnifiedMemory(sixteenGiBMac)
 	require.NoError(t, err)
 	want := server.GPU{
-		TotalMiB: 16384, UsedMiB: 14684, FreeMiB: 1700, TempC: 0, Unified: true,
+		TotalMiB: 16384, UsedMiB: 14884, FreeMiB: 1500, TempC: 0, Unified: true,
 		Parts: server.MemoryParts{FreeMiB: 1000, SpeculativeMiB: 200, PurgeableMiB: 100, FileBackedMiB: 400},
 	}
 	assert.Equal(t, want, got)
@@ -31,7 +31,15 @@ func TestParseUnifiedMemoryCountsWhatMacOSCanReclaim(t *testing.T) {
 func TestParseUnifiedMemoryAcceptsSpacesAndCarriageReturns(t *testing.T) {
 	got, err := server.ParseUnifiedMemory(" 17179869184\r\n16384\r\n 64000\r\n12800\r\n6400\r\n 25600\r\n")
 	require.NoError(t, err)
-	assert.Equal(t, 1700, got.FreeMiB)
+	assert.Equal(t, 1500, got.FreeMiB)
+}
+
+func TestParseUnifiedMemoryDoesNotCountSpeculativePagesTwice(t *testing.T) {
+	got, err := server.ParseUnifiedMemory("17179869184\n16384\n64000\n12800\n0\n12800\n")
+	require.NoError(t, err)
+	assert.Equal(t, 1200, got.FreeMiB, "speculative pages are already in the file-backed count")
+	assert.Equal(t, 200, got.Parts.SpeculativeMiB)
+	assert.Equal(t, 200, got.Parts.FileBackedMiB)
 }
 
 func TestParseUnifiedMemoryNeverReportsMoreFreeThanTotal(t *testing.T) {
@@ -51,7 +59,7 @@ func TestParseUnifiedMemoryRejectsMalformedOutput(t *testing.T) {
 		{"a sysctl error line", "17179869184\n16384\n64000\n12800\n6400\nsysctl: unknown oid 'vm.page_pageable_external_count'\n", "vm.page_pageable_external_count"},
 		{"no memory size", "0\n16384\n64000\n12800\n6400\n25600\n", "must not be 0"},
 		{"no page size", "17179869184\n0\n64000\n12800\n6400\n25600\n", "must not be 0"},
-		{"an overflow", "17179869184\n16384\n18446744073709551615\n1\n0\n0\n", "overflow"},
+		{"an overflow", "17179869184\n16384\n18446744073709551615\n0\n1\n0\n", "overflow"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

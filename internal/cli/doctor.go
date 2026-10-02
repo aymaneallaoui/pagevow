@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -14,6 +15,7 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/browser"
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
+	"github.com/aymaneallaoui/pagevow/internal/model"
 	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 )
@@ -182,6 +184,7 @@ func (d *doctor) run(cfg config.Config, path string, loadErr error) {
 		d.keys()
 		d.backend()
 		d.localServing()
+		d.installedModels()
 	}
 	d.browserChecks(loadErr == nil)
 	if loadErr == nil {
@@ -354,7 +357,7 @@ func (d *doctor) checkLeg(kevDir string, leg modelLeg, bf16Fix string) {
 		runDir = filepath.Join(kevDir, "runs", leg.model)
 	}
 	if !dirExists(runDir) {
-		d.add(prefix+":run", levelFail, "train or copy the run into "+filepath.Join(kevDir, "runs")+", or pick another model with: pagevow use local --model NAME", "the run directory %s for the %s does not exist", runDir, leg.label)
+		d.add(prefix+":run", levelFail, "install it with: pagevow install --model PATH|OWNER/NAME --name "+leg.model+", train or copy the run into "+filepath.Join(kevDir, runsDirName)+", or pick another model with: pagevow use local --model NAME", "the run directory %s for the %s does not exist", runDir, leg.label)
 		return
 	}
 	d.add(prefix+":run", levelOK, "", "run directory %s exists", runDir)
@@ -375,6 +378,42 @@ func (d *doctor) checkLeg(kevDir string, leg modelLeg, bf16Fix string) {
 		return
 	}
 	d.add(prefix+":mode", levelOK, "", "mode %s is allowed for %s", leg.mode, leg.model)
+}
+
+// installedModels lists the run directories that pagevow install --model made, and warns about one that lost its files.
+func (d *doctor) installedModels() {
+	kevDir, err := kevDirOf(d.cfg, d.home)
+	if err != nil {
+		return
+	}
+	runs := filepath.Join(kevDir, runsDirName)
+	list, err := os.ReadDir(runs)
+	if err != nil {
+		return
+	}
+	var names []string
+	for _, entry := range list {
+		dir := filepath.Join(runs, entry.Name())
+		if strings.HasPrefix(entry.Name(), ".") || !dirExists(dir) {
+			continue
+		}
+		rec, err := model.ReadRecord(dir)
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			continue
+		case err != nil:
+			d.add("model:installed", levelWarn, "install it again with: pagevow install --model PATH|OWNER/NAME --name "+entry.Name()+" --force", "the install record of %s cannot be read: %v", dir, err)
+			continue
+		}
+		if _, err := model.Validate(dir); err != nil {
+			d.add("model:installed", levelWarn, "install it again with: pagevow install --model "+rec.Source+" --name "+entry.Name()+" --force", "the installed model %s is incomplete: %v", entry.Name(), err)
+			continue
+		}
+		names = append(names, entry.Name())
+	}
+	if len(names) > 0 {
+		d.add("model:installed", levelOK, "", "pagevow installed %d model(s) under %s: %s", len(names), runs, strings.Join(names, ", "))
+	}
 }
 
 func quantisationVariable(mode string) string {

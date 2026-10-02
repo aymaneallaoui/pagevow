@@ -5,16 +5,49 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
+	"slices"
 
 	"github.com/spf13/cobra"
 
 	"github.com/aymaneallaoui/pagevow/internal/browser"
 	"github.com/aymaneallaoui/pagevow/internal/config"
+	"github.com/aymaneallaoui/pagevow/internal/mode"
+	"github.com/aymaneallaoui/pagevow/internal/model"
 	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 )
 
-const bytesPerMB = 1 << 20
+const (
+	bytesPerMB        = 1 << 20
+	huggingFaceKeyRef = "keychain:huggingface"
+	runsDirName       = "runs"
+	shortCommitLen    = 7
+	progressMinBytes  = bytesPerMB
+)
+
+type modelReport struct {
+	Name             string `json:"name"`
+	Dir              string `json:"dir"`
+	Source           string `json:"source"`
+	Revision         string `json:"revision"`
+	BaseModel        string `json:"base_model"`
+	Files            int    `json:"files"`
+	AlreadyInstalled bool   `json:"already_installed"`
+}
+
+type bothReport struct {
+	Browser installReport `json:"browser"`
+	Model   modelReport   `json:"model"`
+}
+
+type modelRequest struct {
+	arg    string
+	name   string
+	force  bool
+	link   bool
+	asJSON bool
+}
 
 type installReport struct {
 	Version          string `json:"version"`
@@ -27,18 +60,28 @@ func (a *app) newInstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "install",
 		Short: "Download the browser, and optionally a local model",
-		Long: "Download the pinned Chrome for Testing build for this operating system and architecture into the user cache directory,\n" +
-			"verify its size and SHA-256, unpack it and record the version. Run again, the command does nothing while the pinned build\n" +
+		Long: "--browser downloads the pinned Chrome for Testing build for this operating system and architecture into the user cache directory,\n" +
+			"verifies its size and SHA-256, unpacks it and records the version. Run again, the command does nothing while the pinned build\n" +
 			"is installed; --force installs it again. pagevow uses the installed build before any browser found on PATH.\n" +
 			"The install refuses while the browser that pagevow start keeps running exists: run pagevow stop first.\n\n" +
+			"--model puts a run directory under <server.kev_dir>/runs/NAME, where pagevow use local --model NAME finds it. The source is a\n" +
+			"directory (copied; --link makes a symbolic link instead and writes the install record into that directory), or a Hugging Face\n" +
+			"repository as OWNER/NAME[@REVISION], downloaded at the commit that the revision names. A run directory needs\n" +
+			"adapter_config.json, adapter_model.safetensors and head.pt. NAME is the directory or repository name unless --name is given.\n" +
+			"A large file is checked against the SHA-256 that the Hub lists, every file against its size. A private repository needs\n" +
+			"HF_TOKEN, HUGGING_FACE_HUB_TOKEN or 'pagevow keys set huggingface'; the token is never printed and only goes to the Hub.\n" +
+			"An existing NAME is replaced only with --force and only when pagevow installed it, never while a model server runs it.\n" +
+			"head.pt is a PyTorch file that can run code when it is loaded: install models only from sources you trust.\n\n" +
 			"Exit codes: 0 installed or already installed, 2 nothing was installed.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error { return a.runInstall(cmd) },
 	}
 	flags := cmd.Flags()
 	flags.Bool("browser", false, "download the pinned Chrome for Testing build")
-	flags.String("model", "", "local model to install: a path or a private Hugging Face repository (not implemented yet)")
-	flags.Bool("force", false, "install the pinned build again even when it is installed")
+	flags.String("model", "", "local model to install: a run directory, or a Hugging Face repository as OWNER/NAME[@REVISION]")
+	flags.String("name", "", "name of the installed model under the runs directory (default: the directory or repository name)")
+	flags.Bool("link", false, "link the model directory instead of copying it (with --model and a directory)")
+	flags.Bool("force", false, "install again even when the browser or the model is installed")
 	flags.Bool("json", false, "print the result as JSON")
 	return cmd
 }
@@ -49,35 +92,62 @@ func (a *app) runInstall(cmd *cobra.Command) error {
 	if err != nil {
 		return fmt.Errorf("read --browser: %w", err)
 	}
-	model, err := flags.GetString("model")
-	if err != nil {
+	req := modelRequest{}
+	if req.arg, err = flags.GetString("model"); err != nil {
 		return fmt.Errorf("read --model: %w", err)
 	}
-	force, err := flags.GetBool("force")
-	if err != nil {
+	if req.name, err = flags.GetString("name"); err != nil {
+		return fmt.Errorf("read --name: %w", err)
+	}
+	if req.link, err = flags.GetBool("link"); err != nil {
+		return fmt.Errorf("read --link: %w", err)
+	}
+	if req.force, err = flags.GetBool("force"); err != nil {
 		return fmt.Errorf("read --force: %w", err)
 	}
-	asJSON, err := flags.GetBool("json")
-	if err != nil {
+	if req.asJSON, err = flags.GetBool("json"); err != nil {
 		return fmt.Errorf("read --json: %w", err)
 	}
-	if model != "" {
-		return infrastructure(errors.New("install --model: not implemented yet"))
-	}
-	if !withBrowser {
-		return infrastructure(errors.New("nothing to install: pass --browser"))
-	}
-	return a.installBrowser(cmd, force, asJSON)
-}
-
-func (a *app) installBrowser(cmd *cobra.Command, force, asJSON bool) error {
-	setup, err := a.installSetup(force)
-	if err != nil {
-		return err
+	switch {
+	case !withBrowser && req.arg == "":
+		return infrastructure(errors.New("nothing to install: pass --browser or --model"))
+	case req.arg == "" && (req.name != "" || req.link):
+		return infrastructure(errors.New("--name and --link need --model"))
 	}
 	out, err := a.printer(cmd.OutOrStdout())
 	if err != nil {
 		return err
+	}
+	var (
+		browserReport installReport
+		modelRep      modelReport
+	)
+	if withBrowser {
+		if browserReport, err = a.installBrowser(cmd, out, req.force, req.asJSON); err != nil {
+			return err
+		}
+	}
+	if req.arg != "" {
+		if modelRep, err = a.installModel(cmd, out, req); err != nil {
+			return err
+		}
+	}
+	if req.asJSON {
+		switch {
+		case withBrowser && req.arg != "":
+			return writeJSON(cmd, bothReport{Browser: browserReport, Model: modelRep})
+		case withBrowser:
+			return writeJSON(cmd, browserReport)
+		}
+		return writeJSON(cmd, modelRep)
+	}
+	return out.Err()
+}
+
+func (a *app) installBrowser(cmd *cobra.Command, out *ui.Printer, force, asJSON bool) (installReport, error) {
+	setup, err := a.installSetup(force)
+	if err != nil {
+		return installReport{}, err
 	}
 	if !asJSON {
 		setup.opts.Progress = downloadProgress(out, setup.pin)
@@ -86,23 +156,198 @@ func (a *app) installBrowser(cmd *cobra.Command, force, asJSON bool) error {
 	if err != nil {
 		var exit *ExitError
 		if errors.As(err, &exit) {
-			return err
+			return installReport{}, err
 		}
-		return infrastructure(err)
+		return installReport{}, infrastructure(err)
 	}
 	report := installReport{
 		Version: installed.Version, Platform: installed.Platform,
 		Executable: installed.Executable, AlreadyInstalled: installed.AlreadyInstalled,
 	}
 	if asJSON {
-		return writeJSON(cmd, report)
+		return report, nil
 	}
 	if installed.AlreadyInstalled {
 		out.Status(ui.OK, "Chrome for Testing %s is already installed at %s", installed.Version, installed.Executable)
 	} else {
 		out.Status(ui.OK, "installed Chrome for Testing %s at %s", installed.Version, installed.Executable)
 	}
-	return out.Err()
+	return report, nil
+}
+
+func (a *app) installModel(cmd *cobra.Command, out *ui.Printer, req modelRequest) (modelReport, error) {
+	src, err := model.ParseSource(req.arg)
+	if err != nil {
+		return modelReport{}, infrastructure(err)
+	}
+	opts, err := a.modelOptions(src, req)
+	if err != nil {
+		return modelReport{}, err
+	}
+	if !req.asJSON {
+		opts.Begin = modelBegin(out)
+		opts.Progress = modelProgress(out)
+	}
+	installed, err := model.Install(commandContext(cmd), src, opts)
+	if err != nil {
+		var exit *ExitError
+		if errors.As(err, &exit) {
+			return modelReport{}, err
+		}
+		return modelReport{}, infrastructure(err)
+	}
+	report := modelReport{
+		Name: installed.Name, Dir: installed.Dir, Source: installed.Source, Revision: installed.Revision,
+		BaseModel: installed.BaseModel, Files: len(installed.Files), AlreadyInstalled: installed.AlreadyInstalled,
+	}
+	if req.asJSON {
+		return report, nil
+	}
+	if installed.AlreadyInstalled {
+		out.Status(ui.OK, "model %s is already installed at %s (base %s)", installed.Name, installed.Dir, installed.BaseModel)
+	} else {
+		out.Status(ui.OK, "installed model %s at %s (base %s)", installed.Name, installed.Dir, installed.BaseModel)
+	}
+	if err := a.modelHint(out, installed.Name); err != nil {
+		return modelReport{}, err
+	}
+	return report, nil
+}
+
+func (a *app) modelOptions(src model.Source, req modelRequest) (model.Options, error) {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return model.Options{}, infrastructure(err)
+	}
+	home, err := service[HomeDir](a)
+	if err != nil {
+		return model.Options{}, err
+	}
+	kevDir, err := kevDirOf(cfg, home)
+	if err != nil {
+		return model.Options{}, infrastructure(err)
+	}
+	if !dirExists(kevDir) {
+		return model.Options{}, infrastructure(fmt.Errorf("server.kev_dir %s does not exist: set it to your kev checkout, or create it", kevDir))
+	}
+	client, err := service[*http.Client](a)
+	if err != nil {
+		return model.Options{}, err
+	}
+	hubURL, err := service[HubBaseURL](a)
+	if err != nil {
+		return model.Options{}, err
+	}
+	clock, err := service[Clock](a)
+	if err != nil {
+		return model.Options{}, err
+	}
+	guard, err := a.modelInUseGuard()
+	if err != nil {
+		return model.Options{}, err
+	}
+	token := ""
+	if src.Repo != "" {
+		if token, err = a.tokenFrom([]string{"HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"}, huggingFaceKeyRef); err != nil {
+			return model.Options{}, err
+		}
+	}
+	return model.Options{
+		RunsDir: filepath.Join(kevDir, runsDirName), Name: req.name, Force: req.force, Link: req.link,
+		HubBaseURL: string(hubURL), Client: client, Token: token, Guard: guard, Now: clock,
+	}, nil
+}
+
+func (a *app) modelInUseGuard() (func(context.Context, string) error, error) {
+	procs, err := service[Processes](a)
+	if err != nil {
+		return nil, err
+	}
+	return func(_ context.Context, dir string) error {
+		records, err := procs.List()
+		if err != nil {
+			return infrastructure(fmt.Errorf("list the pagevow processes: %w", err))
+		}
+		for _, rec := range records {
+			if rec.Kind != server.KindModel || !procs.Alive(rec) {
+				continue
+			}
+			if run := runDirOf(rec.Command); run != "" && samePath(run, dir) {
+				return infrastructure(fmt.Errorf("the model server %s (pid %d) runs %s and would use files that the install replaces; run pagevow stop first", rec.Name, rec.PID, dir))
+			}
+		}
+		return nil
+	}, nil
+}
+
+func runDirOf(argv []string) string {
+	i := slices.Index(argv, "--run")
+	if i < 0 || i+1 >= len(argv) {
+		return ""
+	}
+	return argv[i+1]
+}
+
+func samePath(a, b string) bool {
+	if filepath.Clean(a) == filepath.Clean(b) {
+		return true
+	}
+	realA, errA := filepath.EvalSymlinks(a)
+	realB, errB := filepath.EvalSymlinks(b)
+	return errA == nil && errB == nil && realA == realB
+}
+
+func (a *app) modelHint(out *ui.Printer, name string) error {
+	goos, err := service[GOOS](a)
+	if err != nil {
+		return err
+	}
+	switch goos {
+	case "linux":
+		out.Status(ui.Info, "use it with: pagevow use local --model %s --mode %s", name, mode.NF4)
+	case "darwin":
+		out.Status(ui.Info, "use it with: pagevow use local --model %s --mode %s", name, mode.BF16)
+	}
+	return nil
+}
+
+func modelBegin(out *ui.Printer) func(model.Plan) {
+	return func(plan model.Plan) {
+		switch {
+		case plan.Link:
+			out.Status(ui.Info, "linking %s as %s", plan.Source, plan.Dir)
+		case plan.Revision != "":
+			out.Status(ui.Info, "downloading %s@%s (%d files, %d MB)", plan.Source, shortCommit(plan.Revision), plan.Files, (plan.Bytes+bytesPerMB/2)/bytesPerMB)
+		default:
+			out.Status(ui.Info, "copying %s to %s", plan.Source, plan.Dir)
+		}
+	}
+}
+
+func shortCommit(commit string) string {
+	if len(commit) > shortCommitLen {
+		return commit[:shortCommitLen]
+	}
+	return commit
+}
+
+func modelProgress(out *ui.Printer) func(file string, done, total int64) {
+	var (
+		current string
+		last    int
+	)
+	return func(file string, done, total int64) {
+		if file != current {
+			current, last = file, 0
+		}
+		if !out.Styled() || done == 0 || total < progressMinBytes {
+			return
+		}
+		if tenth := int(done * 10 / total); tenth > last {
+			last = tenth
+			out.Status(ui.Info, "%s %d%%", file, tenth*10)
+		}
+	}
 }
 
 type installPlan struct {

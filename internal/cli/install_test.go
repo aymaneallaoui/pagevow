@@ -93,19 +93,6 @@ func TestInstallNeedsAFlag(t *testing.T) {
 	assert.Zero(t, e.hits.Load())
 }
 
-func TestInstallModelIsNotImplementedYet(t *testing.T) {
-	e := newInstallEnv(t)
-
-	for _, args := range [][]string{{"install", "--model", "/models/jev"}, {"install", "--browser", "--model", "x"}} {
-		_, err := e.run(args...)
-
-		require.Error(t, err, args)
-		assert.Equal(t, 2, cli.ExitCode(err), args)
-		assert.Contains(t, err.Error(), "not implemented yet", args)
-	}
-	assert.Zero(t, e.hits.Load(), "nothing is downloaded")
-}
-
 func TestInstallRejectsArguments(t *testing.T) {
 	_, err := newInstallEnv(t).run("install", "--browser", "extra")
 	require.Error(t, err)

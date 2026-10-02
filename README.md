@@ -28,6 +28,19 @@ make build      # writes bin/pagevow
 make install    # installs into GOBIN
 ```
 
+## Install a model
+
+```
+pagevow install --model ~/kev/runs/jev-4b            # copies a run directory into <kev_dir>/runs/jev-4b
+pagevow install --model /path/to/run --name mine --link   # links it instead of copying
+pagevow install --model owner/name@main               # downloads a Hugging Face repository, LFS files checked by SHA-256
+```
+
+A run directory holds the LoRA adapter, the pointer head and the tokenizer; the base model named in `adapter_config.json`
+is fetched by kev on first use. For a private repository set `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN`, or store the token
+with `pagevow keys set huggingface`. The token is never printed. After the install, `pagevow use local --model <name>
+--mode nf4` (or `--mode bf16` on macOS) selects it. pagevow ships no model of its own.
+
 ## Install the browser
 
 ```
@@ -80,7 +93,7 @@ hook stores the path of the binary.
 | `pagevow run [--tests FILE] [--ids a,b] [--out DIR] [--screenshots final\|failed\|all] [--retries N] [--timeout SECONDS] [--full-page] [--headed] [--json]` | works: see below |
 | `pagevow hook stop` | works: the Claude Code Stop hook, see below |
 | `pagevow plugin install [--no-register]`, `plugin uninstall`, `plugin path [--json]` | works: manage the Claude Code plugin, see below |
-| `pagevow install --browser [--force] [--json]` | works: downloads and verifies the pinned Chrome for Testing; `--model` is not implemented yet |
+| `pagevow install --browser`, `install --model PATH|OWNER/NAME[@REV] [--name N] [--link] [--force] [--json]` | works: downloads and verifies the pinned Chrome for Testing; copies, links or downloads a model run directory into `<kev_dir>/runs/` |
 | `pagevow update [--check] [--force] [--json]` | works: replaces the binary with the latest GitHub release after checking its SHA-256, see below |
 
 ## Running tests

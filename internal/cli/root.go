@@ -28,8 +28,10 @@ func NewRootCommand(injector do.Injector) *cobra.Command {
 		Long:          "pagevow runs browser tests written as goals. A decision model drives a real Chromium step by step,\nan independent verifier checks the final page, and every test leaves screenshots.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		RunE:          func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
 	root.CompletionOptions.DisableDefaultCmd = true
+	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return usageError(err) })
 	root.PersistentFlags().StringVar(&a.configFlag, "config", "", "config file (default: pagevow/config.yaml in the user config directory)")
 	root.AddCommand(
 		a.newInstallCmd(),
@@ -47,7 +49,28 @@ func NewRootCommand(injector do.Injector) *cobra.Command {
 		a.newUpdateCmd(),
 		a.newVersionCmd(),
 	)
+	root.Args = func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return fmt.Errorf("unknown command %q for %q", args[0], cmd.CommandPath())
+		}
+		return nil
+	}
+	wrapArgsErrors(root)
 	return root
+}
+
+func wrapArgsErrors(cmd *cobra.Command) {
+	if args := cmd.Args; args != nil {
+		cmd.Args = func(c *cobra.Command, positional []string) error {
+			if err := args(c, positional); err != nil {
+				return usageError(err)
+			}
+			return nil
+		}
+	}
+	for _, child := range cmd.Commands() {
+		wrapArgsErrors(child)
+	}
 }
 
 func service[T any](a *app) (T, error) {

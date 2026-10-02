@@ -26,6 +26,10 @@ func (e *ExitError) Error() string { return e.Err.Error() }
 // Unwrap returns the wrapped error.
 func (e *ExitError) Unwrap() error { return e.Err }
 
+func usageError(err error) error {
+	return &ExitError{Code: ExitInfrastructure, Err: err}
+}
+
 // ExitCode maps an error to a process exit code.
 func ExitCode(err error) int {
 	if err == nil {

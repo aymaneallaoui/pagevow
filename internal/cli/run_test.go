@@ -808,3 +808,17 @@ func TestRunHeadedStartsItsOwnBrowserAndSaysSo(t *testing.T) {
 	assert.False(t, e.launcher.specs[0].Headless)
 	assert.Contains(t, stderr, "--headed: starting a private browser")
 }
+
+func TestRunInterruptedBeforeItStartedExits2(t *testing.T) {
+	e := newRunEnv(t)
+	e.writeTests("pagevow.yaml", passingTests)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, _, err := e.exec(ctx, "run")
+
+	require.Error(t, err)
+	assert.Equal(t, 2, cli.ExitCode(err))
+	assert.Contains(t, err.Error(), "interrupted before the run started")
+	assert.Empty(t, e.launcher.browsers)
+}

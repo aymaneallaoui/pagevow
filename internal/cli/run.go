@@ -36,7 +36,7 @@ func (a *app) newRunCmd() *cobra.Command {
 		Short: "Run the browser tests",
 		Long: "Run the tests of a tests file: a decision model drives a private browser step by step (headless unless browser.headless is false or --headed is given),\n" +
 			"the verifier of each test checks the final page, and every test leaves screenshots in\n" +
-			"<out>/<timestamp>/.\n\nExit codes: 0 every test passed, 1 a test failed or has no verifier, 2 the run could not start.",
+			"<out>/<timestamp>/.\n\nExit codes: 0 every test passed, 1 a test failed or has no verifier, 2 the run could not start, was interrupted before it started, or the command line was wrong.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error { return a.runTests(cmd) },
 	}
@@ -114,7 +114,7 @@ func (a *app) runTests(cmd *cobra.Command) error {
 		}
 	}
 	if ctx.Err() != nil {
-		return &ExitError{Code: ExitFailure, Err: errors.New("interrupted before the run started")}
+		return infrastructure(errors.New("interrupted before the run started"))
 	}
 	if len(problems) > 0 {
 		_, _ = fmt.Fprintf(stderr, "Preflight failed; no test was run.\n\n%s\n", joinProblems(problems))

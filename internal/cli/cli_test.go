@@ -258,7 +258,7 @@ func TestExitCodeMapping(t *testing.T) {
 func TestUnknownCommandFails(t *testing.T) {
 	_, err := newHarness(t).run("frobnicate")
 	require.Error(t, err)
-	assert.Equal(t, 1, cli.ExitCode(err))
+	assert.Equal(t, 2, cli.ExitCode(err))
 }
 
 func TestStatusPlainShowsBackendURLsBrowserAndConfigFile(t *testing.T) {

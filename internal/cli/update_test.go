@@ -434,7 +434,7 @@ func TestUpdateKeepsTheVerifiedBinaryWhenTheDirectoryIsNotWritable(t *testing.T)
 func TestUpdateRejectsArguments(t *testing.T) {
 	_, err := newUpdateEnv(t).run("update", "now")
 	require.Error(t, err)
-	assert.Equal(t, cli.ExitFailure, cli.ExitCode(err))
+	assert.Equal(t, cli.ExitInfrastructure, cli.ExitCode(err))
 }
 
 func TestUpdateFlagsExist(t *testing.T) {

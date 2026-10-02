@@ -1,7 +1,8 @@
 # pagevow
 
-Go CLI that runs browser tests written as goals. Read `docs/SPEC.md` before editing: it is the contract. When code and
-the spec disagree, fix one of them in the same change.
+Go CLI that runs browser tests written as goals. The code and the reference sections of `README.md` (commands, tests
+file, run output, exit codes, configuration, platforms) are the contract. Read them before editing. When code and
+README disagree, fix one of them in the same change.
 
 ## Go development
 

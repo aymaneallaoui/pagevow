@@ -79,13 +79,13 @@ and prints a fix for each problem. Never put a password in a goal, because goals
 ## Install
 
 Releases are built by goreleaser for Linux (amd64, arm64), macOS (Intel, Apple Silicon) and Windows (amd64). The latest
-is `v0.2.0`. You don't need an account to download one:
+is `v0.2.1`. You don't need an account to download one:
 
 ```sh
-curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.0/pagevow_0.2.0_linux_amd64.tar.gz
-curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.0/checksums.txt
+curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.1/pagevow_0.2.1_linux_amd64.tar.gz
+curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.1/checksums.txt
 sha256sum -c checksums.txt --ignore-missing
-tar -xzf pagevow_0.2.0_linux_amd64.tar.gz pagevow
+tar -xzf pagevow_0.2.1_linux_amd64.tar.gz pagevow
 ```
 
 Put `pagevow` on your `PATH`, for example `sudo mv pagevow /usr/local/bin/`. From source you need Go 1.27 or newer:

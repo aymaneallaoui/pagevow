@@ -439,7 +439,7 @@ config entry is set:
 
 ### Release binaries
 
-The latest release is `v0.2.0`. Each release has these assets, built by goreleaser:
+The latest release is `v0.2.1`. Each release has these assets, built by goreleaser:
 
 | Asset | System |
 |---|---|
@@ -450,23 +450,23 @@ The latest release is `v0.2.0`. Each release has these assets, built by goreleas
 | `pagevow_<version>_windows_amd64.zip` | Windows, x86-64 |
 | `checksums.txt` | SHA-256 of every archive |
 
-`<version>` is the tag without its `v`, for example `0.2.0`. Each archive holds the binary, `LICENSE`, `NOTICE`,
+`<version>` is the tag without its `v`, for example `0.2.1`. Each archive holds the binary, `LICENSE`, `NOTICE`,
 `README.md` and `REFERENCE.md`. Check the archive against `checksums.txt`, unpack it and put `pagevow` on your `PATH`.
 
 You don't need an account to download a release:
 
 ```sh
-curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.0/pagevow_0.2.0_linux_amd64.tar.gz
-curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.0/checksums.txt
+curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.1/pagevow_0.2.1_linux_amd64.tar.gz
+curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.1/checksums.txt
 sha256sum -c checksums.txt --ignore-missing
-tar -xzf pagevow_0.2.0_linux_amd64.tar.gz pagevow
+tar -xzf pagevow_0.2.1_linux_amd64.tar.gz pagevow
 sudo mv pagevow /usr/local/bin/
 ```
 
 With the GitHub CLI the download step is:
 
 ```sh
-gh release download v0.2.0 --repo aymaneallaoui/pagevow --pattern 'pagevow_0.2.0_linux_amd64.tar.gz' --pattern checksums.txt
+gh release download v0.2.1 --repo aymaneallaoui/pagevow --pattern 'pagevow_0.2.1_linux_amd64.tar.gz' --pattern checksums.txt
 ```
 
 ### From source

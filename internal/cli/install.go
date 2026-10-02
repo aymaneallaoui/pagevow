@@ -65,14 +65,18 @@ func (a *app) newInstallCmd() *cobra.Command {
 			"is installed; --force installs it again. pagevow uses the installed build before any browser found on PATH.\n" +
 			"The install refuses while the browser that pagevow start keeps running exists: run pagevow stop first.\n\n" +
 			"--model puts a run directory under <server.kev_dir>/runs/NAME, where pagevow use local --model NAME finds it. The source is a\n" +
-			"directory (copied; --link makes a symbolic link instead and writes the install record into that directory), or a Hugging Face\n" +
-			"repository as OWNER/NAME[@REVISION], downloaded at the commit that the revision names. A run directory needs\n" +
+			"directory (copied; --link makes a symbolic link instead and keeps its install record beside it in the runs directory), or a\n" +
+			"Hugging Face repository as OWNER/NAME[@REVISION], downloaded at the commit that the revision names. A run directory needs\n" +
 			"adapter_config.json, adapter_model.safetensors and head.pt. NAME is the directory or repository name unless --name is given.\n" +
-			"A large file is checked against the SHA-256 that the Hub lists, every file against its size. A private repository needs\n" +
+			"A copy follows a symbolic link only to a file inside the source directory. A large file is checked against the SHA-256 that\n" +
+			"the Hub lists, a small one against its git object id, every file against its size. A private repository needs\n" +
 			"HF_TOKEN, HUGGING_FACE_HUB_TOKEN or 'pagevow keys set huggingface'; the token is never printed and only goes to the Hub.\n" +
 			"An existing NAME is replaced only with --force and only when pagevow installed it, never while a model server runs it.\n" +
+			"A copy whose source changed since the install (file names, sizes or modification times) is replaced only with --force.\n" +
 			"head.pt is a PyTorch file that can run code when it is loaded: install models only from sources you trust.\n\n" +
-			"Exit codes: 0 installed or already installed, 2 nothing was installed.",
+			"With --browser and --model the model is installed first, then the browser.\n\n" +
+			"Exit codes: 0 installed or already installed, 2 nothing was installed, or with --browser and --model the model was\n" +
+			"installed and the browser was not (the message says so, and --json still prints the model report).",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error { return a.runInstall(cmd) },
 	}
@@ -122,14 +126,17 @@ func (a *app) runInstall(cmd *cobra.Command) error {
 		browserReport installReport
 		modelRep      modelReport
 	)
-	if withBrowser {
-		if browserReport, err = a.installBrowser(cmd, out, req.force, req.asJSON); err != nil {
-			return err
-		}
-	}
 	if req.arg != "" {
 		if modelRep, err = a.installModel(cmd, out, req); err != nil {
 			return err
+		}
+	}
+	if withBrowser {
+		if browserReport, err = a.installBrowser(cmd, out, req.force, req.asJSON); err != nil {
+			if req.arg == "" {
+				return err
+			}
+			return a.browserFailedAfterModel(cmd, modelRep, req.asJSON, err)
 		}
 	}
 	if req.asJSON {
@@ -142,6 +149,16 @@ func (a *app) runInstall(cmd *cobra.Command) error {
 		return writeJSON(cmd, modelRep)
 	}
 	return out.Err()
+}
+
+// browserFailedAfterModel reports a browser install that failed after the model was installed: the model report still goes out.
+func (a *app) browserFailedAfterModel(cmd *cobra.Command, modelRep modelReport, asJSON bool, err error) error {
+	if asJSON {
+		if jsonErr := writeJSON(cmd, modelRep); jsonErr != nil {
+			return errors.Join(err, jsonErr)
+		}
+	}
+	return infrastructure(fmt.Errorf("installed model %s at %s, but the browser install failed: %w", modelRep.Name, modelRep.Dir, err))
 }
 
 func (a *app) installBrowser(cmd *cobra.Command, out *ui.Printer, force, asJSON bool) (installReport, error) {
@@ -254,8 +271,14 @@ func (a *app) modelOptions(src model.Source, req modelRequest) (model.Options, e
 	}
 	return model.Options{
 		RunsDir: filepath.Join(kevDir, runsDirName), Name: req.name, Force: req.force, Link: req.link,
-		HubBaseURL: string(hubURL), Client: client, Token: token, Guard: guard, Now: clock,
+		HubBaseURL: string(hubURL), Client: hubClient(client), Token: token, Guard: guard, Now: clock,
 	}, nil
+}
+
+// hubClient keeps the transport and redirect rule of base without its overall timeout, which a large model file outlasts.
+// The stall guard of model.Install takes the place of that timeout.
+func hubClient(base *http.Client) *http.Client {
+	return &http.Client{Transport: base.Transport, CheckRedirect: base.CheckRedirect, Jar: base.Jar}
 }
 
 func (a *app) modelInUseGuard() (func(context.Context, string) error, error) {

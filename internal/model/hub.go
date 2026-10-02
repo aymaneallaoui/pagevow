@@ -2,6 +2,8 @@ package model
 
 import (
 	"context"
+	"crypto/sha1" //nolint:gosec // git defines the object id of a file as a SHA-1
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,11 +30,14 @@ const (
 	defaultMaxRedirects = 10
 	apiTimeout          = 30 * time.Second
 	listTimeout         = 2 * time.Minute
+	defaultStallTimeout = 2 * time.Minute
 	maxAPIBytes         = 4 << 20
 	maxListBytes        = 64 << 20
 	maxListPages        = 1000
 	maxListFiles        = 100000
 )
+
+var errStalled = errors.New("the download stalled")
 
 // ErrNotFound reports a repository the hub does not show to the caller: missing, or private without a readable token.
 var ErrNotFound = errors.New("model repository not found")
@@ -40,6 +45,7 @@ var ErrNotFound = errors.New("model repository not found")
 var (
 	commitPattern = regexp.MustCompile(`^[0-9a-f]{40}([0-9a-f]{24})?$`)
 	digestPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	blobPattern   = regexp.MustCompile(`^[0-9a-f]{40}$`)
 )
 
 type hub struct {
@@ -47,18 +53,21 @@ type hub struct {
 	text   string
 	client *http.Client
 	token  string
+	stall  time.Duration
 }
 
 type hubFile struct {
 	path   string
 	size   int64
 	sha256 string
+	blob   string
 }
 
 type treeEntry struct {
 	Type string `json:"type"`
 	Path string `json:"path"`
 	Size int64  `json:"size"`
+	OID  string `json:"oid"`
 	LFS  *struct {
 		OID  string `json:"oid"`
 		Size int64  `json:"size"`
@@ -81,7 +90,11 @@ func newHub(opts Options) (*hub, error) {
 	if opts.Token != "" && base.Scheme != "https" && !config.IsLoopbackURL(text) {
 		return nil, errors.New("refusing to send a token over plain HTTP")
 	}
-	return &hub{base: base, text: text, client: guardedClient(opts.Client, opts.Token), token: opts.Token}, nil
+	stall := opts.StallTimeout
+	if stall <= 0 {
+		stall = defaultStallTimeout
+	}
+	return &hub{base: base, text: text, client: guardedClient(opts.Client, opts.Token), token: opts.Token, stall: stall}, nil
 }
 
 func guardedClient(base *http.Client, token string) *http.Client {
@@ -141,7 +154,7 @@ func (h *hub) statusError(repo string, resp *http.Response) error {
 		return h.notFound(repo)
 	case http.StatusForbidden:
 		if !hasToken {
-			return errors.New("the request was refused by Hugging Face (HTTP 403): the repository may need a token, set HF_TOKEN")
+			return errors.New("the request was refused by Hugging Face (HTTP 403): the repository may need a token, set HF_TOKEN or HUGGING_FACE_HUB_TOKEN, or run 'pagevow keys set huggingface'")
 		}
 		return errors.New("the request was refused by Hugging Face (HTTP 403): the token may lack access to the repository")
 	case http.StatusTooManyRequests:
@@ -155,7 +168,7 @@ func (h *hub) notFound(repo string) error {
 		return fmt.Errorf("%w: %s does not exist on the hub, or the token cannot read it", ErrNotFound, repo)
 	}
 	return fmt.Errorf("%w: %s does not exist on the hub, or the repository is private; "+
-		"set HF_TOKEN or run 'pagevow keys set huggingface' to give pagevow a token that can read it", ErrNotFound, repo)
+		"set HF_TOKEN or HUGGING_FACE_HUB_TOKEN, or run 'pagevow keys set huggingface', to give pagevow a token that can read it", ErrNotFound, repo)
 }
 
 func (h *hub) commit(ctx context.Context, repo, revision string) (string, error) {
@@ -214,16 +227,17 @@ func (h *hub) files(ctx context.Context, repo, commit string, limit int64) ([]hu
 				return nil, 0, fmt.Errorf("list %s: %s appears twice", repo, file.path)
 			}
 			seen[file.path] = struct{}{}
-			if total += file.size; total > limit || len(files) >= maxListFiles {
+			if file.size > limit-total || len(files) >= maxListFiles {
 				return nil, 0, fmt.Errorf("%w: %s holds more than %d bytes or %d files", ErrTooLarge, repo, limit, maxListFiles)
 			}
+			total += file.size
 			files = append(files, file)
 		}
 		if next, err = h.following(link, next); err != nil {
 			return nil, 0, fmt.Errorf("list %s: %w", repo, err)
 		}
 	}
-	for _, name := range requiredFiles {
+	for _, name := range requiredFiles() {
 		if _, ok := seen[name]; !ok {
 			return nil, 0, fmt.Errorf("%w: the repository %s has no %s", ErrInvalid, repo, name)
 		}
@@ -277,7 +291,7 @@ func fileOf(entry treeEntry) (hubFile, bool, error) {
 	if err := checkRepoPath(entry.Path); err != nil {
 		return hubFile{}, false, err
 	}
-	if hidden(entry.Path) {
+	if skipped(entry.Path) {
 		return hubFile{}, false, nil
 	}
 	file := hubFile{path: entry.Path, size: entry.Size}
@@ -286,6 +300,11 @@ func fileOf(entry treeEntry) (hubFile, bool, error) {
 		file.sha256 = strings.ToLower(entry.LFS.OID)
 		if !digestPattern.MatchString(file.sha256) {
 			return hubFile{}, false, fmt.Errorf("%s has an invalid SHA-256", entry.Path)
+		}
+	} else {
+		file.blob = strings.ToLower(entry.OID)
+		if !blobPattern.MatchString(file.blob) {
+			return hubFile{}, false, fmt.Errorf("%s has an invalid git object id", entry.Path)
 		}
 	}
 	if file.size < 0 {
@@ -302,13 +321,15 @@ func checkRepoPath(name string) error {
 	return nil
 }
 
-func hidden(name string) bool {
-	for part := range strings.SplitSeq(name, "/") {
+// skipped reports a file that an install leaves out: anything in a hidden directory, .git, and the install record.
+func skipped(name string) bool {
+	dir, base := path.Split(name)
+	for part := range strings.SplitSeq(strings.TrimSuffix(dir, "/"), "/") {
 		if strings.HasPrefix(part, ".") {
 			return true
 		}
 	}
-	return false
+	return base == ".git" || name == recordFile
 }
 
 func escapePath(name string) string {
@@ -319,8 +340,25 @@ func escapePath(name string) string {
 	return strings.Join(parts, "/")
 }
 
-// fetch streams one file of a commit into root and checks its size and, for a large file, its SHA-256.
+// fetch streams one file of a commit into root and checks its size and its SHA-256 or git object id.
 func (h *hub) fetch(ctx context.Context, repo, commit string, file hubFile, root *os.Root, report func(done int64)) (FileRecord, error) {
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	timer := time.AfterFunc(h.stall, func() { cancel(errStalled) })
+	defer timer.Stop()
+	record, err := h.stream(ctx, repo, commit, file, root, func(done int64) {
+		timer.Reset(h.stall)
+		if report != nil {
+			report(done)
+		}
+	})
+	if err != nil && errors.Is(context.Cause(ctx), errStalled) {
+		return FileRecord{}, fmt.Errorf("download %s: no data arrived for %s", file.path, h.stall)
+	}
+	return record, err
+}
+
+func (h *hub) stream(ctx context.Context, repo, commit string, file hubFile, root *os.Root, report func(done int64)) (FileRecord, error) {
 	resp, err := h.get(ctx, h.text+"/"+repo+"/resolve/"+commit+"/"+escapePath(file.path), "application/octet-stream")
 	if err != nil {
 		return FileRecord{}, fmt.Errorf("download %s: %w", file.path, err)
@@ -332,7 +370,9 @@ func (h *hub) fetch(ctx context.Context, repo, commit string, file hubFile, root
 	if resp.ContentLength >= 0 && resp.ContentLength != file.size {
 		return FileRecord{}, fmt.Errorf("download %s: the server announces %d bytes, expected %d", file.path, resp.ContentLength, file.size)
 	}
-	written, sum, err := stageFile(ctx, root, file.path, resp.Body, file.size, report)
+	blob := sha1.New() //nolint:gosec // git defines the object id of a file as a SHA-1
+	_, _ = fmt.Fprintf(blob, "blob %d\x00", file.size)
+	written, sum, err := stageFile(ctx, root, file.path, io.TeeReader(resp.Body, blob), file.size, report)
 	switch {
 	case err != nil:
 		return FileRecord{}, fmt.Errorf("download %s: %w", file.path, err)
@@ -342,6 +382,8 @@ func (h *hub) fetch(ctx context.Context, repo, commit string, file hubFile, root
 		return FileRecord{}, fmt.Errorf("download %s: size mismatch: expected %d bytes, got %d", file.path, file.size, written)
 	case file.sha256 != "" && sum != file.sha256:
 		return FileRecord{}, fmt.Errorf("download %s: checksum mismatch: expected sha256 %s, got %s", file.path, file.sha256, sum)
+	case file.blob != "" && hex.EncodeToString(blob.Sum(nil)) != file.blob:
+		return FileRecord{}, fmt.Errorf("download %s: checksum mismatch: expected git object %s, got %s", file.path, file.blob, hex.EncodeToString(blob.Sum(nil)))
 	}
 	return FileRecord{Name: file.path, Size: written, SHA256: sum}, nil
 }

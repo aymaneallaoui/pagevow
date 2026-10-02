@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -60,6 +62,8 @@ type Options struct {
 	// Client performs the hub requests; Install of a repository fails when it is nil.
 	Client *http.Client
 	Token  string
+	// StallTimeout fails a download that receives no bytes for this long; zero means 2 minutes.
+	StallTimeout time.Duration
 	// MaxBytes caps the bytes that an install copies or downloads; zero means 20 GiB.
 	MaxBytes int64
 	// Guard runs when an existing model would be replaced, before any bytes move and again right before the swap.
@@ -94,6 +98,11 @@ func Install(ctx context.Context, src Source, opts Options) (Installed, error) {
 			return Installed{}, fmt.Errorf("install model: resolve %s: %w", src.Path, err)
 		}
 		src.Path = abs
+		if opts.Link {
+			if src.Path, err = linkSource(abs, opts.RunsDir); err != nil {
+				return Installed{}, err
+			}
+		}
 	}
 	name := opts.Name
 	if name == "" {
@@ -112,25 +121,37 @@ func Install(ctx context.Context, src Source, opts Options) (Installed, error) {
 	return in.fromPath(ctx)
 }
 
+// linkSource returns the real path of a directory to link; a directory inside the runs directory is refused.
+func linkSource(abs, runsDir string) (string, error) {
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", fmt.Errorf("install model: resolve %s: %w", abs, err)
+	}
+	if within(runsDir, abs) || within(runsDir, resolved) {
+		return "", fmt.Errorf("%w: %s lies inside the runs directory %s; install it without --link to copy it", ErrInvalidSource, abs, runsDir)
+	}
+	return resolved, nil
+}
+
 func (in *installer) fromPath(ctx context.Context) (Installed, error) {
-	base, err := Validate(in.src.Path)
+	base, err := validate(in.src.Path, !in.opts.Link)
 	if err != nil {
 		return Installed{}, err
-	}
-	already, err := in.existing(ctx)
-	if err != nil {
-		return Installed{}, err
-	}
-	if already != nil {
-		return *already, nil
 	}
 	limit := in.limit
 	if in.opts.Link {
 		limit = math.MaxInt64
 	}
-	files, total, err := walkSource(in.src.Path, limit)
+	files, total, err := walkSource(in.src.Path, limit, in.opts.Link)
 	if err != nil {
 		return Installed{}, err
+	}
+	already, err := in.existing(ctx, files)
+	if err != nil {
+		return Installed{}, err
+	}
+	if already != nil {
+		return *already, nil
 	}
 	in.begin(len(files), total)
 	if in.opts.Link {
@@ -147,7 +168,7 @@ func (in *installer) fromHub(ctx context.Context) (Installed, error) {
 	if in.commit, err = hub.commit(ctx, in.src.Repo, in.src.Revision); err != nil {
 		return Installed{}, err
 	}
-	already, err := in.existing(ctx)
+	already, err := in.existing(ctx, nil)
 	if err != nil {
 		return Installed{}, err
 	}
@@ -230,7 +251,7 @@ func (in *installer) copyFile(ctx context.Context, from, to *os.Root, file sourc
 	case written > remaining:
 		return FileRecord{}, fmt.Errorf("%w: %s holds more than %d bytes", ErrTooLarge, in.src.Path, in.limit)
 	}
-	return FileRecord{Name: file.rel, Size: written, SHA256: sum}, nil
+	return FileRecord{Name: file.rel, Size: written, SHA256: sum, ModTime: file.mtime.UTC()}, nil
 }
 
 // publish validates the staged files, records them and moves the staging directory into place.
@@ -243,11 +264,14 @@ func (in *installer) publish(ctx context.Context, staging string, root *os.Root,
 		return Installed{}, err
 	}
 	rec := in.record(base, records)
-	if err := writeRecord(staging, rec); err != nil {
+	if err := writeRecord(filepath.Join(staging, recordFile), rec); err != nil {
 		return Installed{}, err
 	}
 	if err := in.place(ctx, staging); err != nil {
 		return Installed{}, err
+	}
+	if err := os.Remove(linkRecordPath(in.opts.RunsDir, in.name)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return Installed{}, fmt.Errorf("install model: remove the record of the replaced link: %w", err)
 	}
 	rec.Dir = in.target
 	return rec, nil
@@ -259,32 +283,48 @@ func (in *installer) link(ctx context.Context, base string, files []sourceFile) 
 		records[i] = FileRecord{Name: file.rel, Size: file.size}
 	}
 	rec := in.record(base, records)
-	if err := writeRecord(in.src.Path, rec); err != nil {
-		return Installed{}, fmt.Errorf("record the model in %s (copy it instead of linking when the directory is read-only): %w", in.src.Path, err)
-	}
 	if err := in.prepareRuns(); err != nil {
 		return Installed{}, err
 	}
+	pending, err := stageRecord(in.opts.RunsDir, rec)
+	if err != nil {
+		return Installed{}, err
+	}
+	defer func() { _ = os.Remove(pending) }()
 	staged := filepath.Join(in.opts.RunsDir, stagePrefix+in.name+"-"+rand.Text())
 	if err := os.Symlink(in.src.Path, staged); err != nil {
-		return Installed{}, fmt.Errorf("install model: create the symbolic link: %w", err)
+		return Installed{}, symlinkError(runtime.GOOS, err)
 	}
 	defer func() { _ = os.Remove(staged) }()
 	if err := in.place(ctx, staged); err != nil {
 		return Installed{}, err
 	}
-	rec.Dir = in.target
+	if err := os.Rename(pending, linkRecordPath(in.opts.RunsDir, in.name)); err != nil {
+		_ = os.Remove(in.target)
+		return Installed{}, fmt.Errorf("install model: record the link, which was removed again: %w", err)
+	}
+	rec.Dir, rec.Link = in.target, true
 	return rec, nil
 }
 
+func symlinkError(goos string, err error) error {
+	if goos == "windows" {
+		return fmt.Errorf("install model: create the symbolic link (Windows allows it with Developer Mode on or the symlink privilege; leave out --link to copy the model): %w", err)
+	}
+	return fmt.Errorf("install model: create the symbolic link: %w", err)
+}
+
 func (in *installer) record(base string, files []FileRecord) Installed {
-	now := in.opts.Now
-	if now == nil {
-		now = time.Now
-	}
 	return Installed{
-		Name: in.name, Source: in.location(), Revision: in.commit, BaseModel: base, Files: files, InstalledAt: now().UTC(),
+		Name: in.name, Source: in.location(), Revision: in.commit, BaseModel: base, Files: files, InstalledAt: in.now().UTC(),
 	}
+}
+
+func (in *installer) now() time.Time {
+	if in.opts.Now == nil {
+		return time.Now()
+	}
+	return in.opts.Now()
 }
 
 func (in *installer) location() string {
@@ -314,7 +354,7 @@ func (in *installer) reporter(file string, total int64) func(done int64) {
 }
 
 // existing decides what an existing target means: a record when the same model is installed, an error when the install may not replace it.
-func (in *installer) existing(ctx context.Context) (*Installed, error) {
+func (in *installer) existing(ctx context.Context, files []sourceFile) (*Installed, error) {
 	info, err := os.Lstat(in.target)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
@@ -322,7 +362,7 @@ func (in *installer) existing(ctx context.Context) (*Installed, error) {
 	if err != nil {
 		return nil, fmt.Errorf("install model: check %s: %w", in.target, err)
 	}
-	if info.IsDir() && in.src.Path != "" && sameOrInside(in.target, in.src.Path) {
+	if in.sourceIsTarget(info.IsDir()) {
 		return nil, fmt.Errorf("%w: the source %s is, or sits inside, %s", ErrExists, in.src.Path, in.target)
 	}
 	rec, err := ReadRecord(in.target)
@@ -332,13 +372,43 @@ func (in *installer) existing(ctx context.Context) (*Installed, error) {
 	if in.opts.Force {
 		return nil, in.guard(ctx)
 	}
-	if isLink := info.Mode()&fs.ModeSymlink != 0; rec.Source == in.location() && rec.Revision == in.commit && isLink == in.opts.Link {
-		if _, err := Validate(in.target); err == nil {
-			rec.AlreadyInstalled = true
-			return &rec, nil
+	switch {
+	case rec.Source != in.location() || rec.Revision != in.commit || rec.Link != in.opts.Link:
+		return nil, fmt.Errorf("%w: %s is installed from %s; pass --force to replace it", ErrExists, in.target, rec.Source)
+	case in.src.Path != "" && !in.opts.Link && !sameFiles(rec.Files, files):
+		return nil, fmt.Errorf("%w: the source %s changed since it was installed at %s; pass --force to install it again", ErrExists, in.src.Path, in.target)
+	}
+	if _, err := Validate(in.target); err != nil {
+		return nil, fmt.Errorf("%w: %s is installed from %s but is incomplete; pass --force to install it again", ErrExists, in.target, rec.Source)
+	}
+	rec.AlreadyInstalled = true
+	return &rec, nil
+}
+
+// sourceIsTarget reports a path source that is the target or lies inside it; a linked target is compared by its own path, not where it points.
+func (in *installer) sourceIsTarget(targetIsDir bool) bool {
+	if in.src.Path == "" {
+		return false
+	}
+	return lexicallyInside(in.target, in.src.Path) || targetIsDir && sameOrInside(in.target, in.src.Path)
+}
+
+// sameFiles reports whether a copy record still describes the source files by name, size and modification time.
+func sameFiles(recorded []FileRecord, files []sourceFile) bool {
+	if len(recorded) != len(files) {
+		return false
+	}
+	byName := make(map[string]FileRecord, len(recorded))
+	for _, rec := range recorded {
+		byName[rec.Name] = rec
+	}
+	for _, file := range files {
+		rec, ok := byName[file.rel]
+		if !ok || rec.Size != file.size || !rec.ModTime.Equal(file.mtime) {
+			return false
 		}
 	}
-	return nil, fmt.Errorf("%w: %s is installed from %s; pass --force to replace it", ErrExists, in.target, rec.Source)
+	return true
 }
 
 func (in *installer) guard(ctx context.Context) error {
@@ -352,7 +422,7 @@ func (in *installer) prepareRuns() error {
 	if err := os.MkdirAll(in.opts.RunsDir, runsMode); err != nil {
 		return fmt.Errorf("install model: create %s: %w", in.opts.RunsDir, err)
 	}
-	sweepLeftovers(in.opts.RunsDir)
+	sweepLeftovers(in.opts.RunsDir, in.now())
 	return nil
 }
 
@@ -372,15 +442,12 @@ func (in *installer) place(ctx context.Context, staged string) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("install model: %w", err)
 	}
-	if _, err := os.Lstat(in.target); err == nil {
-		if !in.opts.Force {
-			return fmt.Errorf("%w: %s appeared during the install", ErrExists, in.target)
-		}
+	if _, err := os.Lstat(in.target); err == nil && in.opts.Force {
 		if err := in.guard(ctx); err != nil {
 			return err
 		}
 	}
-	previous, err := swapIn(os.Rename, staged, in.target)
+	previous, err := swapIn(os.Rename, staged, in.target, in.opts.Force, in.now())
 	if err != nil {
 		return err
 	}
@@ -390,10 +457,13 @@ func (in *installer) place(ctx context.Context, staged string) error {
 	return nil
 }
 
-// swapIn moves staged to target. An existing target is renamed aside first, returned, and put back when the move fails.
-func swapIn(rename func(oldPath, newPath string) error, staged, target string) (previous string, err error) {
+// swapIn moves staged to target. An existing target is refused unless replace is set; then it is renamed aside, returned, and put back when the move fails.
+func swapIn(rename func(oldPath, newPath string) error, staged, target string, replace bool, now time.Time) (previous string, err error) {
 	if _, err := os.Lstat(target); err == nil {
-		previous = filepath.Join(filepath.Dir(target), oldPrefix+filepath.Base(target)+"-"+rand.Text())
+		if !replace {
+			return "", fmt.Errorf("%w: %s appeared during the install; pass --force to replace it", ErrExists, target)
+		}
+		previous = filepath.Join(filepath.Dir(target), asideName(filepath.Base(target), now))
 		if err := rename(target, previous); err != nil {
 			return "", fmt.Errorf("install model: move the previous model aside: %w", err)
 		}
@@ -412,21 +482,74 @@ func swapIn(rename func(oldPath, newPath string) error, staged, target string) (
 	return previous, nil
 }
 
-// sweepLeftovers removes staging and aside entries that an interrupted install left behind a day ago or earlier.
-func sweepLeftovers(runsDir string) {
+func asideName(name string, now time.Time) string {
+	return oldPrefix + name + "-" + strconv.FormatInt(now.Unix(), 10) + "-" + rand.Text()
+}
+
+// asideTime reads the time that asideName put into an entry name.
+func asideTime(entry string) (time.Time, bool) {
+	rest, ok := strings.CutPrefix(entry, oldPrefix)
+	if !ok {
+		return time.Time{}, false
+	}
+	i := strings.LastIndexByte(rest, '-')
+	if i < 0 {
+		return time.Time{}, false
+	}
+	rest = rest[:i]
+	secs, err := strconv.ParseInt(rest[strings.LastIndexByte(rest, '-')+1:], 10, 64)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return time.Unix(secs, 0), true
+}
+
+// sweepLeftovers removes staging entries untouched for a day, aside entries whose name says they are a day old, and orphaned link records.
+func sweepLeftovers(runsDir string, now time.Time) {
 	entries, err := os.ReadDir(runsDir)
 	if err != nil {
 		return
 	}
 	for _, entry := range entries {
 		name := entry.Name()
-		if !strings.HasPrefix(name, stagePrefix) && !strings.HasPrefix(name, oldPrefix) {
+		switch {
+		case strings.HasPrefix(name, oldPrefix):
+			if at, ok := asideTime(name); !ok || now.Sub(at) <= staleAfter {
+				continue
+			}
+		case strings.HasPrefix(name, stagePrefix):
+			if info, err := entry.Info(); err != nil || time.Since(info.ModTime()) <= staleAfter {
+				continue
+			}
+		case strings.HasPrefix(name, linkRecordPrefix):
+			if !orphanLinkRecord(runsDir, name) {
+				continue
+			}
+		default:
 			continue
 		}
-		if info, err := entry.Info(); err == nil && time.Since(info.ModTime()) > staleAfter {
-			_ = os.RemoveAll(filepath.Join(runsDir, name))
-		}
+		_ = os.RemoveAll(filepath.Join(runsDir, name))
 	}
+}
+
+// orphanLinkRecord reports a link record whose link was removed or replaced by something else.
+func orphanLinkRecord(runsDir, record string) bool {
+	name, ok := strings.CutSuffix(strings.TrimPrefix(record, linkRecordPrefix), ".json")
+	if !ok {
+		return false
+	}
+	info, err := os.Lstat(filepath.Join(runsDir, name))
+	return errors.Is(err, fs.ErrNotExist) || err == nil && info.Mode()&fs.ModeSymlink == 0
+}
+
+// within reports whether path is dir or lies below it, by name or once links are resolved.
+func within(dir, path string) bool {
+	return lexicallyInside(dir, path) || sameOrInside(dir, path)
+}
+
+func lexicallyInside(dir, path string) bool {
+	rel, err := filepath.Rel(filepath.Clean(dir), filepath.Clean(path))
+	return err == nil && filepath.IsLocal(rel)
 }
 
 // sameOrInside reports whether path is dir or lies below it once links are resolved.
@@ -444,12 +567,13 @@ func sameOrInside(dir, path string) bool {
 }
 
 type sourceFile struct {
-	rel  string
-	size int64
+	rel   string
+	size  int64
+	mtime time.Time
 }
 
-// walkSource lists the regular, visible files below dir; links and hidden entries are not copied.
-func walkSource(dir string, limit int64) ([]sourceFile, int64, error) {
+// walkSource lists the files below dir that an install takes, outside hidden directories and following links as fileInfo does.
+func walkSource(dir string, limit int64, link bool) ([]sourceFile, int64, error) {
 	root, err := os.OpenRoot(dir)
 	if err != nil {
 		return nil, 0, fmt.Errorf("install model: open %s: %w", dir, err)
@@ -465,28 +589,45 @@ func walkSource(dir string, limit int64) ([]sourceFile, int64, error) {
 			return err
 		case name == ".":
 			return nil
-		case strings.HasPrefix(entry.Name(), "."):
-			if entry.IsDir() {
-				return fs.SkipDir
-			}
-			return nil
-		case entry.IsDir() || !entry.Type().IsRegular():
+		case entry.IsDir() && strings.HasPrefix(entry.Name(), "."):
+			return fs.SkipDir
+		case entry.IsDir() || skipped(name):
 			return nil
 		}
-		info, err := entry.Info()
-		if err != nil {
+		info, err := fileInfo(dir, name, entry, link)
+		if err != nil || info == nil {
 			return err
 		}
-		if total += info.Size(); total > limit || len(files) >= maxSourceFiles {
+		if info.Size() > limit-total || len(files) >= maxSourceFiles {
 			return fmt.Errorf("%w: %s holds more than %d bytes or %d files", ErrTooLarge, dir, limit, maxSourceFiles)
 		}
-		files = append(files, sourceFile{rel: name, size: info.Size()})
+		total += info.Size()
+		files = append(files, sourceFile{rel: name, size: info.Size(), mtime: info.ModTime()})
 		return nil
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("install model: read %s: %w", dir, err)
 	}
 	return files, total, nil
+}
+
+// fileInfo describes a regular file, or a link to one, or returns nil for an entry the install leaves out.
+// A copy refuses a link out of dir; a link install records any link by its target.
+func fileInfo(dir, name string, entry fs.DirEntry, link bool) (fs.FileInfo, error) {
+	switch {
+	case entry.Type().IsRegular():
+		return entry.Info()
+	case entry.Type()&fs.ModeSymlink == 0:
+		return nil, nil
+	}
+	full := filepath.Join(dir, filepath.FromSlash(name))
+	if !link && linkOutside(dir, full) {
+		return nil, fmt.Errorf("%w: %s is a symbolic link out of the source directory; pass --link, or download with --local-dir", ErrInvalid, name)
+	}
+	if info, err := os.Stat(full); err == nil && info.Mode().IsRegular() {
+		return info, nil
+	}
+	return nil, nil
 }
 
 // stageFile writes body to a new file rel inside root and returns the bytes written, at most limit+1, and their SHA-256.

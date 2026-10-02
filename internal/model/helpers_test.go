@@ -1,9 +1,11 @@
 package model_test
 
 import (
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,6 +42,11 @@ func sum(content string) string {
 	return hex.EncodeToString(digest[:])
 }
 
+func gitBlob(content string) string {
+	digest := sha1.Sum([]byte(fmt.Sprintf("blob %d\x00%s", len(content), content)))
+	return hex.EncodeToString(digest[:])
+}
+
 func adapterConfig(base string) string {
 	data, err := json.Marshal(map[string]any{"base_model_name_or_path": base, "peft_type": "LORA"})
 	if err != nil {
@@ -73,4 +80,18 @@ func entries(t *testing.T, dir string) []string {
 		names = append(names, entry.Name())
 	}
 	return names
+}
+
+func mtime(t *testing.T, dir, name string) time.Time {
+	t.Helper()
+	info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(name)))
+	require.NoError(t, err)
+	return info.ModTime().UTC()
+}
+
+func realPath(t *testing.T, path string) string {
+	t.Helper()
+	resolved, err := filepath.EvalSymlinks(path)
+	require.NoError(t, err)
+	return resolved
 }

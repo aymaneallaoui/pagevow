@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,12 +24,26 @@ const (
 // ErrInvalid reports a directory that is not a usable run directory.
 var ErrInvalid = errors.New("invalid model directory")
 
-var requiredFiles = []string{adapterConfigFile, adapterWeightsFile, headFile}
+func requiredFiles() [3]string {
+	return [3]string{adapterConfigFile, adapterWeightsFile, headFile}
+}
 
 // Validate checks that dir holds the files a model server needs and returns the base model that the adapter names.
 func Validate(dir string) (string, error) {
-	for _, name := range requiredFiles {
-		info, err := os.Stat(filepath.Join(dir, name))
+	return validate(dir, false)
+}
+
+// validate checks the required files; contained also refuses a file that is a symbolic link out of dir, which a copy cannot take.
+func validate(dir string, contained bool) (string, error) {
+	for _, name := range requiredFiles() {
+		full := filepath.Join(dir, name)
+		info, err := os.Lstat(full)
+		if err == nil && info.Mode()&fs.ModeSymlink != 0 {
+			if contained && linkOutside(dir, full) {
+				return "", fmt.Errorf("%w: %s is a symbolic link out of the source directory; pass --link, or download with --local-dir", ErrInvalid, name)
+			}
+			info, err = os.Stat(full)
+		}
 		switch {
 		case errors.Is(err, os.ErrNotExist):
 			return "", fmt.Errorf("%w: %s has no %s", ErrInvalid, dir, name)
@@ -39,6 +54,12 @@ func Validate(dir string) (string, error) {
 		}
 	}
 	return baseModelOf(dir)
+}
+
+// linkOutside reports whether the link at full resolves to a path outside dir.
+func linkOutside(dir, full string) bool {
+	target, err := filepath.EvalSymlinks(full)
+	return err == nil && !sameOrInside(dir, target)
 }
 
 func baseModelOf(dir string) (string, error) {

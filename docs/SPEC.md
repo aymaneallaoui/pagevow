@@ -82,7 +82,9 @@ pagevow version
 Exit codes of `run`: 0 all passed; 1 at least one test failed or is unverified; 2 infrastructure problem (backend or
 browser not reachable, invalid tests file). `hook stop` follows section 10.
 
-Exit codes of `install`: 0 installed or already installed; 2 nothing was installed, including a missing flag.
+Exit codes of `install`: 0 installed or already installed; 2 nothing was installed, including a missing flag, or with
+`--browser` and `--model` the model was installed and the browser was not (the model goes first; the message names both
+and `--json` still prints the model report).
 Exit codes of `update`: 0 updated or already current; 1 with `--check` when a newer release exists; 2 nothing was
 replaced, including a network, token or verification failure.
 Exit codes of `start` and `stop`: 0 everything requested runs or is stopped; 2 otherwise. `status` exits 0 also when
@@ -291,13 +293,18 @@ supervises the model.
 
 Models: `pagevow install --model SOURCE` puts a run directory under `<server.kev_dir>/runs/<name>`. `SOURCE` is a path
 that exists (copied, or linked with `--link`) or a Hugging Face repository `owner/name[@revision]` (downloaded by commit
-sha, every LFS file checked against its SHA-256, other files by size). A run directory must hold `adapter_config.json`
-with `base_model_name_or_path`, `adapter_model.safetensors` and `head.pt`; the base weights are not inside and kev fetches
-them on first use. The install writes `<runs>/<name>/.pagevow-model.json` (source, revision, base model, files with
-size and SHA-256, time). A Hub token comes from `HF_TOKEN`, then `HUGGING_FACE_HUB_TOKEN`, then the keychain entry
-`huggingface`; it is sent only over https or loopback, dropped on a cross-host redirect, and never printed. An existing
-run directory is replaced only with `--force`, never while a `model-<port>` record uses it. `doctor` lists installed
-models and warns when one is incomplete or its record cannot be read.
+sha, every LFS file checked against its SHA-256, every other file against its git blob id, all files by size). A run
+directory must hold `adapter_config.json` with `base_model_name_or_path`, `adapter_model.safetensors` and `head.pt`; the
+base weights are not inside and kev fetches them on first use. A copy follows a symbolic link only when it points at a
+regular file inside the source directory; a link out of it fails with a hint to pass `--link` or to download with
+`--local-dir`. A copy or a download writes `<runs>/<name>/.pagevow-model.json` (source, revision, base model, files with
+size, SHA-256 and, for a copy, modification time, time); a link keeps its record beside it as
+`<runs>/.pagevow-link-<name>.json` and never writes into the source. A Hub token comes from `HF_TOKEN`, then
+`HUGGING_FACE_HUB_TOKEN`, then the keychain entry `huggingface`; it is sent only over https or loopback, dropped on a
+cross-host redirect, and never printed. An existing run directory is replaced only with `--force`, only when its record
+proves pagevow installed it, and never while a `model-<port>` record uses it. A copy whose source changed since the
+install (file names, sizes or modification times) is replaced only with `--force`. `doctor` lists installed models and
+warns when one is incomplete, its record cannot be read, or its link points at a missing directory.
 
 ## 10. Stop hook
 
@@ -565,7 +572,7 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | `--model` | implemented in phase 5, part 3 (see below) |
 | `doctor` | `browser:installed` reports the recorded build, warns when it differs from the pin or cannot be used, and warns when there is neither a record nor a system browser; the missing browser fix names `pagevow install --browser` |
 | `status` | the Browser section shows `installed` with the version and path, or `no (pagevow install --browser)` |
-| HTTP client | 15 minute overall timeout, at most 3 redirects; the address of the archives can be replaced by the container for tests only |
+| HTTP client | 15 minute overall timeout, at most 3 redirects; the address of the archives can be replaced by the container for tests only; `install --model` uses the same transport without the overall timeout |
 
 ### Decisions of phase 5, part 2
 
@@ -591,15 +598,21 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 
 | Topic | Decision |
 |---|---|
-| Sources | an existing path (absolute or relative) is copied, or linked with `--link`; `owner/name[@rev]` is a Hugging Face repository, `rev` defaults to `main` and is resolved to a commit sha before any download |
-| Name | `--name`, else the last path element or the repository name; must match `[A-Za-z0-9][A-Za-z0-9._-]*` |
+| Sources | decided by shape before any file system check: a `..` element is allowed only at the start of a path (`../x`, `../../x/y`) and refused after any other element (`owner/..`, `x/../y`); `OWNER/NAME[@REV]` that does not start with `.`, `/`, `~`, `\` or a drive letter is a Hugging Face repository (at most 512 bytes) unless a directory of that relative name exists; anything else must be an existing directory, copied or linked with `--link`; `rev` defaults to `main` and is resolved to a commit sha before any download |
+| Name | `--name`, else the last path element or the repository name; must match `[A-Za-z0-9][A-Za-z0-9._-]*`, be a local path, and not be a Windows device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`, with or without an extension) |
 | Validation | `adapter_config.json` with a non-empty `base_model_name_or_path`, `adapter_model.safetensors` and `head.pt` are required, before and after the copy or download |
-| Verification | LFS files by SHA-256 from the Hub tree listing, other files by size; total capped at 20 GiB; files under `.git` and hidden directories are skipped |
-| Staging | files go to `<runs>/.staging-<name>-*` and are renamed into place; an existing directory is renamed aside first and restored when the swap fails; leftovers older than a day are swept |
-| Record | `<runs>/<name>/.pagevow-model.json`, mode 0600; linked models record no hashes |
+| Symbolic links | a copy follows a link to a regular file inside the source directory and fails on a link out of it (`pass --link, or download with --local-dir`); links to directories and dangling links are not copied; `--link` points at the resolved source and is refused for a source inside the runs directory |
+| Verification | LFS files by SHA-256 from the Hub tree listing, other files by their git blob id (`sha1("blob <size>\0" + content)`), every file by size; total capped at 20 GiB, checked without overflow; files in hidden directories, `.git` and a root `.pagevow-model.json` are skipped, root dotfiles such as `.gitattributes` are kept |
+| Download | no overall timeout: a file fails when no byte arrives for 2 minutes, and the command context cancels it |
+| Staging | files go to `<runs>/.staging-<name>-*` and are renamed into place; an existing directory is renamed aside to `.old-<name>-<unix seconds>-<random>` and restored when the swap fails; without `--force` a target that appears before the swap is left alone; staging entries untouched for a day, aside entries whose name is a day old and records of removed links are swept |
+| Record | `<runs>/<name>/.pagevow-model.json` for a copy or a download, `<runs>/.pagevow-link-<name>.json` for a link, mode 0600; linked models record no hashes; a record proves ownership only with a name, source, base model, install time and, for a copy or a download, files, and a link record only while the link points at its source |
+| Repeated install | the same commit, or the same unchanged path, reports already installed; a path whose files changed in name, size or modification time needs `--force` |
 | Token | `HF_TOKEN`, then `HUGGING_FACE_HUB_TOKEN`, then `keychain:huggingface`; https or loopback only, dropped on a cross-host redirect, never printed; a 404 without a token names the three sources |
 | Guard | refused while a live `model-<port>` record runs from the target directory; refused without `--force` when the directory exists |
 | Output | `[ok] installed model <name> at <dir> (base <base>)` then the `pagevow use local --model <name> --mode nf4` hint (`bf16` on macOS); `--json` prints name, dir, source, revision, base_model, files and already_installed |
+| `--browser --model` | the model is installed first, then the browser; a browser failure after the model exits 2 with a message naming both, and `--json` prints the model report |
+| Doctor | a broken link is a warning; the repair hint of a Hub model pins `@<commit>`; a missing absolute `backends.local.model` gets a hint without `--name` |
+| Windows | `--link` needs Developer Mode or the symlink privilege; the error says so |
 | Shipping | pagevow still ships no model (open question 1); the command only brings the user's own checkpoint into place |
 
 ### Decisions of phase 6

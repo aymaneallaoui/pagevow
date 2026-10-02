@@ -3,6 +3,8 @@
 <h1 align="center">pagevow</h1>
 
 <p align="center">
+  <a href="https://github.com/aymaneallaoui/pagevow/actions/workflows/ci.yml"><img src="https://github.com/aymaneallaoui/pagevow/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/aymaneallaoui/pagevow/releases/latest"><img src="https://img.shields.io/github/v/release/aymaneallaoui/pagevow" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/go-1.27-00ADD8" alt="Go 1.27">
   <img src="https://img.shields.io/badge/licence-MIT-informational" alt="Licence MIT">
 </p>
@@ -76,22 +78,20 @@ and prints a fix for each problem. Never put a password in a goal, because goals
 
 ## Install
 
-The repository `aymaneallaoui/pagevow` is private for now. Downloading a release, `go install` and `pagevow update` all
-need an account or a token that can read it.
-
 Releases are built by goreleaser for Linux (amd64, arm64), macOS (Intel, Apple Silicon) and Windows (amd64). The latest
-is `v0.2.0`. With the GitHub CLI:
+is `v0.2.0`. You don't need an account to download one:
 
 ```sh
-gh release download v0.2.0 --repo aymaneallaoui/pagevow --pattern 'pagevow_0.2.0_linux_amd64.tar.gz' --pattern checksums.txt
-sha256sum --check --ignore-missing checksums.txt
+curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.0/pagevow_0.2.0_linux_amd64.tar.gz
+curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.0/checksums.txt
+sha256sum -c checksums.txt --ignore-missing
 tar -xzf pagevow_0.2.0_linux_amd64.tar.gz pagevow
 ```
 
-Put `pagevow` on your `PATH`. From source you need Go 1.27 or newer:
+Put `pagevow` on your `PATH`, for example `sudo mv pagevow /usr/local/bin/`. From source you need Go 1.27 or newer:
 
 ```sh
-GOPRIVATE=github.com/aymaneallaoui/pagevow go install github.com/aymaneallaoui/pagevow/cmd/pagevow@latest
+go install github.com/aymaneallaoui/pagevow/cmd/pagevow@latest
 ```
 
 or in a checkout, `make build` writes `bin/pagevow` and `make install` installs it into `GOBIN`. Archive names, the

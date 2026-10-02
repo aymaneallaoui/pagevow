@@ -17,6 +17,7 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/keys"
 	"github.com/aymaneallaoui/pagevow/internal/model"
 	"github.com/aymaneallaoui/pagevow/internal/plugin"
+	"github.com/aymaneallaoui/pagevow/internal/runner"
 	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 )
@@ -642,7 +643,7 @@ func dirExists(path string) bool {
 
 func failureText(status int, err error) string {
 	if err != nil {
-		return rootCause(err)
+		return runner.RootCause(err)
 	}
 	return fmt.Sprintf("HTTP %d", status)
 }

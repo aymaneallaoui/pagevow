@@ -12,6 +12,7 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/backend"
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
+	"github.com/aymaneallaoui/pagevow/internal/runner"
 	"github.com/aymaneallaoui/pagevow/internal/secret"
 	"github.com/aymaneallaoui/pagevow/internal/texthelper"
 )
@@ -156,20 +157,10 @@ func (c *collaborators) describe(err error, message string) string {
 	if errors.As(err, &status) {
 		return text
 	}
-	if cause := rootCause(err); cause != "" {
+	if cause := runner.RootCause(err); cause != "" {
 		text += "\n  Cause: " + secret.New(c.secrets...).Text(cause)
 	}
 	return text
-}
-
-func rootCause(err error) string {
-	if err == nil {
-		return ""
-	}
-	for next := errors.Unwrap(err); next != nil; next = errors.Unwrap(err) {
-		err = next
-	}
-	return err.Error()
 }
 
 func describeFailure(err error, message string) string {

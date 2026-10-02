@@ -232,13 +232,20 @@ func (a *attempt) conclude(ctx context.Context, outcome agent.Outcome) {
 	}
 }
 
+// RootCause returns the text of the innermost error in the chain of err, or "" for a nil error.
+func RootCause(err error) string {
+	if err == nil {
+		return ""
+	}
+	for next := errors.Unwrap(err); next != nil; next = errors.Unwrap(err) {
+		err = next
+	}
+	return err.Error()
+}
+
 // hiddenCause returns the innermost cause of err when its text is not already part of err's message, as with model connection errors.
 func hiddenCause(err error, redactor *secret.Redactor) string {
-	root := err
-	for next := errors.Unwrap(root); next != nil; next = errors.Unwrap(root) {
-		root = next
-	}
-	cause := root.Error()
+	cause := RootCause(err)
 	if strings.Contains(err.Error(), cause) {
 		return ""
 	}

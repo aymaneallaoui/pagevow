@@ -2,6 +2,8 @@ package runner
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -68,6 +70,13 @@ func TestTheParentEndsThePausedBudgetToo(t *testing.T) {
 	}
 	assert.ErrorIs(t, ctx.Err(), context.Canceled)
 	assert.NotErrorIs(t, ctx.Err(), context.DeadlineExceeded)
+}
+
+func TestRootCauseIsTheInnermostError(t *testing.T) {
+	inner := errors.New("connection refused")
+	assert.Equal(t, "connection refused", RootCause(fmt.Errorf("decide: %w", fmt.Errorf("dial: %w", inner))))
+	assert.Equal(t, "plain", RootCause(errors.New("plain")))
+	assert.Empty(t, RootCause(nil))
 }
 
 func TestCancelEndsTheBudget(t *testing.T) {

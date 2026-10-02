@@ -10,6 +10,7 @@ import (
 
 	"github.com/aymaneallaoui/pagevow/internal/browser"
 	"github.com/aymaneallaoui/pagevow/internal/config"
+	"github.com/aymaneallaoui/pagevow/internal/runner"
 	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 	"github.com/aymaneallaoui/pagevow/internal/version"
@@ -172,7 +173,7 @@ func probeHealth(ctx context.Context, procs Processes, targets []healthTarget) [
 			status, err := procs.Probe(ctx, target.probeURL)
 			switch {
 			case err != nil:
-				state.Error = rootCause(err)
+				state.Error = runner.RootCause(err)
 			case !answered(status, nil):
 				state.HTTPStatus, state.Error = status, fmt.Sprintf("HTTP %d", status)
 			default:

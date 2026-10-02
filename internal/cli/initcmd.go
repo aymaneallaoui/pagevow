@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/aymaneallaoui/pagevow/internal/testsfile"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 )
 
@@ -17,8 +18,6 @@ import (
 var starterTests string
 
 const testsFileName = "pagevow.yaml"
-
-var legacyTestsFiles = []string{"browser-tests.yaml", filepath.Join(".claude", "browser-tests.yaml")}
 
 func (a *app) newInitCmd() *cobra.Command {
 	return &cobra.Command{
@@ -50,7 +49,7 @@ func (a *app) newInitCmd() *cobra.Command {
 }
 
 func refuseExistingTests(dir string) error {
-	for _, name := range legacyTestsFiles {
+	for _, name := range testsfile.LegacyNames() {
 		path := filepath.Join(dir, name)
 		if _, err := os.Stat(path); err == nil {
 			return fmt.Errorf("%s already exists: pagevow reads it as a tests file, so no starter was written", path)

@@ -65,14 +65,14 @@ func TestLatestSendsTheTokenOnlyWhenSet(t *testing.T) {
 }
 
 func TestLatestNotFound(t *testing.T) {
-	t.Run("without a token the error says not found and names both ways to give a token", func(t *testing.T) {
+	t.Run("the error says not found and does not suggest a token", func(t *testing.T) {
 		fake := newFakeRelease(t, "v1.0.0", nil)
 		fake.status = http.StatusNotFound
 		_, err := Latest(context.Background(), fake.options(""))
 		require.ErrorIs(t, err, ErrReleaseNotFound)
 		assert.NotContains(t, err.Error(), "private")
-		assert.Contains(t, err.Error(), "GITHUB_TOKEN")
-		assert.Contains(t, err.Error(), "pagevow keys set github")
+		assert.Contains(t, err.Error(), "not found")
+		assert.NotContains(t, err.Error(), "GITHUB_TOKEN")
 	})
 	t.Run("with a token the error never holds the token", func(t *testing.T) {
 		fake := newFakeRelease(t, "v1.0.0", nil)
@@ -98,6 +98,8 @@ func TestLatestStatusErrors(t *testing.T) {
 		{"rate limit", http.StatusForbidden, map[string]string{"X-RateLimit-Remaining": "0"}, "", "rate limit"},
 		{"forbidden with token", http.StatusForbidden, nil, secretToken, "lack access"},
 		{"forbidden without token", http.StatusForbidden, nil, "", "GITHUB_TOKEN"},
+		{"forbidden without token names the keys command", http.StatusForbidden, nil, "", "pagevow keys set github"},
+		{"too many requests without token", http.StatusTooManyRequests, nil, "", "pagevow keys set github"},
 		{"server error", http.StatusInternalServerError, nil, "", "500"},
 	}
 	for _, tt := range tests {

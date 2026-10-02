@@ -355,8 +355,9 @@ func TestUpdateFailuresExitWithCode2(t *testing.T) {
 		runs  [][]string
 		want  string
 	}{
-		{"not found without a token", func(e *updateEnv) { e.status = http.StatusNotFound }, [][]string{update, check}, "GITHUB_TOKEN"},
-		{"not found names the keys command", func(e *updateEnv) { e.status = http.StatusNotFound }, [][]string{update, check}, "pagevow keys set github"},
+		{"not found", func(e *updateEnv) { e.status = http.StatusNotFound }, [][]string{update, check}, "repository was not found"},
+		{"rate limited names the token", func(e *updateEnv) { e.status = http.StatusForbidden }, [][]string{update, check}, "GITHUB_TOKEN"},
+		{"rate limited names the keys command", func(e *updateEnv) { e.status = http.StatusForbidden }, [][]string{update, check}, "pagevow keys set github"},
 		{"token rejected", func(e *updateEnv) {
 			e.env["GITHUB_TOKEN"] = updateSecret
 			e.status = http.StatusUnauthorized

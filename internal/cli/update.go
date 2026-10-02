@@ -37,8 +37,8 @@ func (a *app) newUpdateCmd() *cobra.Command {
 		Long: "Download the latest GitHub release for this operating system and architecture, check the SHA-256 of the archive against\n" +
 			"the release's checksums.txt and replace the running binary. A release that is not newer leaves the binary alone;\n" +
 			"--force installs it again. A build that is not a release, such as dev, counts as older than every release.\n" +
-			"The repository is private: give pagevow a token that can read it with GITHUB_TOKEN, GH_TOKEN or 'pagevow keys set github'.\n" +
-			"The token is never printed. The checksum file comes from the same release, so it detects damage, not a tampered release.\n" +
+			"No token is needed. To avoid the anonymous GitHub rate limit pagevow uses GITHUB_TOKEN, else GH_TOKEN, else the keychain entry\n" +
+			"github ('pagevow keys set github') when present. The token is never printed. The checksum file comes from the same release, so it detects damage, not a tampered release.\n" +
 			"After an update run 'pagevow plugin install' again: the Stop hook stores the path of the binary.\n\n" +
 			"Exit codes: 0 up to date or updated, 1 with --check when a newer release exists, 2 nothing was replaced.",
 		Args: cobra.NoArgs,

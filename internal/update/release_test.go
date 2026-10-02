@@ -65,16 +65,16 @@ func TestLatestSendsTheTokenOnlyWhenSet(t *testing.T) {
 }
 
 func TestLatestNotFound(t *testing.T) {
-	t.Run("without a token the error names the private repository and both ways to give a token", func(t *testing.T) {
+	t.Run("without a token the error says not found and names both ways to give a token", func(t *testing.T) {
 		fake := newFakeRelease(t, "v1.0.0", nil)
 		fake.status = http.StatusNotFound
 		_, err := Latest(context.Background(), fake.options(""))
 		require.ErrorIs(t, err, ErrReleaseNotFound)
-		assert.Contains(t, err.Error(), "private")
+		assert.NotContains(t, err.Error(), "private")
 		assert.Contains(t, err.Error(), "GITHUB_TOKEN")
 		assert.Contains(t, err.Error(), "pagevow keys set github")
 	})
-	t.Run("with a token the error does not blame privacy and never holds the token", func(t *testing.T) {
+	t.Run("with a token the error never holds the token", func(t *testing.T) {
 		fake := newFakeRelease(t, "v1.0.0", nil)
 		fake.status = http.StatusNotFound
 		opts := fake.options("")

@@ -112,10 +112,10 @@ func Latest(ctx context.Context, opts Options) (Release, error) {
 
 func notFoundError(repo string, hasToken bool) error {
 	if hasToken {
-		return fmt.Errorf("%w: %s has no published release, or the token cannot read it", ErrReleaseNotFound, repo)
+		return fmt.Errorf("%w: %s has no published release, or the repository was not found", ErrReleaseNotFound, repo)
 	}
-	return fmt.Errorf("%w: %s has no published release, or the repository is private; "+
-		"set GITHUB_TOKEN or run 'pagevow keys set github' to give pagevow a token that can read it", ErrReleaseNotFound, repo)
+	return fmt.Errorf("%w: %s has no published release, or the repository was not found; "+
+		"if GitHub is limiting anonymous requests, set GITHUB_TOKEN or run 'pagevow keys set github'", ErrReleaseNotFound, repo)
 }
 
 func statusError(resp *http.Response, hasToken bool) error {
@@ -124,10 +124,10 @@ func statusError(resp *http.Response, hasToken bool) error {
 		return errors.New("GitHub rejected the token (HTTP 401): check GITHUB_TOKEN, GH_TOKEN and the github key")
 	case http.StatusForbidden, http.StatusTooManyRequests:
 		if resp.Header.Get("X-RateLimit-Remaining") == "0" {
-			return errors.New("the GitHub API rate limit is used up: set GITHUB_TOKEN or try again later")
+			return errors.New("the GitHub API rate limit is used up: set GITHUB_TOKEN to raise it or try again later")
 		}
 		if !hasToken {
-			return errors.New("GitHub refused the request (HTTP 403): the repository may need a token, set GITHUB_TOKEN")
+			return errors.New("GitHub refused the request (HTTP 403): this may be the anonymous rate limit, set GITHUB_TOKEN")
 		}
 		return errors.New("GitHub refused the request (HTTP 403): the token may lack access to the repository")
 	}

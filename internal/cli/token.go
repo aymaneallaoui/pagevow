@@ -17,7 +17,7 @@ func (a *app) tokenFrom(names []string, keyRef string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// An unreadable or empty keychain means no token: the request then says the repository is missing or private.
+	// An unreadable or empty keychain means no token: the request is then anonymous.
 	token, _ := resolver.Resolve(keyRef)
 	return strings.TrimSpace(token), nil
 }

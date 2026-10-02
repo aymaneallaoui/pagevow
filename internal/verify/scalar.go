@@ -40,9 +40,6 @@ func NewBool(b bool) Scalar {
 	return Scalar{kind: KindBool, text: "False"}
 }
 
-// NewInt returns an integer scalar.
-func NewInt(n int64) Scalar { return Scalar{kind: KindInt, text: strconv.FormatInt(n, 10)} }
-
 // Kind returns the scalar's kind.
 func (s Scalar) Kind() ScalarKind { return s.kind }
 

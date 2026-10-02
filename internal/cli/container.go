@@ -98,7 +98,6 @@ func SystemOptions() Options {
 		Store:            keys.NewKeychain(),
 		Prompter:         huhPrompter{},
 		StdinInteractive: func(r io.Reader) bool { return ui.IsTerminal(r) },
-		Browser:          SystemBrowserLauncher(),
 		Interrupts:       SystemInterrupts,
 		Exit:             os.Exit,
 		Now:              time.Now,
@@ -197,7 +196,7 @@ func NewContainer(opts Options) do.Injector {
 		if opts.ConfigPath != "" {
 			return ConfigPath(opts.ConfigPath), nil
 		}
-		path, err := config.SystemPath()
+		path, err := config.DefaultPath(opts.UserConfigDir)
 		return ConfigPath(path), err
 	})
 	return injector
@@ -225,9 +224,6 @@ func withDefaults(opts Options) Options {
 	if opts.StdinInteractive == nil {
 		opts.StdinInteractive = system.StdinInteractive
 	}
-	if opts.Browser == nil {
-		opts.Browser = system.Browser
-	}
 	if opts.Interrupts == nil {
 		opts.Interrupts = system.Interrupts
 	}
@@ -251,6 +247,9 @@ func withDefaults(opts Options) Options {
 	}
 	if opts.UserConfigDir == nil {
 		opts.UserConfigDir = system.UserConfigDir
+	}
+	if opts.Browser == nil {
+		opts.Browser = systemLauncher{cacheDir: opts.CacheDir}
 	}
 	if opts.CommandRunner == nil {
 		opts.CommandRunner = system.CommandRunner

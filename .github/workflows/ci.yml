@@ -36,6 +36,9 @@ jobs:
       - name: go vet
         run: go vet ./...
 
+      - name: go vet with the browser tag
+        run: go vet -tags browser ./...
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:

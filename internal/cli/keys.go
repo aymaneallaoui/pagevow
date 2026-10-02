@@ -257,6 +257,8 @@ func collectKeyRows(cfg config.Config, indexed []string) ([]keyRow, error) {
 	for _, entry := range []struct{ field, reference string }{
 		{"backends.jev.key", cfg.Backends.Jev.Key},
 		{"backends.custom.key", cfg.Backends.Custom.Key},
+		{"backends.cascade.primary_key", cfg.Backends.Cascade.PrimaryKey},
+		{"backends.cascade.verifier_key", cfg.Backends.Cascade.VerifierKey},
 		{"text_helper.key", cfg.TextHelper.Key},
 	} {
 		ref, err := keys.ParseRef(entry.reference)

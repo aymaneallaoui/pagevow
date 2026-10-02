@@ -300,7 +300,7 @@ change a verdict or an exit code.
 |---|---|
 | 0 | every test passed |
 | 1 | a test failed or is unverified, or the run was interrupted |
-| 2 | the run could not start: invalid tests file or config, backend or browser not reachable |
+| 2 | the run could not start: wrong flag or argument, invalid tests file or config, backend or browser not reachable, or an interrupt before the first test |
 
 `--json` prints only the report on stdout; notes and warnings go to stderr.
 
@@ -377,6 +377,8 @@ Every command accepts `--config FILE`. Without a terminal no command prompts, an
 | `doctor` | no check failed (warnings allowed) | a check failed | |
 | `plugin path` | installed | not installed | |
 | `hook stop` | Claude may stop | tests skipped, or block limit reached | Claude is blocked |
+
+Every command also exits 2 on a wrong flag, a wrong flag value or an unexpected argument, so 1 is never a usage error.
 
 ## Backends
 
@@ -513,11 +515,13 @@ variables override it, and command line flags override both. Every key has a var
 capitals with dots as underscores, for example `PAGEVOW_BROWSER_HEADLESS=false`. A `pagevow.yaml` in a project is
 always a tests file, never config.
 
-Key fields hold references, never secrets: `keychain:NAME` or `env:NAME`. A literal value is rejected with the fix.
+Key fields hold references, never secrets: `keychain:NAME` or `env:NAME`. A literal value is rejected with the fix. A
+backend or text helper URL with a user name, a password or a query string is rejected too, and a real key is never sent
+over plain `http` to a host that is not loopback.
 
 ```sh
 pagevow keys set typesafe < key.txt    # value from stdin, or a hidden prompt on a terminal
-pagevow keys list                      # each name as stored, env or missing
+pagevow keys list                      # each name as stored, env or missing, cascade keys included
 pagevow keys unset typesafe
 ```
 
@@ -606,7 +610,8 @@ pagevow plugin uninstall
 `claude plugin marketplace add` and `claude plugin install pagevow@pagevow --scope user`. Without `claude` on `PATH`, or
 with `--no-register`, it writes the files and prints the commands to run yourself. The plugin holds a skill, the slash
 commands `/pagevow-run` and `/pagevow-init`, and a Stop hook that runs `pagevow hook stop` by the absolute path of the
-binary, with a 900 second timeout. Run `pagevow plugin install` again after you upgrade or move pagevow.
+binary, with a 900 second timeout. Run `pagevow plugin install` again after you upgrade or move pagevow. On Windows it
+refuses a binary path that contains `$`, a backtick or `%`, because a double quoted command would expand them.
 
 When Claude tries to stop, the hook runs the project's tests file and blocks Claude while the tests fail, so Claude
 reads the `final.png` files and fixes the app or the test. The hook never starts a local model and never writes to

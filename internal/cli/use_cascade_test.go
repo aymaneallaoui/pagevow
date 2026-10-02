@@ -74,3 +74,14 @@ func TestUseHelpListsTheNewFlags(t *testing.T) {
 		assert.Contains(t, out, flag)
 	}
 }
+
+func TestKeysListReportsCascadeKeys(t *testing.T) {
+	h := newHarness(t)
+	h.mustRun("use", "cascade", "--primary", "https://a.example.test", "--verifier", "http://127.0.0.1:8010",
+		"--primary-key", "env:PRIMARY_KEY", "--verifier-key", "keychain:verifier")
+
+	out := h.mustRun("keys", "list")
+
+	assert.Regexp(t, `env:PRIMARY_KEY\s+backends\.cascade\.primary_key\s+missing`, out)
+	assert.Regexp(t, `keychain:verifier\s+backends\.cascade\.verifier_key\s+missing`, out)
+}

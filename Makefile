@@ -26,6 +26,7 @@ fmt-check:
 
 vet:
 	go vet ./...
+	go vet -tags browser ./...
 
 check: fmt-check vet lint test
 

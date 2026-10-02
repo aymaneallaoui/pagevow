@@ -26,9 +26,6 @@ type Index struct {
 // NewIndex returns an Index backed by the file at path.
 func NewIndex(path string) *Index { return &Index{path: path} }
 
-// Path returns the index file location.
-func (i *Index) Path() string { return i.path }
-
 type indexFile struct {
 	Names []string `json:"names"`
 }

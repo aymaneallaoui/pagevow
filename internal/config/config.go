@@ -30,7 +30,6 @@ const (
 const (
 	ModeNF4     = mode.NF4
 	ModeInt8    = mode.Int8
-	ModeBF16    = mode.BF16
 	ModeDefault = mode.Default
 )
 

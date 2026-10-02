@@ -26,7 +26,7 @@ A review of this repository checks these points, in this order.
    time, command line). A process group is signalled only when it can be tied to a record. No orphaned model server
    or browser after `stop`, after a failed `start`, or after a test.
 2. GPU safety. `start` refuses when the known peak plus the margin does not fit. Mode `default` is refused for models
-   other than 0.8B. The supervisor stops the model on a guard breach.
+   larger than 1B. The supervisor stops the model on a guard breach.
 3. Secrets. No key value in a log, a trace, a record, a spec file, an error text or JSON output. Key references only
    in the config file.
 4. Request bytes. The body sent to `/v1/systemone` keeps its key order and content. The decision model gives

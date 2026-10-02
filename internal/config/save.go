@@ -8,8 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Save merges updates into the config file at path and writes it back.
-// Only keys already in the file plus the updates are written, so environment values never leak into it.
+// Save merges updates into the config file at path and writes back only the keys already in the file plus the updates.
 func Save(path string, updates map[string]any) error {
 	file := viper.New()
 	file.SetConfigFile(path)

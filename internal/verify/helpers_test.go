@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
 )
+
+func NewInt(n int64) Scalar { return Scalar{kind: KindInt, text: strconv.FormatInt(n, 10)} }
 
 func loadFixture(t *testing.T, name string, into any) {
 	t.Helper()

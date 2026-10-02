@@ -17,6 +17,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/samber/do/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -96,6 +97,7 @@ func TestInstallNeedsAFlag(t *testing.T) {
 func TestInstallRejectsArguments(t *testing.T) {
 	_, err := newInstallEnv(t).run("install", "--browser", "extra")
 	require.Error(t, err)
+	assert.Equal(t, 2, cli.ExitCode(err))
 }
 
 func TestInstallBrowserDownloadsAndReportsInText(t *testing.T) {
@@ -380,4 +382,34 @@ func TestSystemLauncherFindsTheBrowserThatPagevowInstalled(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, executable, got)
+}
+
+func TestDefaultBrowserLauncherAndConfigPathFollowTheOptionDirectories(t *testing.T) {
+	cache := t.TempDir()
+	configDir := t.TempDir()
+	t.Setenv("PATH", "")
+	pin, err := browser.PinFor(runtime.GOOS, runtime.GOARCH)
+	require.NoError(t, err)
+	dir := filepath.Join(cache, "pagevow", "browser")
+	executable := filepath.Join(dir, browser.PinnedVersion, filepath.FromSlash(pin.Executable))
+	require.NoError(t, os.MkdirAll(filepath.Dir(executable), 0o700))
+	require.NoError(t, os.WriteFile(executable, []byte("x"), 0o700))
+	record, err := json.Marshal(map[string]string{"version": browser.PinnedVersion, "platform": pin.Platform, "executable": executable})
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "installed.json"), record, 0o600))
+	injector := cli.NewContainer(cli.Options{
+		CacheDir:      func() (string, error) { return cache, nil },
+		UserConfigDir: func() (string, error) { return configDir, nil },
+	})
+	t.Cleanup(func() { assert.True(t, injector.Shutdown().Succeed) })
+
+	launcher, err := do.Invoke[cli.BrowserLauncher](injector)
+	require.NoError(t, err)
+	found, err := launcher.Find()
+	require.NoError(t, err)
+	path, err := do.Invoke[cli.ConfigPath](injector)
+	require.NoError(t, err)
+
+	assert.Equal(t, executable, found)
+	assert.Equal(t, filepath.Join(configDir, "pagevow", "config.yaml"), string(path))
 }

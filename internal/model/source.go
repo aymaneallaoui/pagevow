@@ -37,17 +37,6 @@ type Source struct {
 	Revision string
 }
 
-// String returns the path, or the repository with its revision when one was given.
-func (s Source) String() string {
-	switch {
-	case s.Path != "":
-		return s.Path
-	case s.Revision != "":
-		return s.Repo + "@" + s.Revision
-	}
-	return s.Repo
-}
-
 func (s Source) defaultName() string {
 	if s.Path != "" {
 		return filepath.Base(s.Path)

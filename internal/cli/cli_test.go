@@ -84,6 +84,7 @@ type harness struct {
 
 	executable    string
 	updateBaseURL string
+	hubBaseURL    string
 	version       string
 }
 
@@ -159,6 +160,7 @@ func (h *harness) options() cli.Options {
 		BrowserBaseURL: h.browserBaseURL,
 		BrowserPin:     h.browserPin,
 		UpdateBaseURL:  h.updateBaseURL,
+		HubBaseURL:     h.hubBaseURL,
 		Version:        h.version,
 		Now:            func() time.Time { return h.now },
 	}

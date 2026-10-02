@@ -62,7 +62,7 @@ behaviour is the Python source in `~/jev-ultrafast` at branch `browser-tests`:
 ## 4. Commands
 
 ```
-pagevow install [--browser] [--force] [--json] [--model NAME]
+pagevow install [--browser] [--model PATH|OWNER/NAME[@REV]] [--name NAME] [--link] [--force] [--json]
                                              download the browser, and optionally a local model
 pagevow use local|jev|custom|cascade [...]   choose the decision backend
 pagevow start [--no-browser] [--json]        start what the active backend needs, and the browser
@@ -288,6 +288,16 @@ The free memory limit does not apply to unified memory until the reclaimable sha
 supervisor logs `guard: free memory guard is off on unified memory until measured` once after the first unified
 reading with a temperature of 0 and stops sampling, so on macOS the guard watches nothing yet; the supervisor still
 supervises the model.
+
+Models: `pagevow install --model SOURCE` puts a run directory under `<server.kev_dir>/runs/<name>`. `SOURCE` is a path
+that exists (copied, or linked with `--link`) or a Hugging Face repository `owner/name[@revision]` (downloaded by commit
+sha, every LFS file checked against its SHA-256, other files by size). A run directory must hold `adapter_config.json`
+with `base_model_name_or_path`, `adapter_model.safetensors` and `head.pt`; the base weights are not inside and kev fetches
+them on first use. The install writes `<runs>/<name>/.pagevow-model.json` (source, revision, base model, files with
+size and SHA-256, time). A Hub token comes from `HF_TOKEN`, then `HUGGING_FACE_HUB_TOKEN`, then the keychain entry
+`huggingface`; it is sent only over https or loopback, dropped on a cross-host redirect, and never printed. An existing
+run directory is replaced only with `--force`, never while a `model-<port>` record uses it. `doctor` lists installed
+models and warns when one is incomplete or its record cannot be read.
 
 ## 10. Stop hook
 
@@ -552,7 +562,7 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Running browser | the install refuses, before any download, while a browser record of `pagevow start` is alive; the hint is `pagevow stop` |
 | Old versions | a new pinned version installs next to the old one; nothing deletes old trees |
 | Output | `[info] downloading ...` line, a progress line every 10 percent only on a terminal, then `[ok] installed ... at <path>`; `--json` prints `version`, `platform`, `executable`, `already_installed` and nothing else on stdout |
-| `--model` | the flag exists and fails with `not implemented yet` and exit code 2 |
+| `--model` | implemented in phase 5, part 3 (see below) |
 | `doctor` | `browser:installed` reports the recorded build, warns when it differs from the pin or cannot be used, and warns when there is neither a record nor a system browser; the missing browser fix names `pagevow install --browser` |
 | `status` | the Browser section shows `installed` with the version and path, or `no (pagevow install --browser)` |
 | HTTP client | 15 minute overall timeout, at most 3 redirects; the address of the archives can be replaced by the container for tests only |
@@ -576,6 +586,21 @@ JSON field names match `snapshot.js`. `Marker`, `PageKey` and `Guards` are opaqu
 | Output | `[info] current v1.2.3, latest v1.3.0`, `[ok] updated to v1.3.0 at <path>`, and `[info] run pagevow plugin install again ...` when the plugin is installed; `--json` prints `current`, `latest`, `update_available`, `updated`, `executable`, and `staged` when the binary was kept aside |
 | Release targets | Linux, macOS and Windows on amd64 and arm64, except Windows arm64 because Chrome for Testing has no build for it; goreleaser creates the GitHub release, marked as a prerelease when the tag has a pre-release part |
 | Release workflow | `.github/workflows/release.yml` runs, on a `v*` tag, a `check` job (`make check`, `contents: read`) and then a `release` job (goreleaser pinned to `v2.18.2`, `contents: write`, `needs: check`); both checkouts set `persist-credentials: false`, so the write token is never stored in `.git/config` while code from the repository runs; CI runs `goreleaser check` on every change; `make release-snapshot` builds the archives locally without publishing |
+
+### Decisions of phase 5, part 3
+
+| Topic | Decision |
+|---|---|
+| Sources | an existing path (absolute or relative) is copied, or linked with `--link`; `owner/name[@rev]` is a Hugging Face repository, `rev` defaults to `main` and is resolved to a commit sha before any download |
+| Name | `--name`, else the last path element or the repository name; must match `[A-Za-z0-9][A-Za-z0-9._-]*` |
+| Validation | `adapter_config.json` with a non-empty `base_model_name_or_path`, `adapter_model.safetensors` and `head.pt` are required, before and after the copy or download |
+| Verification | LFS files by SHA-256 from the Hub tree listing, other files by size; total capped at 20 GiB; files under `.git` and hidden directories are skipped |
+| Staging | files go to `<runs>/.staging-<name>-*` and are renamed into place; an existing directory is renamed aside first and restored when the swap fails; leftovers older than a day are swept |
+| Record | `<runs>/<name>/.pagevow-model.json`, mode 0600; linked models record no hashes |
+| Token | `HF_TOKEN`, then `HUGGING_FACE_HUB_TOKEN`, then `keychain:huggingface`; https or loopback only, dropped on a cross-host redirect, never printed; a 404 without a token names the three sources |
+| Guard | refused while a live `model-<port>` record runs from the target directory; refused without `--force` when the directory exists |
+| Output | `[ok] installed model <name> at <dir> (base <base>)` then the `pagevow use local --model <name> --mode nf4` hint (`bf16` on macOS); `--json` prints name, dir, source, revision, base_model, files and already_installed |
+| Shipping | pagevow still ships no model (open question 1); the command only brings the user's own checkpoint into place |
 
 ### Decisions of phase 6
 

@@ -54,6 +54,9 @@ type BrowserBaseURL string
 // UpdateBaseURL is the GitHub API root that update reads releases from; empty means the official API.
 type UpdateBaseURL string
 
+// HubBaseURL is the Hugging Face Hub root that install --model reads; empty means the official Hub.
+type HubBaseURL string
+
 type browserPinOverride struct{ pin *browser.Pin }
 
 // Options supplies the services the container registers; zero fields fall back to system defaults.
@@ -81,6 +84,7 @@ type Options struct {
 	BrowserBaseURL   string
 	BrowserPin       *browser.Pin
 	UpdateBaseURL    string
+	HubBaseURL       string
 	Version          string
 	CommandRunner    CommandRunner
 	HookRunner       hook.Runner
@@ -151,6 +155,7 @@ func NewContainer(opts Options) do.Injector {
 	do.ProvideValue(injector, opts.HTTPClient)
 	do.ProvideValue(injector, BrowserBaseURL(opts.BrowserBaseURL))
 	do.ProvideValue(injector, UpdateBaseURL(opts.UpdateBaseURL))
+	do.ProvideValue(injector, HubBaseURL(opts.HubBaseURL))
 	do.ProvideValue(injector, browserPinOverride{pin: opts.BrowserPin})
 	do.ProvideValue(injector, buildInfo(opts.Version))
 

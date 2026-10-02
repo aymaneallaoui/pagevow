@@ -201,22 +201,7 @@ func (a *app) updateOptions(force bool) (update.Options, error) {
 }
 
 func (a *app) githubToken() (string, error) {
-	lookup, err := service[LookupEnv](a)
-	if err != nil {
-		return "", err
-	}
-	for _, name := range []string{"GITHUB_TOKEN", "GH_TOKEN"} {
-		if value, ok := lookup(name); ok && strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value), nil
-		}
-	}
-	resolver, err := a.resolver()
-	if err != nil {
-		return "", err
-	}
-	// An unreadable or empty keychain means no token: the release request then says the repository is missing or private.
-	token, _ := resolver.Resolve(githubKeyRef)
-	return strings.TrimSpace(token), nil
+	return a.tokenFrom([]string{"GITHUB_TOKEN", "GH_TOKEN"}, githubKeyRef)
 }
 
 func (a *app) remindPlugin(out *ui.Printer) {

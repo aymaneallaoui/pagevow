@@ -352,6 +352,29 @@ func TestInstallNeverReplacesADirectoryThatPagevowDidNotInstall(t *testing.T) {
 	}
 }
 
+func TestInstallNeverReplacesADirectoryThatAppearsDuringTheInstall(t *testing.T) {
+	for _, force := range []bool{false, true} {
+		t.Run(map[bool]string{false: "plain", true: "forced"}[force], func(t *testing.T) {
+			e := newPathEnv(t)
+			foreign := e.target("run")
+			opts := e.options()
+			opts.Force = force
+			opts.Begin = func(model.Plan) { put(t, foreign, "notes.txt", "mine") }
+			opts.Guard = func(context.Context, string) error {
+				t.Error("the guard is not asked about a directory that is never replaced")
+				return nil
+			}
+
+			_, err := e.install(opts)
+
+			require.ErrorIs(t, err, model.ErrExists)
+			assert.Contains(t, err.Error(), "not installed by pagevow")
+			assert.Equal(t, "mine", read(t, foreign, "notes.txt"))
+			assert.Equal(t, []string{"run"}, entries(t, e.runs))
+		})
+	}
+}
+
 func TestInstallRefusesToReplaceTheSourceDirectoryItself(t *testing.T) {
 	e := newPathEnv(t)
 	e.runs = filepath.Dir(e.source)

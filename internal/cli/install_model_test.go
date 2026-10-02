@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aymaneallaoui/pagevow/internal/cli"
+	"github.com/aymaneallaoui/pagevow/internal/plugin"
 	"github.com/aymaneallaoui/pagevow/internal/server"
 )
 
@@ -544,15 +545,29 @@ func TestInstallModelFailureStopsBeforeTheBrowser(t *testing.T) {
 }
 
 func TestInstallBrowserFailureAfterTheModelSaysWhatWasInstalled(t *testing.T) {
-	for _, asJSON := range []bool{false, true} {
-		t.Run(map[bool]string{false: "text", true: "json"}[asJSON], func(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		asJSON   bool
+		before   bool
+		wantText string
+	}{
+		{"text", false, false, "installed model jev-4b at "},
+		{"json", true, false, "installed model jev-4b at "},
+		{"already installed", false, true, "model jev-4b was already installed at "},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
 			e := newInstallEnv(t)
 			runs := e.kevDirectory()
+			src := e.runDirectory("jev-4b", base4B)
+			if tt.before {
+				_, err := e.run("install", "--model", src)
+				require.NoError(t, err)
+			}
 			wrong := e.pin
 			wrong.SHA256 = strings.Repeat("0", 64)
 			e.browserPin = &wrong
-			args := []string{"install", "--browser", "--model", e.runDirectory("jev-4b", base4B)}
-			if asJSON {
+			args := []string{"install", "--browser", "--model", src}
+			if tt.asJSON {
 				args = append(args, "--json")
 			}
 
@@ -560,10 +575,13 @@ func TestInstallBrowserFailureAfterTheModelSaysWhatWasInstalled(t *testing.T) {
 
 			require.Error(t, err)
 			assert.Equal(t, 2, cli.ExitCode(err))
-			assert.Contains(t, err.Error(), "installed model jev-4b at "+filepath.Join(runs, "jev-4b")+", but the browser install failed")
+			assert.Contains(t, err.Error(), tt.wantText+filepath.Join(runs, "jev-4b")+", but the browser install failed")
+			if tt.before {
+				assert.NotContains(t, err.Error(), "installed model jev-4b")
+			}
 			assert.DirExists(t, filepath.Join(runs, "jev-4b"))
 			assert.NoFileExists(t, e.executable())
-			if asJSON {
+			if tt.asJSON {
 				var report map[string]any
 				require.NoError(t, json.Unmarshal([]byte(stdout), &report), "the model report: "+stdout)
 				assert.Equal(t, filepath.Join(runs, "jev-4b"), report["dir"])
@@ -608,7 +626,25 @@ func TestDoctorWarnsAboutAnInstalledModelThatLostItsFiles(t *testing.T) {
 	check := report.check(t, "model:installed")
 	assert.Equal(t, "warn", check.Level)
 	assert.Contains(t, check.Finding, "incomplete")
-	assert.Contains(t, check.Fix, "pagevow install --model "+src+" --name jev-4b --force")
+	assert.Contains(t, check.Fix, "pagevow install --model "+plugin.ShellQuote(src)+" --name jev-4b --force")
+}
+
+func TestDoctorQuotesARecordedSourcePathWithASpace(t *testing.T) {
+	h := newHarness(t)
+	runs := h.kevDirectory()
+	h.mustRun("use", "custom", "--url", "http://127.0.0.1:8080")
+	h.procs.answer("http://127.0.0.1:8080/v1/models", 200)
+	src := filepath.Join(t.TempDir(), "my runs", "jev-4b")
+	require.NoError(t, os.MkdirAll(filepath.Dir(src), 0o750))
+	require.NoError(t, os.Rename(h.runDirectory("jev-4b", base4B), src))
+	h.mustRun("install", "--model", src)
+	require.NoError(t, os.Remove(filepath.Join(runs, "jev-4b", "head.pt")))
+
+	report, _ := doctorOf(t, h)
+
+	check := report.check(t, "model:installed")
+	assert.Contains(t, check.Fix, "pagevow install --model "+plugin.ShellQuote(src)+" --name jev-4b --force")
+	assert.NotContains(t, check.Fix, "--model "+src)
 }
 
 func TestDoctorWarnsAboutAnUnreadableInstallRecord(t *testing.T) {
@@ -623,6 +659,8 @@ func TestDoctorWarnsAboutAnUnreadableInstallRecord(t *testing.T) {
 	check := report.check(t, "model:installed")
 	assert.Equal(t, "warn", check.Level)
 	assert.Contains(t, check.Finding, "cannot be read")
+	assert.Contains(t, check.Fix, "move or remove "+filepath.Join(runs, "jev-4b")+", then install it again with: pagevow install --model PATH|OWNER/NAME --name jev-4b")
+	assert.NotContains(t, check.Fix, "--force")
 }
 
 func TestDoctorPointsAtInstallWhenTheActiveModelIsMissing(t *testing.T) {

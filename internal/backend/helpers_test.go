@@ -36,7 +36,7 @@ func noSleep(context.Context, time.Duration) error { return nil }
 func newTestClient(t *testing.T, opts Options) *Client {
 	t.Helper()
 	if opts.BaseURL == "" {
-		opts.BaseURL = "http://primary"
+		opts.BaseURL = "https://primary"
 	}
 	if opts.Sleep == nil {
 		opts.Sleep = noSleep

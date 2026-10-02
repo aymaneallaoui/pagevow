@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
+	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/page"
 	"github.com/aymaneallaoui/pagevow/internal/secret"
 )
@@ -28,13 +30,13 @@ type Endpoint struct {
 	Key     string
 }
 
-// Options configures a Client. Keys must already be resolved; they are never logged or put in errors.
+// Options configures a Client, whose keys must already be resolved and are never logged or put in errors.
 type Options struct {
 	Endpoint
 	Model string
-	// Verifier turns the cascade on. An empty Verifier.Key falls back to the primary key.
+	// Verifier turns the cascade on; an empty Verifier.Key falls back to the primary key only on the same scheme and host.
 	Verifier *Endpoint
-	// TargetConfidence escalates a choice whose target probability is below it. Zero means 0.5, negative disables.
+	// TargetConfidence escalates a choice whose target probability is below it, where zero means 0.5 and negative disables.
 	TargetConfidence float64
 	HTTPClient       *http.Client
 	Timeout          time.Duration
@@ -84,7 +86,7 @@ func New(opts Options) (*Client, error) {
 	keys := []string{opts.Key}
 	if opts.Verifier != nil {
 		verifier := *opts.Verifier
-		if verifier.Key == "" {
+		if verifier.Key == "" && sameHost(opts.BaseURL, verifier.BaseURL) {
 			verifier.Key = opts.Key
 		}
 		checked, err := newEndpoint("verifier", verifier)
@@ -124,7 +126,19 @@ func newEndpoint(role string, e Endpoint) (endpoint, error) {
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
 		return endpoint{}, fmt.Errorf("%s url %q is not an http or https address", role, redactURL(parsed, e.BaseURL))
 	}
+	if err := config.CheckKeyTransport(e.BaseURL, e.Key); err != nil {
+		return endpoint{}, fmt.Errorf("%s url %s: %w", role, redactURL(parsed, e.BaseURL), err)
+	}
 	return endpoint{baseURL: e.BaseURL, key: e.Key}, nil
+}
+
+func sameHost(a, b string) bool {
+	left, errLeft := url.Parse(a)
+	right, errRight := url.Parse(b)
+	if errLeft != nil || errRight != nil {
+		return false
+	}
+	return left.Scheme == right.Scheme && strings.EqualFold(left.Host, right.Host)
 }
 
 func redactURL(parsed *url.URL, raw string) string {

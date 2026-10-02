@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"slices"
 	"strings"
 
@@ -24,6 +25,18 @@ func Validate(c Config) error {
 		{"text_helper.key", c.TextHelper.Key},
 	} {
 		if err := validateKeyReference(field.key, field.value); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	for _, field := range []struct{ key, value string }{
+		{"backends.local.url", c.Backends.Local.URL},
+		{"backends.jev.url", c.Backends.Jev.URL},
+		{"backends.custom.url", c.Backends.Custom.URL},
+		{"backends.cascade.primary", c.Backends.Cascade.Primary},
+		{"backends.cascade.verifier", c.Backends.Cascade.Verifier},
+		{"text_helper.url", c.TextHelper.URL},
+	} {
+		if err := validateURL(field.key, field.value); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -83,6 +96,22 @@ func Validate(c Config) error {
 func validateKeyReference(key, value string) error {
 	if _, err := keys.ParseRef(value); err != nil {
 		return fmt.Errorf("%s: a literal secret is not allowed here; store it with \"pagevow keys set NAME\" and set this field to keychain:NAME, or export it and set env:NAME", key)
+	}
+	return nil
+}
+
+func validateURL(key, value string) error {
+	if value == "" {
+		return nil
+	}
+	parsed, err := url.Parse(value)
+	switch {
+	case err != nil:
+		return fmt.Errorf("%s: not a valid URL", key)
+	case parsed.User != nil:
+		return fmt.Errorf("%s: a URL must not carry a user name or password; use a key reference instead", key)
+	case parsed.RawQuery != "" || parsed.ForceQuery:
+		return fmt.Errorf("%s: a URL must not carry a query string; use a key reference instead of a token in the URL", key)
 	}
 	return nil
 }

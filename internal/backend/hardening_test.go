@@ -48,7 +48,7 @@ func TestPlaceholderKeyDoesNotDamageErrorsOrRawReplies(t *testing.T) {
 
 func TestLongKeyIsRemovedFromRawReplies(t *testing.T) {
 	body := `{"echo":"` + longKey + `"}`
-	_, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "http://primary", Key: longKey}}, body)
+	_, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "https://primary", Key: longKey}}, body)
 	var invalid *InvalidResponseError
 	require.ErrorAs(t, err, &invalid)
 	assert.NotContains(t, invalid.Raw, longKey)
@@ -61,7 +61,7 @@ func TestKeyAcrossTheRawCutIsRemovedBeforeTheCut(t *testing.T) {
 		body := `{"p":"` + prefix + longKey + `","q":1}`
 		require.Equal(t, rawLimit, len(body[:strings.Index(body, longKey)])+offset, "the cut falls inside the key")
 
-		_, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "http://primary", Key: longKey}}, body)
+		_, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "https://primary", Key: longKey}}, body)
 
 		var invalid *InvalidResponseError
 		require.ErrorAs(t, err, &invalid)
@@ -74,8 +74,8 @@ func TestVerifierKeyAcrossTheRawCutIsRemovedToo(t *testing.T) {
 	verifierKey := "verifier-" + longKey
 	body := `{"p":"` + strings.Repeat("x", rawLimit-10) + verifierKey + `"}`
 	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary", Key: longKey},
-		Verifier: &Endpoint{BaseURL: "http://verifier", Key: verifierKey},
+		Endpoint: Endpoint{BaseURL: "https://primary", Key: longKey},
+		Verifier: &Endpoint{BaseURL: "https://verifier", Key: verifierKey},
 		HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
 			if r.URL.Host == "verifier" {
 				return httpResponse(200, body), nil
@@ -109,7 +109,7 @@ func TestOnlyExactReplyKeysCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			decision, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey}}, tt.body)
+			decision, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey}}, tt.body)
 			if tt.want == "" {
 				var invalid *InvalidResponseError
 				require.ErrorAs(t, err, &invalid)
@@ -123,7 +123,7 @@ func TestOnlyExactReplyKeysCount(t *testing.T) {
 
 func TestNonStringModelIsToleratedAndRecordedAsSent(t *testing.T) {
 	body := strings.Replace(okAnswer("DONE", "m"), `"model":"m"`, `"model":5`, 1)
-	decision, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey}}, body)
+	decision, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey}}, body)
 	require.NoError(t, err)
 	assert.Equal(t, "5", decision.Model)
 }
@@ -142,7 +142,7 @@ func TestMissingUsageIsNullForTheTraceAndEmptyForTheDecision(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			body := strings.TrimSuffix(okAnswer("DONE", "m"), "}") + tt.usage + "}"
-			decision, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey}}, body)
+			decision, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey}}, body)
 			require.NoError(t, err)
 			assert.JSONEq(t, tt.wantTrace, string(toJSON(t, decision.ServerUsage)))
 			if tt.usage == "" || tt.usage == `,"usage":null` {
@@ -153,7 +153,7 @@ func TestMissingUsageIsNullForTheTraceAndEmptyForTheDecision(t *testing.T) {
 }
 
 func TestNonJSONReplyIsTransientUnlikePython(t *testing.T) {
-	_, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey}}, `<html>oops</html>`)
+	_, err := decideWith(t, Options{Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey}}, `<html>oops</html>`)
 	var invalid *InvalidResponseError
 	require.ErrorAs(t, err, &invalid)
 	assert.Equal(t, "not a JSON object", invalid.Reason)
@@ -178,7 +178,7 @@ func TestTransientErrorsReadAsPythonWritesThem(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client := newTestClient(t, Options{
-				Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey}, HTTPClient: clientOf(tt.transport),
+				Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey}, HTTPClient: clientOf(tt.transport),
 			})
 			_, err := client.Decide(context.Background(), Input{State: clickPage(), Goal: "g"})
 			require.Error(t, err)
@@ -203,7 +203,7 @@ func TestRequestBytesMatchThePreviousBuild(t *testing.T) {
 			loadFixture(t, filepath.Join("testdata", "choose_"+name+".json"), &fx)
 			var sent []byte
 			client := newTestClient(t, Options{
-				Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+				Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 				Model:    fx.ModelOption,
 				HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
 					sent = readBody(t, r)

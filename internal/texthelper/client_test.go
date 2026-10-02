@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/page"
 )
 
@@ -228,13 +229,30 @@ func TestLateReplyIsNeverReturned(t *testing.T) {
 			Header:     http.Header{"Content-Type": {"application/json"}},
 		}, nil
 	})
-	client := newClient("http://helper.invalid", 100*time.Millisecond, WithHTTPClient(&http.Client{Transport: late}))
+	client := newClient("https://helper.invalid", 100*time.Millisecond, WithHTTPClient(&http.Client{Transport: late}))
 
 	result, err := client.FieldText(context.Background(), testInput())
 
 	var exceeded *BudgetError
 	require.ErrorAs(t, err, &exceeded)
 	assert.Empty(t, result.Text)
+}
+
+func TestPlainHTTPKeyIsRefusedOffLoopbackBeforeAnyRequest(t *testing.T) {
+	var hits atomic.Int32
+	counting := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		hits.Add(1)
+		return nil, errors.New("must not be called")
+	})}
+	client := newClient("http://helper.example.com/v1", time.Second, WithHTTPClient(counting))
+
+	_, err := client.FieldText(context.Background(), testInput())
+	require.ErrorIs(t, err, config.ErrKeyOverPlainHTTP)
+	assert.NotContains(t, err.Error(), testKey)
+
+	err = client.Ping(context.Background())
+	require.ErrorIs(t, err, config.ErrKeyOverPlainHTTP)
+	assert.Zero(t, hits.Load())
 }
 
 func TestConnectionFailureIsTransient(t *testing.T) {

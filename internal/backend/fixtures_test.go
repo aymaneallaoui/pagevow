@@ -42,10 +42,10 @@ func TestDecideMatchesPythonFixtures(t *testing.T) {
 			loadFixture(t, path, &fx)
 			var sent []byte
 			client := newTestClient(t, Options{
-				Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+				Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 				Model:    fx.ModelOption,
 				HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
-					assert.Equal(t, "http://primary/v1/systemone", r.URL.String())
+					assert.Equal(t, "https://primary/v1/systemone", r.URL.String())
 					assert.Equal(t, "Bearer "+primaryKey, r.Header.Get("Authorization"))
 					sent = readBody(t, r)
 					return httpResponse(200, string(fx.Response)), nil
@@ -101,7 +101,7 @@ func TestRepliesPythonRejectsAreRejected(t *testing.T) {
 			var fx invalidFixture
 			loadFixture(t, path, &fx)
 			client := newTestClient(t, Options{
-				Endpoint:   Endpoint{BaseURL: "http://primary", Key: primaryKey},
+				Endpoint:   Endpoint{BaseURL: "https://primary", Key: primaryKey},
 				HTTPClient: clientOf(func(*http.Request) (*http.Response, error) { return httpResponse(200, string(fx.Response)), nil }),
 			})
 
@@ -172,12 +172,12 @@ func TestCascadeAndVetoCacheMatchPythonFixtures(t *testing.T) {
 				return httpResponse(200, string(response)), nil
 			}
 			opts := Options{
-				Endpoint:         Endpoint{BaseURL: "http://primary", Key: primaryKey},
+				Endpoint:         Endpoint{BaseURL: "https://primary", Key: primaryKey},
 				HTTPClient:       clientOf(transport),
 				TargetConfidence: fx.TargetConfidence,
 			}
 			if fx.Verifier {
-				opts.Verifier = &Endpoint{BaseURL: "http://verifier/", Key: verifierKey}
+				opts.Verifier = &Endpoint{BaseURL: "https://verifier/", Key: verifierKey}
 			}
 			client := newTestClient(t, opts)
 			var cache *VetoCache

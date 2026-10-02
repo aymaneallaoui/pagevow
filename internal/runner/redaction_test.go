@@ -56,7 +56,7 @@ func runWithRealBackend(t *testing.T, key string, start, end page.State, secrets
 	t.Helper()
 	model := &recordingModel{}
 	client, err := backend.New(backend.Options{
-		Endpoint:   backend.Endpoint{BaseURL: "http://model.test", Key: key},
+		Endpoint:   backend.Endpoint{BaseURL: "https://model.test", Key: key},
 		HTTPClient: &http.Client{Transport: model},
 	})
 	require.NoError(t, err)

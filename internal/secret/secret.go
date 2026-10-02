@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	// MinLength is the shortest value treated as a secret; shorter ones such as the placeholder key "local" are
-	// substrings of ordinary text and would damage it.
+	// MinLength is the shortest value treated as a secret, so the placeholder key "local" is never redacted out of ordinary text.
 	MinLength = 12
 	// Marker replaces every secret removed from text.
 	Marker = "***"
@@ -20,7 +19,7 @@ const (
 // Is reports whether value is a secret: empty and placeholder values never are.
 func Is(value string) bool { return len(value) >= MinLength }
 
-// Redactor removes a fixed set of secrets from text, in raw and JSON-escaped form. A nil Redactor removes nothing.
+// Redactor removes a fixed set of secrets from text in raw and JSON-escaped form, and a nil Redactor removes nothing.
 type Redactor struct {
 	forms []string
 }

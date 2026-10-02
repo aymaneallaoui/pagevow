@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aymaneallaoui/pagevow/internal/config"
+
 	"github.com/aymaneallaoui/pagevow/internal/page"
 )
 
@@ -52,7 +54,7 @@ func TestPostRetriesOnOverloadWithBoundedPauses(t *testing.T) {
 			var requests int
 			rec := &recorder{}
 			client := newTestClient(t, Options{
-				Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+				Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 				Sleep:    rec.sleep,
 				HTTPClient: clientOf(func(*http.Request) (*http.Response, error) {
 					requests++
@@ -75,7 +77,7 @@ func TestPostGivesUpAfterThreeOverloadedAttempts(t *testing.T) {
 	var requests int
 	rec := &recorder{}
 	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+		Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 		Sleep:    rec.sleep,
 		HTTPClient: clientOf(func(*http.Request) (*http.Response, error) {
 			requests++
@@ -97,7 +99,7 @@ func TestPostDoesNotRetryOtherHTTPErrors(t *testing.T) {
 			var requests int
 			rec := &recorder{}
 			client := newTestClient(t, Options{
-				Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+				Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 				Sleep:    rec.sleep,
 				HTTPClient: clientOf(func(*http.Request) (*http.Response, error) {
 					requests++
@@ -117,7 +119,7 @@ func TestPostDoesNotRetryOtherHTTPErrors(t *testing.T) {
 func TestConnectionFailureIsTransientAndNotRetried(t *testing.T) {
 	var requests int
 	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+		Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 		HTTPClient: clientOf(func(*http.Request) (*http.Response, error) {
 			requests++
 			return nil, errors.New("connection refused")
@@ -134,7 +136,7 @@ func TestContextCancellationStopsARetryWait(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var requests int
 	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+		Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 		Sleep:    sleepContext,
 		HTTPClient: clientOf(func(*http.Request) (*http.Response, error) {
 			requests++
@@ -165,7 +167,7 @@ func TestSleepContextRespectsPauseAndCancellation(t *testing.T) {
 func TestCancelledContextIsNotAConnectionError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+		Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 		HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
 			cancel()
 			return nil, r.Context().Err()
@@ -178,7 +180,7 @@ func TestCancelledContextIsNotAConnectionError(t *testing.T) {
 
 func TestAttemptTimeoutIsATransientConnectionError(t *testing.T) {
 	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+		Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 		Timeout:  20 * time.Millisecond,
 		HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
 			<-r.Context().Done()
@@ -200,7 +202,7 @@ func TestInvalidAndMalformedResponsesAreTransient(t *testing.T) {
 	for name, body := range bodies {
 		t.Run(name, func(t *testing.T) {
 			client := newTestClient(t, Options{
-				Endpoint:   Endpoint{BaseURL: "http://primary", Key: primaryKey},
+				Endpoint:   Endpoint{BaseURL: "https://primary", Key: primaryKey},
 				HTTPClient: clientOf(func(*http.Request) (*http.Response, error) { return httpResponse(200, body), nil }),
 			})
 			_, err := client.Decide(context.Background(), Input{State: clickPage(), Goal: "g"})
@@ -230,8 +232,8 @@ func TestKeysNeverAppearInErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client := newTestClient(t, Options{
-				Endpoint:   Endpoint{BaseURL: "http://primary", Key: secretKey},
-				Verifier:   &Endpoint{BaseURL: "http://verifier", Key: "verifier-" + secretKey},
+				Endpoint:   Endpoint{BaseURL: "https://primary", Key: secretKey},
+				Verifier:   &Endpoint{BaseURL: "https://verifier", Key: "verifier-" + secretKey},
 				HTTPClient: clientOf(tt.transport),
 			})
 			_, err := client.Decide(context.Background(), Input{State: clickPage(), Goal: "g"})
@@ -251,8 +253,8 @@ func TestKeysNeverAppearInErrors(t *testing.T) {
 
 func TestVerifierErrorRecordedInCascadeNeverContainsKeys(t *testing.T) {
 	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary", Key: secretKey},
-		Verifier: &Endpoint{BaseURL: "http://verifier", Key: "verifier-" + secretKey},
+		Endpoint: Endpoint{BaseURL: "https://primary", Key: secretKey},
+		Verifier: &Endpoint{BaseURL: "https://verifier", Key: "verifier-" + secretKey},
 		HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
 			if r.URL.Host == "verifier" {
 				return nil, errors.New("refused for verifier-" + secretKey)
@@ -268,27 +270,69 @@ func TestVerifierErrorRecordedInCascadeNeverContainsKeys(t *testing.T) {
 	assert.NotContains(t, decision.Cascade.Verifier.Error, secretKey)
 }
 
-func TestVerifierFallsBackToPrimaryKeyWhenItHasNone(t *testing.T) {
-	var auth []string
-	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary/", Key: primaryKey},
-		Verifier: &Endpoint{BaseURL: "http://verifier/"},
-		HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
-			auth = append(auth, r.Header.Get("Authorization"))
-			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
-			return httpResponse(200, okAnswer("DONE", "m")), nil
-		}),
-	})
-	_, err := client.Decide(context.Background(), Input{State: clickPage(), Goal: "g"})
-	require.NoError(t, err)
-	assert.Equal(t, []string{"Bearer " + primaryKey, "Bearer " + primaryKey}, auth)
+func TestVerifierFallsBackToPrimaryKeyOnlyOnTheSameHost(t *testing.T) {
+	cases := []struct {
+		name     string
+		verifier string
+		want     string
+	}{
+		{"same host", "https://primary/other", "Bearer " + primaryKey},
+		{"other host", "https://verifier/", "Bearer "},
+		{"other scheme", "http://primary/", "Bearer "},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var auth []string
+			client := newTestClient(t, Options{
+				Endpoint: Endpoint{BaseURL: "https://primary/", Key: primaryKey},
+				Verifier: &Endpoint{BaseURL: tc.verifier},
+				HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
+					auth = append(auth, r.Header.Get("Authorization"))
+					assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+					return httpResponse(200, okAnswer("DONE", "m")), nil
+				}),
+			})
+			_, err := client.Decide(context.Background(), Input{State: clickPage(), Goal: "g"})
+			require.NoError(t, err)
+			assert.Equal(t, []string{"Bearer " + primaryKey, tc.want}, auth)
+		})
+	}
+}
+
+func TestPlainHTTPKeyIsRefusedOffLoopback(t *testing.T) {
+	cases := []struct {
+		name    string
+		opts    Options
+		refused bool
+	}{
+		{"remote http real key", Options{Endpoint: Endpoint{BaseURL: "http://models.example.com", Key: secretKey}}, true},
+		{"remote https real key", Options{Endpoint: Endpoint{BaseURL: "https://models.example.com", Key: secretKey}}, false},
+		{"loopback http real key", Options{Endpoint: Endpoint{BaseURL: "http://127.0.0.1:8009", Key: secretKey}}, false},
+		{"remote http placeholder key", Options{Endpoint: Endpoint{BaseURL: "http://models.example.com", Key: "local"}}, false},
+		{"remote http verifier real key", Options{
+			Endpoint: Endpoint{BaseURL: "https://a.example.com", Key: secretKey},
+			Verifier: &Endpoint{BaseURL: "http://b.example.com", Key: "verifier-" + secretKey},
+		}, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := New(tc.opts)
+
+			if !tc.refused {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, config.ErrKeyOverPlainHTTP)
+			assert.NotContains(t, err.Error(), secretKey)
+		})
+	}
 }
 
 func TestCascadeCancellationIsNotAFallback(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
-		Verifier: &Endpoint{BaseURL: "http://verifier"},
+		Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
+		Verifier: &Endpoint{BaseURL: "https://verifier"},
 		HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
 			if r.URL.Host == "verifier" {
 				cancel()
@@ -306,8 +350,8 @@ func TestLatencyIsMeasuredPerCallAndTotalForTheDecision(t *testing.T) {
 	advance := func(d time.Duration) { clock = clock.Add(d) }
 	build := func(verifier func(*http.Request) (*http.Response, error)) *Client {
 		return newTestClient(t, Options{
-			Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
-			Verifier: &Endpoint{BaseURL: "http://verifier"},
+			Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
+			Verifier: &Endpoint{BaseURL: "https://verifier"},
 			Now:      func() time.Time { return clock },
 			HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
 				if r.URL.Host == "verifier" {
@@ -359,7 +403,7 @@ func TestLatencyIsMeasuredPerCallAndTotalForTheDecision(t *testing.T) {
 
 	t.Run("no cascade", func(t *testing.T) {
 		client := newTestClient(t, Options{
-			Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+			Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 			Now:      func() time.Time { return clock },
 			HTTPClient: clientOf(func(*http.Request) (*http.Response, error) {
 				advance(42 * time.Millisecond)
@@ -375,7 +419,7 @@ func TestLatencyIsMeasuredPerCallAndTotalForTheDecision(t *testing.T) {
 func TestCascadeStaysOffWithoutAVerifier(t *testing.T) {
 	var requests int
 	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
+		Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
 		HTTPClient: clientOf(func(*http.Request) (*http.Response, error) {
 			requests++
 			return httpResponse(200, okAnswer("DONE", "m")), nil
@@ -390,8 +434,8 @@ func TestCascadeStaysOffWithoutAVerifier(t *testing.T) {
 func TestNegativeTargetConfidenceDisablesTargetEscalation(t *testing.T) {
 	var requests int
 	client := newTestClient(t, Options{
-		Endpoint:         Endpoint{BaseURL: "http://primary", Key: primaryKey},
-		Verifier:         &Endpoint{BaseURL: "http://verifier"},
+		Endpoint:         Endpoint{BaseURL: "https://primary", Key: primaryKey},
+		Verifier:         &Endpoint{BaseURL: "https://verifier"},
 		TargetConfidence: -1,
 		HTTPClient: clientOf(func(*http.Request) (*http.Response, error) {
 			requests++
@@ -440,10 +484,10 @@ func TestNewAppliesDefaults(t *testing.T) {
 func TestPing(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		client := newTestClient(t, Options{
-			Endpoint: Endpoint{BaseURL: "http://primary/", Key: primaryKey},
+			Endpoint: Endpoint{BaseURL: "https://primary/", Key: primaryKey},
 			HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
 				assert.Equal(t, http.MethodGet, r.Method)
-				assert.Equal(t, "http://primary/v1/models", r.URL.String())
+				assert.Equal(t, "https://primary/v1/models", r.URL.String())
 				assert.Equal(t, "Bearer "+primaryKey, r.Header.Get("Authorization"))
 				return httpResponse(200, `{"data":[]}`), nil
 			}),
@@ -453,7 +497,7 @@ func TestPing(t *testing.T) {
 	t.Run("http error is not retried", func(t *testing.T) {
 		var requests int
 		client := newTestClient(t, Options{
-			Endpoint: Endpoint{BaseURL: "http://primary"},
+			Endpoint: Endpoint{BaseURL: "https://primary"},
 			HTTPClient: clientOf(func(*http.Request) (*http.Response, error) {
 				requests++
 				return httpResponse(503, ``), nil
@@ -466,7 +510,7 @@ func TestPing(t *testing.T) {
 	})
 	t.Run("connection failure", func(t *testing.T) {
 		client := newTestClient(t, Options{
-			Endpoint:   Endpoint{BaseURL: "http://primary"},
+			Endpoint:   Endpoint{BaseURL: "https://primary"},
 			HTTPClient: clientOf(func(*http.Request) (*http.Response, error) { return nil, errors.New("refused") }),
 		})
 		assert.ErrorIs(t, client.Ping(context.Background()), ErrTransient)
@@ -518,8 +562,8 @@ func TestRedirectsAreNotFollowed(t *testing.T) {
 
 func TestVetoCacheStoresOnlyOverridesAndForgets(t *testing.T) {
 	client := newTestClient(t, Options{
-		Endpoint: Endpoint{BaseURL: "http://primary", Key: primaryKey},
-		Verifier: &Endpoint{BaseURL: "http://verifier"},
+		Endpoint: Endpoint{BaseURL: "https://primary", Key: primaryKey},
+		Verifier: &Endpoint{BaseURL: "https://verifier"},
 		HTTPClient: clientOf(func(r *http.Request) (*http.Response, error) {
 			if r.URL.Host == "verifier" {
 				return httpResponse(200, okAnswer("CLICK", "large")), nil

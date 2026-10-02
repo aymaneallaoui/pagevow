@@ -182,6 +182,38 @@ func TestValidateRejectsLiteralSecretFromEnvironment(t *testing.T) {
 	assert.NotContains(t, err.Error(), "sk-from-env-literal")
 }
 
+func TestValidateRejectsSecretsInURLs(t *testing.T) {
+	const secret = "sk-live-abcdef123456"
+	setters := map[string]func(*config.Config, string){
+		"backends.local.url":        func(c *config.Config, u string) { c.Backends.Local.URL = u },
+		"backends.jev.url":          func(c *config.Config, u string) { c.Backends.Jev.URL = u },
+		"backends.custom.url":       func(c *config.Config, u string) { c.Backends.Custom.URL = u },
+		"backends.cascade.primary":  func(c *config.Config, u string) { c.Backends.Cascade.Primary = u },
+		"backends.cascade.verifier": func(c *config.Config, u string) { c.Backends.Cascade.Verifier = u },
+		"text_helper.url":           func(c *config.Config, u string) { c.TextHelper.URL = u },
+	}
+	for key, set := range setters {
+		for _, raw := range []string{
+			"https://user:" + secret + "@host.example.com",
+			"https://" + secret + "@host.example.com",
+			"https://host.example.com/v1?api_key=" + secret,
+			"https://host.example.com/v1?",
+		} {
+			cfg := config.Defaults()
+			set(&cfg, raw)
+
+			err := config.Validate(cfg)
+
+			require.Error(t, err, key+" "+raw)
+			assert.Contains(t, err.Error(), key)
+			assert.NotContains(t, err.Error(), secret)
+		}
+		cfg := config.Defaults()
+		set(&cfg, "https://host.example.com/v1")
+		require.NoError(t, config.Validate(cfg), key)
+	}
+}
+
 func TestValidateAcceptsReferencesAndEmpty(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.Backends.Jev.Key = "env:MY_KEY"

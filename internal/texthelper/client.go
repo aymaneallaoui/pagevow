@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/secret"
 )
 
@@ -31,7 +32,7 @@ const (
 	maxTokens     = 1024
 )
 
-// Config describes one text helper. Key is the resolved secret, never a reference.
+// Config describes one text helper, whose Key is the resolved secret and never a reference.
 type Config struct {
 	BaseURL string
 	Model   string
@@ -63,7 +64,7 @@ func WithRetryPause(base time.Duration) Option {
 	return func(c *Client) { c.retryPause = base }
 }
 
-// Client sends field value requests. It is safe for concurrent use.
+// Client sends field value requests and is safe for concurrent use.
 type Client struct {
 	baseURL    string
 	model      string
@@ -166,6 +167,9 @@ func (c *Client) FieldText(ctx context.Context, in Input) (Result, error) {
 	if c.key == "" {
 		return Result{}, ErrNoKey
 	}
+	if err := config.CheckKeyTransport(c.baseURL, c.key); err != nil {
+		return Result{}, fmt.Errorf("text helper: %w", err)
+	}
 	payload, err := c.payload(in)
 	if err != nil {
 		return Result{}, fmt.Errorf("encode text helper request: %w", err)
@@ -194,6 +198,9 @@ func (c *Client) FieldText(ctx context.Context, in Input) (Result, error) {
 
 // Ping checks that the helper server answers GET <base>/models.
 func (c *Client) Ping(ctx context.Context) error {
+	if err := config.CheckKeyTransport(c.baseURL, c.key); err != nil {
+		return fmt.Errorf("text helper ping: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(ctx, PingTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/models", nil)

@@ -4,7 +4,7 @@ Local mirror of https://goperf.dev/. Each file starts with its Source URL.
 
 ## Overview
 
-- `index.md` - Go Optimization Guide - Patterns and Techniques for Writing High-Performance Applications with Go
+- `00-home.md` - Go Optimization Guide - Patterns and Techniques for Writing High-Performance Applications with Go
 
 ## Part 1 - Common Go Patterns for Performance
 

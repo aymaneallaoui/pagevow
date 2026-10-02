@@ -48,3 +48,55 @@ func TestTiedToRecord(t *testing.T) {
 		})
 	}
 }
+
+func TestOrphanTied(t *testing.T) {
+	const (
+		supervisor = 2147480000
+		child      = 2147480100
+		started    = 1000
+		command    = "uv run --extra serve python -m kev.serve --port 8009"
+	)
+	rec := server.Record{
+		Kind: server.KindModel, PID: supervisor, ChildPID: child, ChildPGID: child, ChildStartTicks: started,
+		Command: []string{"uv", "run", "--extra", "serve", "python", "-m", "kev.serve", "--port", "8009"},
+	}
+	running := server.ChildEntry{Running: true, StartTicks: started, PGID: child, Command: command}
+	reused := server.ChildEntry{Running: true, StartTicks: started + 40, PGID: child, Command: "sleep 60"}
+	gone := server.ChildEntry{}
+	member := server.GroupLine{PID: child + 5, PPID: 1, PGID: child, SID: supervisor, StartTicks: started + 1}
+	darwinMember := server.GroupLine{PID: child + 5, PPID: 1, PGID: child, StartTicks: started + 1}
+	withoutTicks := rec
+	withoutTicks.ChildStartTicks = 0
+	browser := rec
+	browser.Kind = server.KindBrowser
+	unsafeGroup := rec
+	unsafeGroup.ChildPGID = 1
+
+	cases := []struct {
+		name   string
+		rec    server.Record
+		child  server.ChildEntry
+		table  []server.GroupLine
+		darwin bool
+		want   bool
+	}{
+		{"linux child with the recorded start time, group and command", rec, running, nil, false, true},
+		{"darwin child with the recorded start time, group and command", rec, running, nil, true, true},
+		{"linux child pid reused by another process", rec, reused, []server.GroupLine{{PID: child, PPID: 1, PGID: child, SID: child, StartTicks: started + 40}}, false, false},
+		{"darwin child pid reused by another process", rec, reused, []server.GroupLine{{PID: child, PPID: 1, PGID: child, StartTicks: started + 40}}, true, false},
+		{"linux child with the start time but another command and session", rec, server.ChildEntry{Running: true, StartTicks: started, PGID: child, Command: "sleep 60"}, nil, false, false},
+		{"linux child in another group", rec, server.ChildEntry{Running: true, StartTicks: started, PGID: child + 1, Command: command}, nil, false, false},
+		{"linux child gone while a member of its group runs in the supervisor session", rec, gone, []server.GroupLine{member}, false, true},
+		{"darwin child gone while a member started after it runs", rec, gone, []server.GroupLine{darwinMember}, true, true},
+		{"linux child gone and the group empty", rec, gone, nil, false, false},
+		{"darwin child gone and the group empty", rec, gone, nil, true, false},
+		{"record without a child start time", withoutTicks, running, []server.GroupLine{member}, false, false},
+		{"browser record", browser, running, nil, false, false},
+		{"record whose group is not one pagevow may signal", unsafeGroup, running, nil, false, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, server.OrphanTied(tc.rec, tc.child, tc.table, tc.darwin))
+		})
+	}
+}

@@ -86,6 +86,10 @@ func TestChildAliveChecksStartTimeAndGroup(t *testing.T) {
 	wrongGroup := rec
 	wrongGroup.ChildPGID = 2147483646
 	assert.False(t, server.ChildAlive(wrongGroup))
+
+	wrongCommand := rec
+	wrongCommand.Command = []string{"uv", "run"}
+	assert.False(t, server.ChildAlive(wrongCommand))
 }
 
 func TestStartTicksOfAMissingProcessIsAnError(t *testing.T) {

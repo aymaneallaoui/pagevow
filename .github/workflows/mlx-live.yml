@@ -151,6 +151,8 @@ jobs:
           sleep 5
           echo "kev.serve after the supervisor was killed:"
           pgrep -fl kev.serve || echo "none"
+          echo "status before stop:"
+          bin/pagevow --config "${CONFIG}" status --json | jq '.processes'
           code=0
           bin/pagevow --config "${CONFIG}" stop || code=$?
           echo "stop exit code: ${code}"

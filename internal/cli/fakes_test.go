@@ -28,6 +28,7 @@ type fakeProcesses struct {
 	dir           string
 	records       map[string]server.Record
 	dead          map[string]bool
+	orphaned      map[string]bool
 	statuses      map[string]int
 	portsInUse    map[int]bool
 	tripped       []server.Tripped
@@ -51,7 +52,7 @@ type fakeProcesses struct {
 
 func newFakeProcesses(dir string) *fakeProcesses {
 	return &fakeProcesses{
-		dir: dir, records: map[string]server.Record{}, dead: map[string]bool{}, statuses: map[string]int{}, portsInUse: map[int]bool{},
+		dir: dir, records: map[string]server.Record{}, dead: map[string]bool{}, orphaned: map[string]bool{}, statuses: map[string]int{}, portsInUse: map[int]bool{},
 		spawnErr: map[string]error{}, waitErr: map[string]error{}, stopErr: map[string]error{}, nextPID: 4000,
 	}
 }
@@ -66,6 +67,12 @@ func (f *fakeProcesses) markDead(name string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.dead[name] = true
+}
+
+func (f *fakeProcesses) markOrphaned(name string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.orphaned[name] = true
 }
 
 func (f *fakeProcesses) answer(url string, status int) {
@@ -101,10 +108,16 @@ func compareStrings(a, b string) int {
 	return 0
 }
 
-func (f *fakeProcesses) Alive(rec server.Record) bool {
+func (f *fakeProcesses) State(rec server.Record) server.State {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return !f.dead[rec.Name]
+	switch {
+	case f.dead[rec.Name]:
+		return server.StateGone
+	case f.orphaned[rec.Name]:
+		return server.StateOrphaned
+	}
+	return server.StateRunning
 }
 
 func (f *fakeProcesses) Track(rec server.Record) (server.Record, error) {
@@ -148,8 +161,11 @@ func (f *fakeProcesses) Stop(_ context.Context, rec server.Record) (server.StopR
 		return server.Stopped, err
 	}
 	delete(f.records, rec.Name)
-	if f.dead[rec.Name] {
+	switch {
+	case f.dead[rec.Name]:
 		return server.WasStale, nil
+	case f.orphaned[rec.Name]:
+		return server.WasOrphaned, nil
 	}
 	return server.Stopped, nil
 }

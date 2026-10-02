@@ -34,7 +34,7 @@ type GOARCH string
 // Processes is what the lifecycle commands need from the local process layer.
 type Processes interface {
 	List() ([]server.Record, error)
-	Alive(rec server.Record) bool
+	State(rec server.Record) server.State
 	Track(rec server.Record) (server.Record, error)
 	Spawn(ctx context.Context, spec server.Spec) (server.Record, error)
 	Stop(ctx context.Context, rec server.Record) (server.StopResult, error)
@@ -87,7 +87,7 @@ func newSystemProcesses(stateDir string, executable Executable, gpu GPUReader) P
 
 func (p systemProcesses) List() ([]server.Record, error) { return p.store.List() }
 
-func (p systemProcesses) Alive(rec server.Record) bool { return p.store.Alive(rec) }
+func (p systemProcesses) State(rec server.Record) server.State { return p.store.State(rec) }
 
 func (p systemProcesses) StateDir() string { return p.store.Dir() }
 
@@ -196,21 +196,26 @@ type sweepFailure struct {
 	Err  error
 }
 
-// sweep is the outcome of removing the stale records.
+// sweep is the outcome of removing the stale records; an orphaned record is kept because its program still runs.
 type sweep struct {
-	Live    []server.Record
-	Gone    []server.Record
-	Failed  []sweepFailure
-	ListErr error
+	Live     []server.Record
+	Orphaned []server.Record
+	Gone     []server.Record
+	Failed   []sweepFailure
+	ListErr  error
 }
 
-// sweepRecords lists the records, removes the stale ones and returns the live ones with the names of what it removed.
+// sweepRecords lists the records, removes the stale ones and returns the live and orphaned ones with what it removed.
 func sweepRecords(ctx context.Context, procs Processes) sweep {
 	records, listErr := procs.List()
 	result := sweep{ListErr: listErr}
 	for _, rec := range records {
-		if procs.Alive(rec) {
+		switch procs.State(rec) {
+		case server.StateRunning:
 			result.Live = append(result.Live, rec)
+			continue
+		case server.StateOrphaned:
+			result.Orphaned = append(result.Orphaned, rec)
 			continue
 		}
 		if _, err := procs.Stop(ctx, rec); err != nil {
@@ -220,4 +225,8 @@ func sweepRecords(ctx context.Context, procs Processes) sweep {
 		result.Gone = append(result.Gone, rec)
 	}
 	return result
+}
+
+func orphanText(name string, supervisorPID, childPID int) string {
+	return fmt.Sprintf("%s runs without its supervisor: the supervisor (pid %d) is gone and the program it started (pid %d) still runs", name, supervisorPID, childPID)
 }

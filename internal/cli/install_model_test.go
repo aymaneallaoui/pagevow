@@ -441,17 +441,18 @@ func TestInstallModelRefusesToReplaceAModelThatAServerRuns(t *testing.T) {
 	tests := []struct {
 		name    string
 		record  func(dir string) server.Record
-		dead    bool
+		state   server.State
 		refused bool
 	}{
-		{"the server runs it", func(dir string) server.Record { return modelRecord(dir) }, false, true},
-		{"a stale record", func(dir string) server.Record { return modelRecord(dir) }, true, false},
-		{"another run", func(string) server.Record { return modelRecord("/elsewhere/runs/other") }, false, false},
+		{"the server runs it", func(dir string) server.Record { return modelRecord(dir) }, server.StateRunning, true},
+		{"the server runs it without its supervisor", func(dir string) server.Record { return modelRecord(dir) }, server.StateOrphaned, true},
+		{"a stale record", func(dir string) server.Record { return modelRecord(dir) }, server.StateGone, false},
+		{"another run", func(string) server.Record { return modelRecord("/elsewhere/runs/other") }, server.StateRunning, false},
 		{"a record without a run", func(string) server.Record {
 			rec := modelRecord("")
 			rec.Command = []string{"uv", "run"}
 			return rec
-		}, false, false},
+		}, server.StateRunning, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -463,8 +464,11 @@ func TestInstallModelRefusesToReplaceAModelThatAServerRuns(t *testing.T) {
 			marker := filepath.Join(dir, "marker.txt")
 			require.NoError(t, os.WriteFile(marker, []byte("x"), 0o600))
 			h.procs.addRecord(tt.record(dir))
-			if tt.dead {
+			switch tt.state {
+			case server.StateGone:
 				h.procs.markDead("model-8009")
+			case server.StateOrphaned:
+				h.procs.markOrphaned("model-8009")
 			}
 
 			_, err := h.run("install", "--model", src, "--force")

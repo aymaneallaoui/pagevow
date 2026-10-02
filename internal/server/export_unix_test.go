@@ -2,6 +2,8 @@
 
 package server
 
+import "strings"
+
 // GroupLine is one process line of the group listing, as the tests see it.
 type GroupLine struct {
 	PID, PPID, PGID, SID int
@@ -22,4 +24,27 @@ var TiedToRecord = func(rec Record, table []GroupLine, darwin bool) bool {
 		members[i] = groupMember(line)
 	}
 	return tiedToRecord(rec, members, darwin)
+}
+
+// ChildEntry is the process table entry of a recorded child, as the tests see it.
+type ChildEntry struct {
+	Running    bool
+	StartTicks uint64
+	PGID       int
+	Command    string
+}
+
+// OrphanTied exposes the orphan decision of a process table to the tests; on darwin the command is one text, as ps prints it.
+var OrphanTied = func(rec Record, child ChildEntry, table []GroupLine, darwin bool) bool {
+	info := procInfo{Exists: child.Running, StartTicks: child.StartTicks, TicksKnown: child.Running, PGID: child.PGID, CmdlineKnown: child.Running}
+	if darwin {
+		info.CmdText = child.Command
+	} else {
+		info.Args = strings.Fields(child.Command)
+	}
+	members := make([]groupMember, len(table))
+	for i, line := range table {
+		members[i] = groupMember(line)
+	}
+	return orphanTied(rec, info, func(r Record) bool { return tiedToRecord(r, members, darwin) })
 }

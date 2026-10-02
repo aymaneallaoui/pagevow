@@ -24,6 +24,8 @@ func TestMain(m *testing.M) {
 		os.Exit(runFakeSupervisor(os.Getenv("SERVER_TEST_DIR")))
 	case "leader":
 		os.Exit(runLeader(os.Getenv("SERVER_TEST_DIR")))
+	case "parent-of-orphan":
+		os.Exit(runParentOfOrphan(os.Getenv("SERVER_TEST_DIR")))
 	case "sleeper":
 		time.Sleep(time.Minute)
 		os.Exit(0)
@@ -69,6 +71,23 @@ func runFakeSupervisor(dir string) int {
 	time.Sleep(time.Hour)
 	return 0
 }
+
+// runParentOfOrphan starts a group leader that keeps a member, without a parent-death signal, so the pair outlives a
+// SIGKILL of this process as it does on macOS.
+func runParentOfOrphan(dir string) int {
+	child := exec.Command("sh", "-c", orphanScript)
+	child.Env = append(os.Environ(), "SERVER_TEST_DIR="+dir)
+	child.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if err := child.Start(); err != nil {
+		return 1
+	}
+	writePID(filepath.Join(dir, "child"), child.Process.Pid)
+	go func() { _ = child.Wait() }()
+	time.Sleep(time.Hour)
+	return 0
+}
+
+const orphanScript = `sleep 60 & echo $! > "$SERVER_TEST_DIR/member.tmp"; mv "$SERVER_TEST_DIR/member.tmp" "$SERVER_TEST_DIR/member"; wait`
 
 func runLeader(dir string) int {
 	member := exec.Command("sleep", "60")

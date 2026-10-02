@@ -62,6 +62,21 @@ func isGone(err error) bool {
 	return errors.Is(err, syscall.ESRCH)
 }
 
+// orphanLives reports whether the program of a supervised record still runs and can be tied to the record although
+// the supervisor fails the alive check.
+func orphanLives(rec Record) bool {
+	return orphanTied(rec, inspect(rec.ChildPID), groupTied)
+}
+
+// orphanTied decides from the child's process entry and the group tie whether a supervised record has a live orphan;
+// without a child start time and a usable group nothing can be proven, so nothing counts.
+func orphanTied(rec Record, child procInfo, tied func(Record) bool) bool {
+	if !rec.Kind.supervised() || rec.ChildStartTicks == 0 || safeGroup(rec.ChildPGID) != nil {
+		return false
+	}
+	return childMatches(rec, child) || tied(rec)
+}
+
 // groupTied reports whether the recorded process group still exists and has a member that belongs to the record.
 func groupTied(rec Record) bool {
 	if safeGroup(rec.ChildPGID) != nil || !groupExists(rec.ChildPGID) {

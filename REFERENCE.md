@@ -453,22 +453,28 @@ The latest release is `v0.2.0`. Each release has these assets, built by goreleas
 `<version>` is the tag without its `v`, for example `0.2.0`. Each archive holds the binary, `LICENSE`, `NOTICE`,
 `README.md` and `REFERENCE.md`. Check the archive against `checksums.txt`, unpack it and put `pagevow` on your `PATH`.
 
-The repository `aymaneallaoui/pagevow` is private for now. Downloading a release, `go install` and `pagevow update`
-all need an account or a token that can read it. With the GitHub CLI:
+You don't need an account to download a release:
+
+```sh
+curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.0/pagevow_0.2.0_linux_amd64.tar.gz
+curl -fsSLO https://github.com/aymaneallaoui/pagevow/releases/download/v0.2.0/checksums.txt
+sha256sum -c checksums.txt --ignore-missing
+tar -xzf pagevow_0.2.0_linux_amd64.tar.gz pagevow
+sudo mv pagevow /usr/local/bin/
+```
+
+With the GitHub CLI the download step is:
 
 ```sh
 gh release download v0.2.0 --repo aymaneallaoui/pagevow --pattern 'pagevow_0.2.0_linux_amd64.tar.gz' --pattern checksums.txt
-sha256sum --check --ignore-missing checksums.txt
-tar -xzf pagevow_0.2.0_linux_amd64.tar.gz pagevow
 ```
 
 ### From source
 
-Go 1.27 or newer is required. While the repository is private, `go install` needs `GOPRIVATE` and git credentials
-that can read it.
+Go 1.27 or newer is required.
 
 ```sh
-GOPRIVATE=github.com/aymaneallaoui/pagevow go install github.com/aymaneallaoui/pagevow/cmd/pagevow@latest
+go install github.com/aymaneallaoui/pagevow/cmd/pagevow@latest
 ```
 
 Or in a checkout:
@@ -534,9 +540,9 @@ pagevow update --force    # installs the latest release again
 pagevow update --json     # prints current, latest, update_available, updated and executable
 ```
 
-Because the repository is private, `update` needs a token that can read it: `GITHUB_TOKEN`, else `GH_TOKEN`, else the
-keychain entry `github` (`pagevow keys set github`). The token is sent to `api.github.com` only, is dropped on a
-redirect to another host or port, and is never printed. Run `pagevow plugin install` again after an update: the Stop
+`update` needs no token. When one is set, it is used only to avoid the anonymous GitHub API rate limit: `GITHUB_TOKEN`,
+else `GH_TOKEN`, else the keychain entry `github` (`pagevow keys set github`). The token is sent to `api.github.com`
+only, is dropped on a redirect to another host or port, and is never printed. Run `pagevow plugin install` again after an update: the Stop
 hook stores the path of the binary.
 
 How update replaces the binary:

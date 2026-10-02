@@ -515,7 +515,7 @@ func (s *starter) launchBrowser(t startTarget) startedProcess {
 		return entry
 	}
 	entry.PID = process.PID
-	rec, err := s.procs.Track(server.Record{
+	rec, err := s.procs.Track(s.ctx, server.Record{
 		Name: t.name, Kind: server.KindBrowser, PID: process.PID, Port: t.port, Command: []string{s.execPath},
 		StartedAt: s.now().UTC(), Log: log, ReadyURL: process.DebugURL + "/json/version", ProfileDir: s.profile,
 	})

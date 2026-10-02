@@ -81,11 +81,6 @@ func (n NvidiaSMI) Read(ctx context.Context) (GPU, error) {
 	return ParseGPU(string(out))
 }
 
-// ReadGPU reads the GPU with nvidia-smi from PATH.
-func ReadGPU(ctx context.Context) (GPU, error) {
-	return NvidiaSMI{}.Read(ctx)
-}
-
 func runProgram(ctx context.Context, name string, args ...string) ([]byte, error) {
 	path, err := exec.LookPath(name)
 	if err != nil {

@@ -3,6 +3,7 @@
 package server
 
 import (
+	"context"
 	"os"
 	"strconv"
 	"strings"
@@ -13,7 +14,7 @@ const (
 	statFieldSession = 6
 )
 
-func inspect(pid int) procInfo {
+func inspect(_ context.Context, pid int) procInfo {
 	root := "/proc/" + strconv.Itoa(pid)
 	stat, err := os.ReadFile(root + "/stat") //nolint:gosec // pid is an integer
 	if err != nil {
@@ -41,7 +42,7 @@ func inspect(pid int) procInfo {
 	return info
 }
 
-func groupMembers(pgid int) []groupMember {
+func groupMembers(_ context.Context, pgid int) []groupMember {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
 		return nil

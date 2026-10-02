@@ -3,6 +3,7 @@
 package server_test
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -67,7 +68,7 @@ func processRunning(pid int) bool {
 	if err := syscall.Kill(pid, 0); err != nil {
 		return false
 	}
-	_, err := server.StartTicks(pid)
+	_, err := server.StartTicks(context.Background(), pid)
 	return err == nil
 }
 
@@ -100,7 +101,7 @@ func startSleeper(t *testing.T, name string) (*exec.Cmd, server.Record) {
 		_ = cmd.Process.Kill()
 		<-done
 	})
-	ticks, err := server.StartTicks(cmd.Process.Pid)
+	ticks, err := server.StartTicks(t.Context(), cmd.Process.Pid)
 	require.NoError(t, err)
 	rec := server.Record{
 		Name:       name,
@@ -118,7 +119,7 @@ func startSleeper(t *testing.T, name string) (*exec.Cmd, server.Record) {
 func requireAliveEventually(t *testing.T, rec server.Record) {
 	t.Helper()
 	store := newStore(t)
-	require.Eventually(t, func() bool { return store.Alive(rec) }, 5*time.Second, 5*time.Millisecond, "the helper process never matched its record")
+	require.Eventually(t, func() bool { return store.Alive(t.Context(), rec) }, 5*time.Second, 5*time.Millisecond, "the helper process never matched its record")
 }
 
 func shellProcess(t *testing.T, script string) *exec.Cmd {

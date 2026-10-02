@@ -498,7 +498,11 @@ process running.
 - Logs are appended to `<user cache directory>/pagevow/logs/<name>.log` (mode 0600).
 - Records are one JSON file per process in `<user cache directory>/pagevow/run/<name>.json` (directory 0700, files
   0600, written atomically). A record holds names, pids, ports, the command, times and paths, never a key.
-- A record is alive while its pid exists, its start time is the recorded one and its command line still fits.
+- A record is alive while its pid exists, its start time is the recorded one and its command line still fits. A record
+  also holds the boot of the machine (Linux boot id, macOS boot time), and one written in an earlier boot is stale.
+- `start` and `stop` take an exclusive lock on the run directory (`.lock`) while they start or stop a process, so two
+  runs at once cannot remove each other's record. A record is removed only while it still holds the pid and start time
+  that were read, and `start` refuses a name whose record still runs.
 - A model server or text helper record whose supervisor is gone while its program still runs is orphaned. This can
   happen on macOS, which has no parent-death signal, when the supervisor is killed. `status` and `doctor` show it with
   the fix `pagevow stop`, `start` refuses to reuse its port, and `stop` sends the signals to the program's process

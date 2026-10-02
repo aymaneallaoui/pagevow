@@ -108,7 +108,7 @@ func compareStrings(a, b string) int {
 	return 0
 }
 
-func (f *fakeProcesses) State(rec server.Record) server.State {
+func (f *fakeProcesses) State(_ context.Context, rec server.Record) server.State {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	switch {
@@ -120,7 +120,7 @@ func (f *fakeProcesses) State(rec server.Record) server.State {
 	return server.StateRunning
 }
 
-func (f *fakeProcesses) Track(rec server.Record) (server.Record, error) {
+func (f *fakeProcesses) Track(_ context.Context, rec server.Record) (server.Record, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.tracked = append(f.tracked, rec)

@@ -36,6 +36,7 @@ type Record struct {
 	Log             string    `json:"log"`
 	ReadyURL        string    `json:"ready_url"`
 	ProfileDir      string    `json:"profile_dir,omitempty"`
+	BootID          string    `json:"boot_id,omitempty"`
 }
 
 // Tripped is a guard message left behind by a supervisor that stopped its process.
@@ -137,15 +138,32 @@ func (s *Store) List() ([]Record, error) {
 	return records, errors.Join(problems...)
 }
 
-// Remove deletes the record called name; a missing record is not an error.
-func (s *Store) Remove(name string) error {
-	if !validName(name) {
-		return fmt.Errorf("remove record: invalid name %q", name)
+// Remove deletes the record file of rec when it still holds the pid and start time of rec; a record that another process
+// wrote in the meantime stays, and a missing file is not an error.
+func (s *Store) Remove(rec Record) error {
+	_, err := s.removeIfSame(rec)
+	return err
+}
+
+// removeIfSame reports whether the file of rec is gone afterwards because it was missing or held rec, and false when it holds another record.
+func (s *Store) removeIfSame(rec Record) (bool, error) {
+	if !validName(rec.Name) {
+		return false, fmt.Errorf("remove record: invalid name %q", rec.Name)
 	}
-	if err := os.Remove(s.recordPath(name)); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("remove record %s: %w", name, err)
+	current, err := readRecordFile(s.recordPath(rec.Name))
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return true, nil
+		}
+		return false, fmt.Errorf("remove record %s: %w", rec.Name, err)
 	}
-	return nil
+	if current.PID != rec.PID || current.StartTicks != rec.StartTicks {
+		return false, nil
+	}
+	if err := os.Remove(s.recordPath(rec.Name)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return false, fmt.Errorf("remove record %s: %w", rec.Name, err)
+	}
+	return true, nil
 }
 
 // WriteTripped stores the guard message for name.

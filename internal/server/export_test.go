@@ -24,3 +24,9 @@ var GuardMessage = func(g Guard, name string, sample GPU) string {
 
 // NoReaderMessage exposes the guard line for a missing memory reader to the tests.
 var NoReaderMessage = noReaderMessage
+
+// BootChanged exposes the boot comparison of the alive check to the tests.
+var BootChanged = bootChanged
+
+// SignalFailed exposes the decision whether a failed signal is an error to the tests.
+var SignalFailed = signalFailed

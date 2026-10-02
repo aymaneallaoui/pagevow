@@ -19,12 +19,34 @@ const (
 	spawnTimeout      = 30 * time.Second
 	spawnPollInterval = 20 * time.Millisecond
 	spawnLogLines     = 20
+	abortWait         = 2 * time.Second
 )
 
-// Spawn starts `executable supervise --spec FILE` detached and returns once the supervisor has written its record.
+// exitStatusError is how a supervisor that ended before it wrote its record left.
+type exitStatusError struct {
+	status syscall.WaitStatus
+}
+
+func (e exitStatusError) Error() string {
+	if e.status.Signaled() {
+		return "signal: " + e.status.Signal().String()
+	}
+	return fmt.Sprintf("exit status %d", e.status.ExitStatus())
+}
+
+// Spawn starts `executable supervise --spec FILE` detached and returns once the supervisor has written its record. It
+// holds the lock of the state directory meanwhile and refuses a name whose record still runs.
 func Spawn(ctx context.Context, executable string, spec Spec, store *Store) (Record, error) {
 	if executable == "" {
 		return Record{}, errors.New("spawn supervisor: no executable")
+	}
+	unlock, err := store.Lock(ctx)
+	if err != nil {
+		return Record{}, fmt.Errorf("spawn supervisor for %s: %w", spec.Name, err)
+	}
+	defer unlock()
+	if existing, err := store.Read(spec.Name); err == nil && store.State(ctx, existing) != StateGone {
+		return Record{}, fmt.Errorf("spawn supervisor for %s: pid %d: %w", spec.Name, existing.PID, ErrAlreadyRunning)
 	}
 	specPath, err := store.WriteSpec(spec)
 	if err != nil {
@@ -45,58 +67,83 @@ func Spawn(ctx context.Context, executable string, spec Spec, store *Store) (Rec
 		_ = store.RemoveSpec(spec.Name)
 		return Record{}, fmt.Errorf("spawn supervisor: start %s: %w", executable, err)
 	}
-
-	done := make(chan struct{})
-	var waitErr error
-	go func() {
-		waitErr = cmd.Wait()
-		close(done)
-	}()
+	pid := cmd.Process.Pid
 
 	timeout := time.NewTimer(spawnTimeout)
 	defer timeout.Stop()
 	ticker := time.NewTicker(spawnPollInterval)
 	defer ticker.Stop()
 	for {
-		if rec, err := store.Read(spec.Name); err == nil && rec.PID == cmd.Process.Pid {
+		if rec, err := store.Read(spec.Name); err == nil && rec.PID == pid {
+			_ = cmd.Process.Release()
 			return rec, nil
 		}
-		select {
-		case <-done:
+		if status, ended := reapIfEnded(pid); ended {
+			_ = cmd.Process.Release()
 			_ = store.RemoveSpec(spec.Name)
-			return Record{}, supervisorEnded(spec, waitErr)
+			return Record{}, supervisorEnded(spec, status)
+		}
+		select {
 		case <-ctx.Done():
-			abortSupervisor(cmd.Process, done)
+			abortSupervisor(ctx, cmd.Process)
+			_ = store.RemoveSpec(spec.Name)
 			return Record{}, fmt.Errorf("spawn supervisor for %s: %w", spec.Name, ctx.Err())
 		case <-timeout.C:
-			abortSupervisor(cmd.Process, done)
+			abortSupervisor(ctx, cmd.Process)
+			_ = store.RemoveSpec(spec.Name)
 			return Record{}, fmt.Errorf("spawn supervisor for %s: no record after %s", spec.Name, spawnTimeout)
 		case <-ticker.C:
 		}
 	}
 }
 
-func supervisorEnded(spec Spec, waitErr error) error {
-	reason := "exit status 0"
-	if waitErr != nil {
-		reason = waitErr.Error()
+// reapIfEnded collects the exit status of the child pid when it has ended.
+func reapIfEnded(pid int) (syscall.WaitStatus, bool) {
+	var status syscall.WaitStatus
+	for {
+		reaped, err := syscall.Wait4(pid, &status, syscall.WNOHANG, nil)
+		switch {
+		case errors.Is(err, syscall.EINTR):
+		case err != nil:
+			return status, true
+		default:
+			return status, reaped == pid
+		}
 	}
-	message := fmt.Sprintf("supervisor for %s ended before it wrote its record (%s); log: %s", spec.Name, reason, spec.Log)
-	if tail, err := LogTail(spec.Log, spawnLogLines); err == nil && tail != "" {
-		message += "\n" + tail
-	}
-	return errors.New(message)
 }
 
-func abortSupervisor(process *os.Process, done <-chan struct{}) {
+func supervisorEnded(spec Spec, status syscall.WaitStatus) error {
+	err := fmt.Errorf("supervisor for %s ended before it wrote its record: %w; log: %s", spec.Name, exitStatusError{status}, spec.Log)
+	if tail, tailErr := LogTail(spec.Log, spawnLogLines); tailErr == nil && tail != "" {
+		return fmt.Errorf("%w\n%s", err, tail)
+	}
+	return err
+}
+
+// abortSupervisor ends a supervisor that did not write its record, with a wait that outlives the cancellation of ctx but stays short.
+func abortSupervisor(ctx context.Context, process *os.Process) {
 	_ = process.Signal(syscall.SIGTERM)
-	timer := time.NewTimer(defaultSupervisorWait)
-	defer timer.Stop()
-	select {
-	case <-done:
-	case <-timer.C:
-		_ = process.Kill()
-		<-done
+	if waitEnded(ctx, process.Pid) {
+		return
+	}
+	_ = process.Kill()
+	waitEnded(ctx, process.Pid)
+}
+
+func waitEnded(ctx context.Context, pid int) bool {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), abortWait)
+	defer cancel()
+	ticker := time.NewTicker(spawnPollInterval)
+	defer ticker.Stop()
+	for {
+		if _, ended := reapIfEnded(pid); ended {
+			return true
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-ticker.C:
+		}
 	}
 }
 

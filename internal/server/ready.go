@@ -63,7 +63,7 @@ func WaitReady(ctx context.Context, store *Store, rec Record, interval, timeout 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
-		if !store.Alive(rec) {
+		if !store.Alive(ctx, rec) {
 			return fmt.Errorf("wait for %s: %w", rec.Name, ErrProcessEnded)
 		}
 		if Ready(ctx, rec.ReadyURL) {

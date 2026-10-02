@@ -21,9 +21,10 @@ const GuardExitCode = 99
 
 // Errors returned by this package.
 var (
-	ErrUnsupported  = errors.ErrUnsupported
-	ErrNotFound     = errors.New("record not found")
-	ErrProcessEnded = errors.New("process ended")
+	ErrUnsupported    = errors.ErrUnsupported
+	ErrNotFound       = errors.New("record not found")
+	ErrProcessEnded   = errors.New("process ended")
+	ErrAlreadyRunning = errors.New("a record for that name still runs")
 )
 
 func (k Kind) valid() bool {

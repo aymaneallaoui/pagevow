@@ -89,13 +89,14 @@ func (c *child) waitGone(limit time.Duration) bool {
 	}
 }
 
-func (c *child) stop(grace time.Duration) {
+// stop ends the process group of the child and reports whether it is empty afterwards.
+func (c *child) stop(grace time.Duration) bool {
 	_ = terminateGroup(c.pid)
 	if c.waitGone(grace) {
-		return
+		return true
 	}
 	_ = killGroup(c.pid)
-	c.waitGone(childKillWait)
+	return c.waitGone(childKillWait)
 }
 
 type supervisor struct {
@@ -133,13 +134,19 @@ func Supervise(ctx context.Context, spec Spec, store *Store, gpu GPUSource) (int
 	if err != nil {
 		return 1, fmt.Errorf("supervise %s: %w", spec.Name, err)
 	}
-	defer func() { _ = store.RemoveSpec(spec.Name) }()
+	defer func() { _ = store.RemoveSpecIfSame(spec) }()
 
-	if err := sup.writeRecord(proc); err != nil {
+	rec, err := sup.writeRecord(ctx, proc)
+	if err != nil {
 		proc.stop(spec.StopGrace())
 		return 1, err
 	}
-	defer func() { _ = store.Remove(spec.Name) }()
+	groupGone := true
+	defer func() {
+		if groupGone {
+			_ = store.Remove(rec)
+		}
+	}()
 
 	watchCtx, cancelWatch := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
@@ -160,25 +167,26 @@ func Supervise(ctx context.Context, spec Spec, store *Store, gpu GPUSource) (int
 	case <-proc.done:
 		if groupExists(proc.pid) {
 			_ = killGroup(proc.pid)
+			groupGone = proc.waitGone(childKillWait)
 		}
 		return proc.exitCode, nil
 	case <-ctx.Done():
-		proc.stop(spec.StopGrace())
+		groupGone = proc.stop(spec.StopGrace())
 		return 0, nil
 	case message := <-breach:
 		sup.logf("%s", message)
 		if err := store.WriteTripped(spec.Name, message); err != nil {
 			sup.logf("guard: cannot write the tripped file for %s: %v", spec.Name, err)
 		}
-		proc.stop(spec.StopGrace())
+		groupGone = proc.stop(spec.StopGrace())
 		return GuardExitCode, nil
 	}
 }
 
-func (s *supervisor) writeRecord(proc *child) error {
+func (s *supervisor) writeRecord(ctx context.Context, proc *child) (Record, error) {
 	self := os.Getpid()
-	selfTicks, _ := StartTicks(self)
-	childTicks, _ := StartTicks(proc.pid)
+	selfTicks, _ := StartTicks(ctx, self)
+	childTicks, _ := StartTicks(ctx, proc.pid)
 	rec := Record{
 		Name:            s.spec.Name,
 		Kind:            s.spec.Kind,
@@ -193,11 +201,12 @@ func (s *supervisor) writeRecord(proc *child) error {
 		ChildStartTicks: childTicks,
 		Log:             s.spec.Log,
 		ReadyURL:        s.spec.ReadyURL,
+		BootID:          BootID(),
 	}
 	if err := s.store.Write(rec); err != nil {
-		return fmt.Errorf("supervise %s: %w", s.spec.Name, err)
+		return Record{}, fmt.Errorf("supervise %s: %w", s.spec.Name, err)
 	}
-	return nil
+	return rec, nil
 }
 
 // watch samples the GPU until ctx ends and sends the guard message on the first breach.

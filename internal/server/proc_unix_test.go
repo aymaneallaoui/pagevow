@@ -38,6 +38,29 @@ func TestTiedToRecord(t *testing.T) {
 			{PID: 902, PPID: 1, PGID: leader, StartTicks: started + 61},
 		}, true, false},
 		{"darwin leader that matches the child", rec, []server.GroupLine{{PID: leader, PPID: 1, PGID: leader, StartTicks: started}}, true, true},
+		{"darwin reused group id still ties by parent", rec, []server.GroupLine{
+			{PID: leader, PPID: 1, PGID: leader, StartTicks: started + 60},
+			{PID: 902, PPID: supervisor, PGID: leader, StartTicks: started + 61},
+		}, true, false},
+		{"linux reused group id still ties by parent", rec, []server.GroupLine{
+			{PID: leader, PPID: 1, PGID: leader, StartTicks: started + 60},
+			{PID: 902, PPID: supervisor, PGID: leader, StartTicks: started + 61},
+		}, false, false},
+		{"linux reused group id still ties by session", rec, []server.GroupLine{
+			{PID: leader, PPID: 1, PGID: leader, SID: supervisor, StartTicks: started + 60},
+		}, false, false},
+		{"darwin reused group id still ties by session", rec, []server.GroupLine{
+			{PID: leader, PPID: 1, PGID: leader, SID: supervisor, StartTicks: started + 60},
+		}, true, false},
+		{"reused group id whose leader is a job of a shell that reused the supervisor pid", server.Record{PID: 500, ChildPID: 900, ChildPGID: 900, ChildStartTicks: 1000}, []server.GroupLine{
+			{PID: 900, PPID: 500, PGID: 900, SID: 500, StartTicks: 1060},
+		}, false, false},
+		{"leader with the recorded start time and the supervisor as parent", rec, []server.GroupLine{
+			{PID: leader, PPID: supervisor, PGID: leader, SID: supervisor, StartTicks: started},
+		}, false, true},
+		{"leader without a start time does not count as reused", rec, []server.GroupLine{
+			{PID: leader, PPID: supervisor, PGID: leader},
+		}, false, true},
 		{"other systems do not tie by start time", rec, []server.GroupLine{orphan}, false, false},
 		{"other systems still tie by parent", rec, []server.GroupLine{{PID: 901, PPID: supervisor, PGID: leader, StartTicks: started}}, false, true},
 		{"other systems still tie by session", rec, []server.GroupLine{{PID: 901, PPID: 1, PGID: leader, SID: supervisor, StartTicks: started}}, false, true},

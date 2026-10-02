@@ -5,6 +5,7 @@ package server_test
 import (
 	"os"
 	"os/exec"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,33 +16,33 @@ import (
 
 func TestAliveForARunningProcessWithMatchingRecord(t *testing.T) {
 	_, rec := startSleeper(t, "browser-9222")
-	assert.True(t, newStore(t).Alive(rec))
+	assert.True(t, newStore(t).Alive(t.Context(), rec))
 }
 
 func TestAliveIsFalseForAPidThatDoesNotExist(t *testing.T) {
 	_, rec := startSleeper(t, "browser-9222")
 	rec.PID = 2147483646
-	assert.False(t, newStore(t).Alive(rec))
+	assert.False(t, newStore(t).Alive(t.Context(), rec))
 }
 
 func TestAliveIsFalseForAProcessThatHasEnded(t *testing.T) {
 	cmd, rec := startSleeper(t, "browser-9222")
 	require.NoError(t, cmd.Process.Kill())
 	requireGone(t, rec.PID)
-	assert.False(t, newStore(t).Alive(rec))
+	assert.False(t, newStore(t).Alive(t.Context(), rec))
 }
 
 func TestAliveIsFalseWhenTheStartTimeDiffers(t *testing.T) {
 	_, rec := startSleeper(t, "browser-9222")
 	require.NotZero(t, rec.StartTicks)
 	rec.StartTicks++
-	assert.False(t, newStore(t).Alive(rec))
+	assert.False(t, newStore(t).Alive(t.Context(), rec))
 }
 
 func TestAliveIsFalseWhenTheBrowserCommandDiffers(t *testing.T) {
 	_, rec := startSleeper(t, "browser-9222")
 	rec.Command = []string{"/usr/bin/chromium", "--headless"}
-	assert.False(t, newStore(t).Alive(rec))
+	assert.False(t, newStore(t).Alive(t.Context(), rec))
 }
 
 func TestAliveAcceptsABrowserThatKeepsItsProfileArgument(t *testing.T) {
@@ -49,7 +50,7 @@ func TestAliveAcceptsABrowserThatKeepsItsProfileArgument(t *testing.T) {
 	cmd.Env = append(os.Environ(), "SERVER_TEST_MODE=sleeper")
 	require.NoError(t, cmd.Start())
 	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait() })
-	ticks, err := server.StartTicks(cmd.Process.Pid)
+	ticks, err := server.StartTicks(t.Context(), cmd.Process.Pid)
 	require.NoError(t, err)
 	rec := server.Record{
 		Name: "browser-9222", Kind: server.KindBrowser, PID: cmd.Process.Pid, StartTicks: ticks,
@@ -61,13 +62,13 @@ func TestAliveAcceptsABrowserThatKeepsItsProfileArgument(t *testing.T) {
 func TestAliveIsFalseForASupervisorRecordWhoseProcessIsNotASupervisor(t *testing.T) {
 	_, rec := startSleeper(t, "model-8009")
 	rec.Kind = server.KindModel
-	assert.False(t, newStore(t).Alive(rec))
+	assert.False(t, newStore(t).Alive(t.Context(), rec))
 }
 
 func TestAliveIsFalseForTheCurrentProcessAndForPidOne(t *testing.T) {
 	store := newStore(t)
 	for _, pid := range []int{0, 1, -5} {
-		assert.False(t, store.Alive(server.Record{Name: "browser-1", Kind: server.KindBrowser, PID: pid, Command: []string{"x"}}), pid)
+		assert.False(t, store.Alive(t.Context(), server.Record{Name: "browser-1", Kind: server.KindBrowser, PID: pid, Command: []string{"x"}}), pid)
 	}
 }
 
@@ -77,23 +78,23 @@ func TestChildAliveChecksStartTimeAndGroup(t *testing.T) {
 	rec.ChildPID = rec.PID
 	rec.ChildStartTicks = rec.StartTicks
 	rec.ChildPGID = 0
-	assert.True(t, server.ChildAlive(rec))
+	assert.True(t, server.ChildAlive(t.Context(), rec))
 
 	wrongTicks := rec
 	wrongTicks.ChildStartTicks++
-	assert.False(t, server.ChildAlive(wrongTicks))
+	assert.False(t, server.ChildAlive(t.Context(), wrongTicks))
 
 	wrongGroup := rec
 	wrongGroup.ChildPGID = 2147483646
-	assert.False(t, server.ChildAlive(wrongGroup))
+	assert.False(t, server.ChildAlive(t.Context(), wrongGroup))
 
 	wrongCommand := rec
 	wrongCommand.Command = []string{"uv", "run"}
-	assert.False(t, server.ChildAlive(wrongCommand))
+	assert.False(t, server.ChildAlive(t.Context(), wrongCommand))
 }
 
 func TestStartTicksOfAMissingProcessIsAnError(t *testing.T) {
-	_, err := server.StartTicks(2147483646)
+	_, err := server.StartTicks(t.Context(), 2147483646)
 	assert.Error(t, err)
 }
 
@@ -115,4 +116,64 @@ func TestArgumentMatchingSurvivesAProcessThatRewritesItsTitle(t *testing.T) {
 	assert.True(t, has)
 	_, has = server.MatchArgs(normal, "pagevow", "/run/model-8009.spec.jso")
 	assert.False(t, has)
+}
+
+func TestAliveAndStateTreatARecordOfAnotherBootAsGone(t *testing.T) {
+	current := server.BootID()
+	if current == "" {
+		t.Skip("this system has no boot identifier")
+	}
+	_, rec := startSleeper(t, "browser-9222")
+	store := newStore(t)
+
+	rec.BootID = current
+	assert.True(t, store.Alive(t.Context(), rec))
+	assert.Equal(t, server.StateRunning, store.State(t.Context(), rec))
+
+	rec.BootID = ""
+	assert.True(t, store.Alive(t.Context(), rec), "a record written before boot ids existed still counts")
+
+	rec.BootID = "another-boot"
+	assert.False(t, store.Alive(t.Context(), rec))
+	assert.Equal(t, server.StateGone, store.State(t.Context(), rec))
+}
+
+func TestChildAliveIsFalseForARecordOfAnotherBoot(t *testing.T) {
+	current := server.BootID()
+	if current == "" {
+		t.Skip("this system has no boot identifier")
+	}
+	_, rec := startSleeper(t, "model-8009")
+	rec.Kind = server.KindModel
+	rec.ChildPID = rec.PID
+	rec.ChildStartTicks = rec.StartTicks
+	rec.BootID = current
+	require.True(t, server.ChildAlive(t.Context(), rec))
+
+	rec.BootID = "another-boot"
+	assert.False(t, server.ChildAlive(t.Context(), rec))
+}
+
+func TestStopOfARecordFromAnotherBootSignalsNothing(t *testing.T) {
+	current := server.BootID()
+	if current == "" {
+		t.Skip("this system has no boot identifier")
+	}
+	cmd, rec := startSleeper(t, "browser-9222")
+	rec.BootID = "another-boot"
+	store := newStore(t)
+	require.NoError(t, store.Write(rec))
+
+	result, err := server.Stop(t.Context(), store, rec)
+
+	require.NoError(t, err)
+	assert.Equal(t, server.WasStale, result)
+	assert.True(t, processRunning(cmd.Process.Pid), "a process of another boot was signalled")
+	_, err = store.Read(rec.Name)
+	assert.ErrorIs(t, err, server.ErrNotFound)
+}
+
+func TestSignalFailedIgnoresNoSuchProcess(t *testing.T) {
+	assert.False(t, server.SignalFailed(syscall.ESRCH, func() bool { return true }))
+	assert.True(t, server.SignalFailed(syscall.EPERM, func() bool { return true }))
 }

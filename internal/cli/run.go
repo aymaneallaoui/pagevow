@@ -166,7 +166,7 @@ func (a *app) managedBrowserURL(ctx context.Context, port int) string {
 	}
 	records, _ := procs.List()
 	for _, rec := range records {
-		if rec.Name != server.RecordName(server.KindBrowser, port) || procs.State(rec) != server.StateRunning {
+		if rec.Name != server.RecordName(server.KindBrowser, port) || procs.State(ctx, rec) != server.StateRunning {
 			continue
 		}
 		debugURL := browser.DebugURL(rec.Port)

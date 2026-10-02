@@ -31,20 +31,35 @@ type GOOS string
 // GOARCH names the processor architecture the commands assume.
 type GOARCH string
 
-// Processes is what the lifecycle commands need from the local process layer.
-type Processes interface {
+// ProcessRecords is what the commands read and clear in the state directory.
+type ProcessRecords interface {
 	List() ([]server.Record, error)
-	State(rec server.Record) server.State
-	Track(rec server.Record) (server.Record, error)
+	State(ctx context.Context, rec server.Record) server.State
+	Tripped() ([]server.Tripped, error)
+	ClearTripped(name string) error
+	StateDir() string
+}
+
+// ProcessLifecycle starts, tracks, waits for and stops the processes of the records.
+type ProcessLifecycle interface {
+	Track(ctx context.Context, rec server.Record) (server.Record, error)
 	Spawn(ctx context.Context, spec server.Spec) (server.Record, error)
 	Stop(ctx context.Context, rec server.Record) (server.StopResult, error)
 	WaitReady(ctx context.Context, rec server.Record, interval, timeout time.Duration) error
 	Supervise(ctx context.Context, specPath string) (int, error)
-	Tripped() ([]server.Tripped, error)
-	ClearTripped(name string) error
+}
+
+// ProcessProbes asks the machine whether a port or a URL answers.
+type ProcessProbes interface {
 	PortInUse(ctx context.Context, port int) bool
 	Probe(ctx context.Context, url string) (int, error)
-	StateDir() string
+}
+
+// Processes is what the lifecycle commands need from the local process layer.
+type Processes interface {
+	ProcessRecords
+	ProcessLifecycle
+	ProcessProbes
 }
 
 // GPUReader reads the memory and temperature of the first GPU.
@@ -87,7 +102,9 @@ func newSystemProcesses(stateDir string, executable Executable, gpu GPUReader) P
 
 func (p systemProcesses) List() ([]server.Record, error) { return p.store.List() }
 
-func (p systemProcesses) State(rec server.Record) server.State { return p.store.State(rec) }
+func (p systemProcesses) State(ctx context.Context, rec server.Record) server.State {
+	return p.store.State(ctx, rec)
+}
 
 func (p systemProcesses) StateDir() string { return p.store.Dir() }
 
@@ -95,11 +112,14 @@ func (p systemProcesses) Tripped() ([]server.Tripped, error) { return p.store.Tr
 
 func (p systemProcesses) ClearTripped(name string) error { return p.store.ClearTripped(name) }
 
-func (p systemProcesses) Track(rec server.Record) (server.Record, error) {
+func (p systemProcesses) Track(ctx context.Context, rec server.Record) (server.Record, error) {
 	if rec.StartTicks == 0 {
-		if ticks, err := server.StartTicks(rec.PID); err == nil {
+		if ticks, err := server.StartTicks(ctx, rec.PID); err == nil {
 			rec.StartTicks = ticks
 		}
+	}
+	if rec.BootID == "" {
+		rec.BootID = server.BootID()
 	}
 	return rec, p.store.Write(rec)
 }
@@ -205,12 +225,24 @@ type sweep struct {
 	ListErr  error
 }
 
+// recordSweeper is what sweepRecords needs to find and remove stale records.
+type recordSweeper interface {
+	List() ([]server.Record, error)
+	State(ctx context.Context, rec server.Record) server.State
+	Stop(ctx context.Context, rec server.Record) (server.StopResult, error)
+}
+
 // sweepRecords lists the records, removes the stale ones and returns the live and orphaned ones with what it removed.
-func sweepRecords(ctx context.Context, procs Processes) sweep {
+func sweepRecords(ctx context.Context, procs recordSweeper) sweep {
 	records, listErr := procs.List()
 	result := sweep{ListErr: listErr}
 	for _, rec := range records {
-		switch procs.State(rec) {
+		state := procs.State(ctx, rec)
+		if err := ctx.Err(); err != nil {
+			result.Failed = append(result.Failed, sweepFailure{Name: rec.Name, Err: err})
+			continue
+		}
+		switch state {
 		case server.StateRunning:
 			result.Live = append(result.Live, rec)
 			continue

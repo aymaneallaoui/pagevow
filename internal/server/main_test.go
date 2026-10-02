@@ -26,6 +26,8 @@ func TestMain(m *testing.M) {
 		os.Exit(runLeader(os.Getenv("SERVER_TEST_DIR")))
 	case "parent-of-orphan":
 		os.Exit(runParentOfOrphan(os.Getenv("SERVER_TEST_DIR")))
+	case "silent-supervisor":
+		os.Exit(runSilentSupervisor(os.Getenv("SERVER_TEST_DIR"), os.Getenv("SERVER_TEST_IGNORE_TERM") == "1"))
 	case "sleeper":
 		time.Sleep(time.Minute)
 		os.Exit(0)
@@ -68,6 +70,16 @@ func runFakeSupervisor(dir string) int {
 		writePID(filepath.Join(dir, "leader"), leader.Process.Pid)
 		go func() { _ = leader.Wait() }()
 	}
+	time.Sleep(time.Hour)
+	return 0
+}
+
+// runSilentSupervisor never writes a record; it reports its pid in dir and optionally ignores SIGTERM.
+func runSilentSupervisor(dir string, ignoreTerm bool) int {
+	if ignoreTerm {
+		signal.Ignore(syscall.SIGTERM)
+	}
+	writePID(filepath.Join(dir, "supervisor"), os.Getpid())
 	time.Sleep(time.Hour)
 	return 0
 }

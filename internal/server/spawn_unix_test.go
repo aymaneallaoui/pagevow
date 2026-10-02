@@ -45,8 +45,8 @@ func TestSpawnStartsADetachedSupervisorAndStopEndsIt(t *testing.T) {
 	assert.Equal(t, spec.Log, rec.Log)
 	assert.Equal(t, spec.ReadyURL, rec.ReadyURL)
 	assert.WithinDuration(t, time.Now(), rec.StartedAt, time.Minute)
-	assert.True(t, store.Alive(rec))
-	assert.True(t, server.ChildAlive(rec))
+	assert.True(t, store.Alive(t.Context(), rec))
+	assert.True(t, server.ChildAlive(t.Context(), rec))
 	assert.FileExists(t, store.SpecPath(spec.Name))
 
 	result, err := server.Stop(t.Context(), store, rec)
@@ -151,7 +151,7 @@ func TestStopKillsABrowserThatIgnoresSigtermAfterTheGrace(t *testing.T) {
 	script := ignoreTermScript(t)
 	cmd := shellProcess(t, script)
 	waitForMarker(t, script)
-	ticks, err := server.StartTicks(cmd.Process.Pid)
+	ticks, err := server.StartTicks(t.Context(), cmd.Process.Pid)
 	require.NoError(t, err)
 	rec := server.Record{
 		Name: "browser-9222", Kind: server.KindBrowser, PID: cmd.Process.Pid, StartTicks: ticks,
@@ -169,7 +169,7 @@ func TestStopHonoursACancelledContext(t *testing.T) {
 	script := ignoreTermScript(t)
 	cmd := shellProcess(t, script)
 	waitForMarker(t, script)
-	ticks, err := server.StartTicks(cmd.Process.Pid)
+	ticks, err := server.StartTicks(t.Context(), cmd.Process.Pid)
 	require.NoError(t, err)
 	rec := server.Record{
 		Name: "browser-9222", Kind: server.KindBrowser, PID: cmd.Process.Pid, StartTicks: ticks,
@@ -312,14 +312,14 @@ func TestStopKillsTheGroupOfAChildWhoseLeaderEndedWhileAMemberKeepsRunning(t *te
 	t.Cleanup(func() { _ = syscall.Kill(member, syscall.SIGKILL) })
 	requireGone(t, leader)
 	require.True(t, processRunning(member))
-	ticks, err := server.StartTicks(supervisor.Process.Pid)
+	ticks, err := server.StartTicks(t.Context(), supervisor.Process.Pid)
 	require.NoError(t, err)
 	rec := server.Record{
 		Name: "model-8113", Kind: server.KindModel, PID: supervisor.Process.Pid, StartTicks: ticks,
 		ChildPID: leader, ChildPGID: leader, ChildStartTicks: ticks, Command: []string{"sleep", "60"},
 	}
-	require.True(t, store.Alive(rec))
-	require.False(t, server.ChildAlive(rec))
+	require.True(t, store.Alive(t.Context(), rec))
+	require.False(t, server.ChildAlive(t.Context(), rec))
 
 	result, err := server.Stop(t.Context(), store, rec, server.WithSupervisorWait(300*time.Millisecond))
 	require.NoError(t, err)
@@ -332,13 +332,13 @@ func TestStopLeavesAProcessGroupAloneWhenNoMemberCanBeTiedToTheRecord(t *testing
 	store := newStore(t)
 	supervisor := startFakeSupervisor(t, store, "model-8114", "")
 	bystander := shellProcess(t, "sleep 60")
-	ticks, err := server.StartTicks(supervisor.Process.Pid)
+	ticks, err := server.StartTicks(t.Context(), supervisor.Process.Pid)
 	require.NoError(t, err)
 	rec := server.Record{
 		Name: "model-8114", Kind: server.KindModel, PID: supervisor.Process.Pid, StartTicks: ticks,
 		ChildPID: 2147483645, ChildPGID: bystander.Process.Pid, Command: []string{"sleep", "60"},
 	}
-	require.True(t, store.Alive(rec))
+	require.True(t, store.Alive(t.Context(), rec))
 
 	_, err = server.Stop(t.Context(), store, rec, server.WithSupervisorWait(300*time.Millisecond))
 	require.NoError(t, err)
@@ -374,23 +374,23 @@ func TestStopEndsTheGroupOfAChildWhoseSupervisorWasKilled(t *testing.T) {
 	store := newStore(t)
 	name := "model-8115"
 	supervisor, child, member := startParentOfOrphan(t, store, name, dir)
-	supervisorTicks, err := server.StartTicks(supervisor.Process.Pid)
+	supervisorTicks, err := server.StartTicks(t.Context(), supervisor.Process.Pid)
 	require.NoError(t, err)
-	childTicks, err := server.StartTicks(child)
+	childTicks, err := server.StartTicks(t.Context(), child)
 	require.NoError(t, err)
 	rec := server.Record{
 		Name: name, Kind: server.KindModel, PID: supervisor.Process.Pid, StartTicks: supervisorTicks,
 		ChildPID: child, ChildPGID: child, ChildStartTicks: childTicks, Command: []string{"sh", "-c", "sleep 60 & wait"},
 	}
 	require.NoError(t, store.Write(rec))
-	require.Equal(t, server.StateRunning, store.State(rec))
+	require.Equal(t, server.StateRunning, store.State(t.Context(), rec))
 
 	require.NoError(t, syscall.Kill(supervisor.Process.Pid, syscall.SIGKILL))
 	requireGone(t, supervisor.Process.Pid)
 	require.True(t, processRunning(child), "the child must outlive its supervisor for this test")
 	require.True(t, processRunning(member))
-	assert.False(t, store.Alive(rec))
-	assert.Equal(t, server.StateOrphaned, store.State(rec))
+	assert.False(t, store.Alive(t.Context(), rec))
+	assert.Equal(t, server.StateOrphaned, store.State(t.Context(), rec))
 
 	result, err := server.Stop(t.Context(), store, rec, server.WithChildGrace(2*time.Second))
 	require.NoError(t, err)
@@ -399,7 +399,7 @@ func TestStopEndsTheGroupOfAChildWhoseSupervisorWasKilled(t *testing.T) {
 	requireGone(t, member)
 	_, err = store.Read(name)
 	assert.ErrorIs(t, err, server.ErrNotFound)
-	assert.Equal(t, server.StateGone, store.State(rec))
+	assert.Equal(t, server.StateGone, store.State(t.Context(), rec))
 }
 
 func TestStopKillsAnOrphanedGroupThatIgnoresSigterm(t *testing.T) {
@@ -407,14 +407,14 @@ func TestStopKillsAnOrphanedGroupThatIgnoresSigterm(t *testing.T) {
 	script := ignoreTermScript(t)
 	orphan := shellProcess(t, script)
 	waitForMarker(t, script)
-	ticks, err := server.StartTicks(orphan.Process.Pid)
+	ticks, err := server.StartTicks(t.Context(), orphan.Process.Pid)
 	require.NoError(t, err)
 	rec := server.Record{
 		Name: "model-8116", Kind: server.KindModel, PID: 2147483646, ChildPID: orphan.Process.Pid,
 		ChildPGID: orphan.Process.Pid, ChildStartTicks: ticks, Command: shell(script),
 	}
 	require.NoError(t, store.Write(rec))
-	require.Equal(t, server.StateOrphaned, store.State(rec))
+	require.Equal(t, server.StateOrphaned, store.State(t.Context(), rec))
 
 	result, err := server.Stop(t.Context(), store, rec, server.WithChildGrace(200*time.Millisecond))
 	require.NoError(t, err)
@@ -426,15 +426,16 @@ func TestStopKillsAnOrphanedGroupThatIgnoresSigterm(t *testing.T) {
 
 func TestStopTreatsARecordWhoseChildPidWasReusedAsStaleAndSignalsNothing(t *testing.T) {
 	store := newStore(t)
-	bystander := shellProcess(t, "sleep 60")
-	ticks, err := server.StartTicks(bystander.Process.Pid)
+	bystander := shellProcess(t, "sleep 60; true")
+	require.Eventually(t, func() bool { return len(groupPIDs(t, bystander.Process.Pid)) == 2 }, 5*time.Second, 5*time.Millisecond, "the shell never started its child")
+	ticks, err := server.StartTicks(t.Context(), bystander.Process.Pid)
 	require.NoError(t, err)
 	rec := server.Record{
 		Name: "model-8117", Kind: server.KindModel, PID: 2147483646, ChildPID: bystander.Process.Pid,
-		ChildPGID: bystander.Process.Pid, ChildStartTicks: ticks + 1, Command: []string{"sh", "-c", "sleep 60"},
+		ChildPGID: bystander.Process.Pid, ChildStartTicks: ticks - 1, Command: []string{"sh", "-c", "sleep 60; true"},
 	}
 	require.NoError(t, store.Write(rec))
-	assert.Equal(t, server.StateGone, store.State(rec))
+	assert.Equal(t, server.StateGone, store.State(t.Context(), rec))
 
 	result, err := server.Stop(t.Context(), store, rec, server.WithChildGrace(200*time.Millisecond))
 	require.NoError(t, err)
@@ -442,6 +443,25 @@ func TestStopTreatsARecordWhoseChildPidWasReusedAsStaleAndSignalsNothing(t *test
 	assert.True(t, processRunning(bystander.Process.Pid), "a process that reused the child pid was signalled")
 	_, err = store.Read(rec.Name)
 	assert.ErrorIs(t, err, server.ErrNotFound)
+}
+
+func groupPIDs(t *testing.T, pgid int) []int {
+	t.Helper()
+	out, err := exec.Command("ps", "-A", "-o", "pid=", "-o", "pgid=").Output()
+	require.NoError(t, err)
+	var pids []int
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			continue
+		}
+		pid, err1 := strconv.Atoi(fields[0])
+		group, err2 := strconv.Atoi(fields[1])
+		if err1 == nil && err2 == nil && group == pgid {
+			pids = append(pids, pid)
+		}
+	}
+	return pids
 }
 
 func readPIDFile(t *testing.T, path string) int {

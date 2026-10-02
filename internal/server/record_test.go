@@ -88,7 +88,7 @@ func TestStoreRejectsNamesThatEscapeTheDirectory(t *testing.T) {
 		assert.Error(t, store.Write(rec), name)
 		_, err := store.Read(name)
 		assert.Error(t, err, name)
-		assert.Error(t, store.Remove(name), name)
+		assert.Error(t, store.Remove(server.Record{Name: name}), name)
 	}
 }
 
@@ -134,11 +134,64 @@ func TestStoreListOfAMissingDirectoryIsEmpty(t *testing.T) {
 
 func TestStoreRemoveIsIdempotent(t *testing.T) {
 	store := server.NewStore(filepath.Join(t.TempDir(), "run"))
-	require.NoError(t, store.Write(sampleRecord("model-8009")))
-	require.NoError(t, store.Remove("model-8009"))
-	require.NoError(t, store.Remove("model-8009"))
+	rec := sampleRecord("model-8009")
+	require.NoError(t, store.Write(rec))
+	require.NoError(t, store.Remove(rec))
+	require.NoError(t, store.Remove(rec))
 	_, err := store.Read("model-8009")
 	assert.ErrorIs(t, err, server.ErrNotFound)
+}
+
+func TestStoreRemoveKeepsARecordThatAnotherStartWrote(t *testing.T) {
+	store := server.NewStore(filepath.Join(t.TempDir(), "run"))
+	old := sampleRecord("model-8009")
+	newer := sampleRecord("model-8009")
+	newer.PID, newer.StartTicks = 5151, 99
+	require.NoError(t, store.Write(newer))
+
+	require.NoError(t, store.Remove(old))
+
+	got, err := store.Read("model-8009")
+	require.NoError(t, err)
+	assert.Equal(t, newer.PID, got.PID)
+
+	sameStart := newer
+	sameStart.StartTicks = 100
+	require.NoError(t, store.Remove(sameStart))
+	_, err = store.Read("model-8009")
+	require.NoError(t, err, "a record with the same pid and another start time is another process")
+
+	require.NoError(t, store.Remove(newer))
+	_, err = store.Read("model-8009")
+	assert.ErrorIs(t, err, server.ErrNotFound)
+}
+
+func TestStoreRemoveSpecIfSameKeepsASpecThatAnotherStartWrote(t *testing.T) {
+	store := server.NewStore(filepath.Join(t.TempDir(), "run"))
+	spec := server.Spec{Name: "model-8009", Kind: server.KindModel, Argv: []string{"sleep", "60"}, Log: "/logs/model.log", Port: 8009}
+	newer := spec
+	newer.Argv = []string{"sleep", "61"}
+	_, err := store.WriteSpec(newer)
+	require.NoError(t, err)
+
+	require.NoError(t, store.RemoveSpecIfSame(spec))
+	assert.FileExists(t, store.SpecPath(spec.Name))
+
+	require.NoError(t, store.RemoveSpecIfSame(newer))
+	assert.NoFileExists(t, store.SpecPath(spec.Name))
+	require.NoError(t, store.RemoveSpecIfSame(newer))
+}
+
+func TestStoreRecordsWithoutABootIdStillLoad(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "run")
+	require.NoError(t, os.MkdirAll(dir, 0o700))
+	old := `{"name":"model-8009","kind":"model","pid":4242,"child_pid":4243,"child_pgid":4243,"port":8009,"command":["uv"],"dir":"/","started_at":"2026-09-30T10:00:00Z","start_ticks":11,"child_start_ticks":12,"log":"/l","ready_url":"http://x"}`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "model-8009.json"), []byte(old), 0o600))
+
+	got, err := server.NewStore(dir).Read("model-8009")
+	require.NoError(t, err)
+	assert.Empty(t, got.BootID)
+	assert.Equal(t, 4242, got.PID)
 }
 
 func TestTrippedFilesAreWrittenListedAndCleared(t *testing.T) {

@@ -3,6 +3,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -20,9 +21,9 @@ type groupMember struct {
 
 var errUnsafeGroup = errors.New("refusing to signal that process group")
 
-func signalTerm(pid int) error { return syscall.Kill(pid, syscall.SIGTERM) }
+func signalTerm(_ context.Context, pid int) error { return syscall.Kill(pid, syscall.SIGTERM) }
 
-func signalKill(pid int) error { return syscall.Kill(pid, syscall.SIGKILL) }
+func signalKill(_ context.Context, pid int) error { return syscall.Kill(pid, syscall.SIGKILL) }
 
 func safeGroup(pgid int) error {
 	if pgid <= 1 || pgid == syscall.Getpgrp() {
@@ -46,8 +47,8 @@ func killGroup(pgid int) error {
 }
 
 // killProcessTree kills the process group of pid when pid leads its own group, and pid alone otherwise.
-func killProcessTree(pid int) error {
-	if inspect(pid).PGID == pid && safeGroup(pid) == nil {
+func killProcessTree(ctx context.Context, pid int) error {
+	if inspect(ctx, pid).PGID == pid && safeGroup(pid) == nil {
 		return syscall.Kill(-pid, syscall.SIGKILL)
 	}
 	return syscall.Kill(pid, syscall.SIGKILL)
@@ -64,8 +65,11 @@ func isGone(err error) bool {
 
 // orphanLives reports whether the program of a supervised record still runs and can be tied to the record although
 // the supervisor fails the alive check.
-func orphanLives(rec Record) bool {
-	return orphanTied(rec, inspect(rec.ChildPID), groupTied)
+func orphanLives(ctx context.Context, rec Record) bool {
+	if otherBoot(rec) {
+		return false
+	}
+	return orphanTied(rec, inspect(ctx, rec.ChildPID), func(rec Record) bool { return groupTied(ctx, rec) })
 }
 
 // orphanTied decides from the child's process entry and the group tie whether a supervised record has a live orphan;
@@ -78,18 +82,21 @@ func orphanTied(rec Record, child procInfo, tied func(Record) bool) bool {
 }
 
 // groupTied reports whether the recorded process group still exists and has a member that belongs to the record.
-func groupTied(rec Record) bool {
+func groupTied(ctx context.Context, rec Record) bool {
 	if safeGroup(rec.ChildPGID) != nil || !groupExists(rec.ChildPGID) {
 		return false
 	}
-	return tiedToRecord(rec, groupMembers(rec.ChildPGID), runtime.GOOS == "darwin")
+	return tiedToRecord(rec, groupMembers(ctx, rec.ChildPGID), runtime.GOOS == "darwin")
 }
 
-// tiedToRecord decides from a process table whether a live member of the recorded group belongs to the record. On macOS
-// a reparented member has no usable session id, so one that started at or after the recorded child counts unless the group
-// id was reused.
+// tiedToRecord decides from a process table whether a live member of the recorded group belongs to the record. A group
+// whose leader started at another time than the recorded child is a reused group id and ties to nothing. On macOS a
+// reparented member has no usable session id, so one that started at or after the recorded child counts.
 func tiedToRecord(rec Record, table []groupMember, darwin bool) bool {
-	byStart := darwin && rec.ChildStartTicks != 0 && !leaderReused(rec, table)
+	if leaderReused(rec, table) {
+		return false
+	}
+	byStart := darwin && rec.ChildStartTicks != 0
 	for _, member := range table {
 		if member.PGID != rec.ChildPGID || member.Zombie {
 			continue
@@ -108,8 +115,11 @@ func tiedToRecord(rec Record, table []groupMember, darwin bool) bool {
 }
 
 func leaderReused(rec Record, table []groupMember) bool {
+	if rec.ChildStartTicks == 0 {
+		return false
+	}
 	for _, member := range table {
-		if member.PID == rec.ChildPGID && member.PGID == rec.ChildPGID && member.StartTicks != rec.ChildStartTicks {
+		if member.PID == rec.ChildPGID && member.PGID == rec.ChildPGID && member.StartTicks != 0 && member.StartTicks != rec.ChildStartTicks {
 			return true
 		}
 	}

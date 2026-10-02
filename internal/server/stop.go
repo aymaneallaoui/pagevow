@@ -48,18 +48,23 @@ func WithChildGrace(d time.Duration) StopOption {
 	return func(c *stopConfig) { c.childGrace = d }
 }
 
-// WithKillWait sets how long Stop waits for a process to end after SIGKILL.
-func WithKillWait(d time.Duration) StopOption {
-	return func(c *stopConfig) { c.killWait = d }
-}
-
-// Stop ends the processes of rec and removes its record; a record whose processes are all gone is removed without signalling anything.
+// Stop ends the processes of rec and removes its record while it still holds rec; a record whose processes are all gone is
+// removed without signalling anything. It holds the lock of the state directory until it returns.
 func Stop(ctx context.Context, store *Store, rec Record, opts ...StopOption) (StopResult, error) {
 	cfg := stopConfig{supervisorWait: defaultSupervisorWait, browserGrace: defaultBrowserGrace, childGrace: defaultStopGrace, killWait: defaultKillWait}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	switch store.State(rec) {
+	unlock, err := store.Lock(ctx)
+	if err != nil {
+		return Stopped, fmt.Errorf("stop %s: %w", rec.Name, err)
+	}
+	defer unlock()
+	state := store.State(ctx, rec)
+	if err := ctx.Err(); err != nil {
+		return Stopped, fmt.Errorf("stop %s: %w", rec.Name, err)
+	}
+	switch state {
 	case StateGone:
 		return WasStale, removeFiles(store, rec)
 	case StateOrphaned:
@@ -68,10 +73,9 @@ func Stop(ctx context.Context, store *Store, rec Record, opts ...StopOption) (St
 		}
 		return WasOrphaned, removeFiles(store, rec)
 	}
-	var err error
 	if rec.Kind.supervised() {
 		err = stopSupervised(ctx, store, rec, cfg)
-		if err == nil && orphanLives(rec) {
+		if err == nil && orphanLives(ctx, rec) {
 			err = stopOrphan(ctx, rec, cfg)
 		}
 	} else {
@@ -83,8 +87,10 @@ func Stop(ctx context.Context, store *Store, rec Record, opts ...StopOption) (St
 	return Stopped, removeFiles(store, rec)
 }
 
+// removeFiles removes the record and, for a supervised kind, its spec, unless a newer start has replaced the record.
 func removeFiles(store *Store, rec Record) error {
-	if err := store.Remove(rec.Name); err != nil {
+	owned, err := store.removeIfSame(rec)
+	if err != nil || !owned {
 		return err
 	}
 	if rec.Kind.supervised() {
@@ -93,11 +99,17 @@ func removeFiles(store *Store, rec Record) error {
 	return nil
 }
 
+// signalFailed reports whether a failed signal is an error: a process that no longer passes the alive check is gone, not failed.
+func signalFailed(err error, alive func() bool) bool {
+	return err != nil && !isGone(err) && alive()
+}
+
 func stopSupervised(ctx context.Context, store *Store, rec Record, cfg stopConfig) error {
-	if err := signalTerm(rec.PID); err != nil && !isGone(err) {
+	alive := func() bool { return store.Alive(ctx, rec) }
+	if err := signalTerm(ctx, rec.PID); signalFailed(err, alive) {
 		return fmt.Errorf("stop %s: signal supervisor %d: %w", rec.Name, rec.PID, err)
 	}
-	gone := func() bool { return !store.Alive(rec) }
+	gone := func() bool { return !alive() }
 	ended, err := waitFor(ctx, cfg.supervisorWait, gone)
 	if err != nil {
 		return fmt.Errorf("stop %s: %w", rec.Name, err)
@@ -105,13 +117,13 @@ func stopSupervised(ctx context.Context, store *Store, rec Record, cfg stopConfi
 	if ended {
 		return nil
 	}
-	if ChildAlive(rec) || groupTied(rec) {
+	if ChildAlive(ctx, rec) || groupTied(ctx, rec) {
 		if err := killGroup(rec.ChildPGID); err != nil && !isGone(err) {
 			return fmt.Errorf("stop %s: kill child group %d: %w", rec.Name, rec.ChildPGID, err)
 		}
 	}
-	if store.Alive(rec) {
-		if err := signalKill(rec.PID); err != nil && !isGone(err) {
+	if alive() {
+		if err := signalKill(ctx, rec.PID); signalFailed(err, alive) {
 			return fmt.Errorf("stop %s: kill supervisor %d: %w", rec.Name, rec.PID, err)
 		}
 	}
@@ -128,7 +140,7 @@ func stopSupervised(ctx context.Context, store *Store, rec Record, cfg stopConfi
 // stopOrphan ends the process group of a program whose supervisor is gone, as the supervisor would: SIGTERM, a grace
 // period, then SIGKILL. The group is signalled only while it is still tied to the record.
 func stopOrphan(ctx context.Context, rec Record, cfg stopConfig) error {
-	gone := func() bool { return !orphanLives(rec) }
+	gone := func() bool { return !orphanLives(ctx, rec) }
 	if err := terminateGroup(rec.ChildPGID); err != nil && !isGone(err) {
 		return fmt.Errorf("stop %s: signal child group %d: %w", rec.Name, rec.ChildPGID, err)
 	}
@@ -139,7 +151,7 @@ func stopOrphan(ctx context.Context, rec Record, cfg stopConfig) error {
 	if ended {
 		return nil
 	}
-	if orphanLives(rec) {
+	if orphanLives(ctx, rec) {
 		if err := killGroup(rec.ChildPGID); err != nil && !isGone(err) {
 			return fmt.Errorf("stop %s: kill child group %d: %w", rec.Name, rec.ChildPGID, err)
 		}
@@ -155,10 +167,11 @@ func stopOrphan(ctx context.Context, rec Record, cfg stopConfig) error {
 }
 
 func stopBrowser(ctx context.Context, store *Store, rec Record, cfg stopConfig) error {
-	if err := signalTerm(rec.PID); err != nil && !isGone(err) {
+	alive := func() bool { return store.Alive(ctx, rec) }
+	if err := signalTerm(ctx, rec.PID); signalFailed(err, alive) {
 		return fmt.Errorf("stop %s: signal pid %d: %w", rec.Name, rec.PID, err)
 	}
-	gone := func() bool { return !store.Alive(rec) }
+	gone := func() bool { return !alive() }
 	ended, err := waitFor(ctx, cfg.browserGrace, gone)
 	if err != nil {
 		return fmt.Errorf("stop %s: %w", rec.Name, err)
@@ -166,8 +179,8 @@ func stopBrowser(ctx context.Context, store *Store, rec Record, cfg stopConfig) 
 	if ended {
 		return nil
 	}
-	if store.Alive(rec) {
-		if err := killProcessTree(rec.PID); err != nil && !isGone(err) {
+	if alive() {
+		if err := killProcessTree(ctx, rec.PID); signalFailed(err, alive) {
 			return fmt.Errorf("stop %s: kill pid %d: %w", rec.Name, rec.PID, err)
 		}
 	}

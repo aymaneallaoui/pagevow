@@ -16,7 +16,7 @@ const (
 	taskkillTimeout                = 5 * time.Second
 )
 
-func inspect(pid int) procInfo {
+func inspect(_ context.Context, pid int) procInfo {
 	handle, err := syscall.OpenProcess(processQueryLimitedInformation, false, uint32(pid)) //nolint:gosec // process ids fit in 32 bits
 	if err != nil {
 		return procInfo{}
@@ -35,25 +35,25 @@ func inspect(pid int) procInfo {
 	return info
 }
 
-func signalTerm(pid int) error { return killTree(pid) }
+func signalTerm(ctx context.Context, pid int) error { return killTree(ctx, pid) }
 
-func signalKill(pid int) error { return killTree(pid) }
+func signalKill(ctx context.Context, pid int) error { return killTree(ctx, pid) }
 
 func terminateGroup(int) error { return ErrUnsupported }
 
 func killGroup(int) error { return ErrUnsupported }
 
 // orphanLives is false on Windows, where pagevow runs no supervisor.
-func orphanLives(Record) bool { return false }
+func orphanLives(context.Context, Record) bool { return false }
 
-func killProcessTree(pid int) error { return killTree(pid) }
+func killProcessTree(ctx context.Context, pid int) error { return killTree(ctx, pid) }
 
 func isGone(error) bool { return false }
 
-func groupTied(Record) bool { return false }
+func groupTied(context.Context, Record) bool { return false }
 
-func killTree(pid int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), taskkillTimeout)
+func killTree(ctx context.Context, pid int) error {
+	ctx, cancel := context.WithTimeout(ctx, taskkillTimeout)
 	defer cancel()
 	//nolint:gosec // only a pid recorded by this package
 	return exec.CommandContext(ctx, "taskkill", "/T", "/F", "/PID", strconv.Itoa(pid)).Run()

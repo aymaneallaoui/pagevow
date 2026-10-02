@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 )
 
-const (
-	defaultStopGrace     = 10 * time.Second
-	defaultGuardInterval = time.Second
-)
+const defaultStopGrace = 10 * time.Second
 
 // Guard sets the limits the supervisor enforces on the GPU.
 type Guard struct {
@@ -104,6 +102,21 @@ func (s *Store) RemoveSpec(name string) error {
 	return nil
 }
 
+// RemoveSpecIfSame deletes the spec file of spec only while it still holds spec, so a supervisor never removes the file of a newer start.
+func (s *Store) RemoveSpecIfSame(spec Spec) error {
+	current, err := ReadSpec(s.SpecPath(spec.Name))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("remove spec %s: %w", spec.Name, err)
+	}
+	if !reflect.DeepEqual(current, spec) {
+		return nil
+	}
+	return s.RemoveSpec(spec.Name)
+}
+
 // ReadSpec loads and validates the spec file at path.
 func ReadSpec(path string) (Spec, error) {
 	data, err := os.ReadFile(path) //nolint:gosec // the path is given on the command line of the supervisor
@@ -118,13 +131,6 @@ func ReadSpec(path string) (Spec, error) {
 		return Spec{}, err
 	}
 	return spec, nil
-}
-
-func (g Guard) interval() time.Duration {
-	if g.IntervalMS <= 0 {
-		return defaultGuardInterval
-	}
-	return time.Duration(g.IntervalMS) * time.Millisecond
 }
 
 // breach returns why sample breaks the limits of g, or an empty string; a temperature of 0 is no reading.
@@ -156,5 +162,3 @@ func noReaderMessage(goos, name string) string {
 	}
 	return fmt.Sprintf("guard: nvidia-smi not found; the GPU watch for %s is off", name)
 }
-
-const unifiedGuardNote = "guard: free memory guard is off on unified memory until measured"

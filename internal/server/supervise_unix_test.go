@@ -89,7 +89,7 @@ func TestSuperviseWritesARecordForTheChildAndStopsItOnCancel(t *testing.T) {
 	rec := waitForRecord(t, s.store, s.spec.Name)
 	assert.NotZero(t, rec.ChildPID)
 	assert.Equal(t, rec.ChildPID, rec.ChildPGID)
-	assert.True(t, server.ChildAlive(rec))
+	assert.True(t, server.ChildAlive(t.Context(), rec))
 
 	s.cancel()
 	result := s.wait(t)
@@ -206,7 +206,7 @@ func TestGuardLeavesAHealthyChildAlone(t *testing.T) {
 	s := runSupervise(t, guardSpec(t, 8213), gpu)
 	rec := waitForRecord(t, s.store, s.spec.Name)
 	require.Eventually(t, func() bool { return gpu.sampled() >= 5 }, 5*time.Second, 10*time.Millisecond)
-	assert.True(t, server.ChildAlive(rec))
+	assert.True(t, server.ChildAlive(t.Context(), rec))
 
 	s.cancel()
 	assert.Zero(t, s.wait(t).code)
@@ -220,7 +220,7 @@ func TestGuardTreatsATemperatureOfZeroAsNoReading(t *testing.T) {
 	s := runSupervise(t, guardSpec(t, 8220), gpu)
 	rec := waitForRecord(t, s.store, s.spec.Name)
 	require.Eventually(t, func() bool { return gpu.sampled() >= 5 }, 5*time.Second, 10*time.Millisecond)
-	assert.True(t, server.ChildAlive(rec))
+	assert.True(t, server.ChildAlive(t.Context(), rec))
 
 	s.cancel()
 	assert.Zero(t, s.wait(t).code)
@@ -235,7 +235,7 @@ func TestGuardLeavesAChildAloneOnLowUnifiedMemoryAndSaysSoOnce(t *testing.T) {
 	rec := waitForRecord(t, s.store, s.spec.Name)
 	require.Eventually(t, func() bool { return gpu.sampled() >= 1 }, 5*time.Second, 10*time.Millisecond)
 	assert.Never(t, func() bool { return gpu.sampled() > 1 }, 300*time.Millisecond, 10*time.Millisecond)
-	assert.True(t, server.ChildAlive(rec))
+	assert.True(t, server.ChildAlive(t.Context(), rec))
 
 	s.cancel()
 	assert.Zero(t, s.wait(t).code)
@@ -284,7 +284,7 @@ func TestGuardEndsTheWatchAfterFiveFailedSamplesAndLeavesTheChildRunning(t *test
 	require.NoError(t, err)
 	assert.Contains(t, tail, "guard: the GPU watch for model-8215 ended after 5 failed samples in a row (no answer); the process keeps running")
 	assert.Equal(t, 5, gpu.sampled())
-	assert.True(t, server.ChildAlive(rec))
+	assert.True(t, server.ChildAlive(t.Context(), rec))
 
 	s.cancel()
 	assert.Zero(t, s.wait(t).code)
@@ -300,7 +300,7 @@ func TestGuardWithoutNvidiaSmiEndsTheWatchWithOneLine(t *testing.T) {
 		return err == nil && tail != ""
 	}, 5*time.Second, 10*time.Millisecond)
 	assert.Equal(t, 1, gpu.sampled())
-	assert.True(t, server.ChildAlive(rec))
+	assert.True(t, server.ChildAlive(t.Context(), rec))
 	s.cancel()
 	s.wait(t)
 }

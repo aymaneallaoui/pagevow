@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"slices"
@@ -38,12 +39,12 @@ func (p procInfo) hasArg(arg string) bool {
 	return strings.Contains(p.CmdText, arg)
 }
 
-// Alive reports whether rec still names the process pagevow started: the pid exists, its start time is the recorded one and its command line fits the kind.
-func (s *Store) Alive(rec Record) bool {
-	if !rec.Kind.valid() || !usablePID(rec.PID) {
+// Alive reports whether rec still names the process pagevow started: it was written in this boot, the pid exists, its start time is the recorded one and its command line fits the kind.
+func (s *Store) Alive(ctx context.Context, rec Record) bool {
+	if !rec.Kind.valid() || !usablePID(rec.PID) || otherBoot(rec) {
 		return false
 	}
-	info := inspect(rec.PID)
+	info := inspect(ctx, rec.PID)
 	if !info.running() {
 		return false
 	}
@@ -79,22 +80,22 @@ const (
 )
 
 // State reports whether rec is running, orphaned or gone; only a record that is gone may be removed without a signal.
-func (s *Store) State(rec Record) State {
+func (s *Store) State(ctx context.Context, rec Record) State {
 	switch {
-	case s.Alive(rec):
+	case s.Alive(ctx, rec):
 		return StateRunning
-	case orphanLives(rec):
+	case orphanLives(ctx, rec):
 		return StateOrphaned
 	}
 	return StateGone
 }
 
 // ChildAlive reports whether the managed program of a supervised record is still the process that was started.
-func ChildAlive(rec Record) bool {
-	if !rec.Kind.supervised() || !usablePID(rec.ChildPID) {
+func ChildAlive(ctx context.Context, rec Record) bool {
+	if !rec.Kind.supervised() || !usablePID(rec.ChildPID) || otherBoot(rec) {
 		return false
 	}
-	return childMatches(rec, inspect(rec.ChildPID))
+	return childMatches(rec, inspect(ctx, rec.ChildPID))
 }
 
 func childMatches(rec Record, info procInfo) bool {
@@ -115,12 +116,21 @@ func childMatches(rec Record, info procInfo) bool {
 }
 
 // StartTicks returns the start time of pid in the unit the record stores; it is 0 where the system has none.
-func StartTicks(pid int) (uint64, error) {
-	info := inspect(pid)
+func StartTicks(ctx context.Context, pid int) (uint64, error) {
+	info := inspect(ctx, pid)
 	if !info.running() {
 		return 0, fmt.Errorf("process %d is not running", pid)
 	}
 	return info.StartTicks, nil
+}
+
+// otherBoot reports whether rec was written before the machine last started, when its pids and start times mean nothing.
+func otherBoot(rec Record) bool {
+	return bootChanged(rec.BootID, BootID())
+}
+
+func bootChanged(recorded, current string) bool {
+	return recorded != "" && current != "" && recorded != current
 }
 
 func usablePID(pid int) bool {

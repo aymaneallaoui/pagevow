@@ -2,10 +2,12 @@ package model_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -49,10 +51,11 @@ func TestInstallCopiesARunDirectory(t *testing.T) {
 	put(t, e.source, ".gitattributes", "*.pt filter=lfs")
 	put(t, e.source, ".cache/blob", "hidden directory")
 	put(t, e.source, ".pagevow-model.json", `{"name": "stale"}`)
-	skipLink := runtime.GOOS == "windows"
-	if !skipLink {
-		require.NoError(t, os.Symlink("/etc/hostname", filepath.Join(e.source, "link.txt")))
+	withLinks := runtime.GOOS != "windows"
+	if withLinks {
+		require.NoError(t, os.Symlink("tokenizer.json", filepath.Join(e.source, "alias.json")))
 		require.NoError(t, os.Symlink(".", filepath.Join(e.source, "loop")))
+		require.NoError(t, os.Symlink("missing", filepath.Join(e.source, "dangling")))
 	}
 
 	got, err := e.install(e.options())
@@ -66,19 +69,29 @@ func TestInstallCopiesARunDirectory(t *testing.T) {
 	assert.Equal(t, baseName, got.BaseModel)
 	assert.Equal(t, fixedNow, got.InstalledAt)
 	assert.False(t, got.AlreadyInstalled)
-	assert.Equal(t, []model.FileRecord{
-		{Name: "adapter_config.json", Size: int64(len(adapterConfig(baseName))), SHA256: sum(adapterConfig(baseName))},
-		{Name: "adapter_model.safetensors", Size: int64(len("weights of " + baseName)), SHA256: sum("weights of " + baseName)},
-		{Name: "head.pt", Size: int64(len("head of " + baseName)), SHA256: sum("head of " + baseName)},
-		{Name: "sub/notes.txt", Size: 5, SHA256: sum("notes")},
-		{Name: "tokenizer.json", Size: 2, SHA256: sum("{}")},
-	}, got.Files)
+	want := []model.FileRecord{
+		{Name: ".gitattributes", Size: 15, SHA256: sum("*.pt filter=lfs"), ModTime: mtime(t, e.source, ".gitattributes")},
+		{Name: "adapter_config.json", Size: int64(len(adapterConfig(baseName))), SHA256: sum(adapterConfig(baseName)), ModTime: mtime(t, e.source, "adapter_config.json")},
+		{Name: "adapter_model.safetensors", Size: int64(len("weights of " + baseName)), SHA256: sum("weights of " + baseName), ModTime: mtime(t, e.source, "adapter_model.safetensors")},
+		{Name: "head.pt", Size: int64(len("head of " + baseName)), SHA256: sum("head of " + baseName), ModTime: mtime(t, e.source, "head.pt")},
+		{Name: "sub/notes.txt", Size: 5, SHA256: sum("notes"), ModTime: mtime(t, e.source, "sub/notes.txt")},
+		{Name: "tokenizer.json", Size: 2, SHA256: sum("{}"), ModTime: mtime(t, e.source, "tokenizer.json")},
+	}
+	if withLinks {
+		alias := model.FileRecord{Name: "alias.json", Size: 2, SHA256: sum("{}"), ModTime: mtime(t, e.source, "tokenizer.json")}
+		want = append(want[:3], append([]model.FileRecord{alias}, want[3:]...)...)
+		assert.Equal(t, "{}", read(t, dir, "alias.json"), "a link to a file inside the source is copied as a file")
+		info, err := os.Lstat(filepath.Join(dir, "alias.json"))
+		require.NoError(t, err)
+		assert.True(t, info.Mode().IsRegular())
+	}
+	assert.Equal(t, want, got.Files)
 	assert.Equal(t, "weights of "+baseName, read(t, dir, "adapter_model.safetensors"))
 	assert.Equal(t, "notes", read(t, dir, "sub/notes.txt"))
-	assert.NoFileExists(t, filepath.Join(dir, ".gitattributes"))
+	assert.Equal(t, "*.pt filter=lfs", read(t, dir, ".gitattributes"), "a dotfile is kept")
 	assert.NoDirExists(t, filepath.Join(dir, ".cache"))
-	assert.NoFileExists(t, filepath.Join(dir, "link.txt"))
 	assert.NoDirExists(t, filepath.Join(dir, "loop"))
+	assert.NoFileExists(t, filepath.Join(dir, "dangling"))
 	assert.ElementsMatch(t, []string{"run"}, entries(t, e.runs))
 
 	record, err := model.ReadRecord(dir)
@@ -88,6 +101,55 @@ func TestInstallCopiesARunDirectory(t *testing.T) {
 	base, err := model.Validate(dir)
 	require.NoError(t, err)
 	assert.Equal(t, baseName, base)
+}
+
+func TestInstallRefusesToCopyALinkOutOfTheSource(t *testing.T) {
+	skipWithoutSymlinks(t)
+	outside := t.TempDir()
+	put(t, outside, "blob", "weights from the cache")
+	for _, name := range []string{"adapter_model.safetensors", "extra.bin"} {
+		t.Run(name, func(t *testing.T) {
+			e := newPathEnv(t)
+			remove(t, e.source, name)
+			require.NoError(t, os.Symlink(filepath.Join(outside, "blob"), filepath.Join(e.source, name)))
+
+			_, err := e.install(e.options())
+
+			require.ErrorIs(t, err, model.ErrInvalid)
+			assert.Contains(t, err.Error(), name+" is a symbolic link out of the source directory; pass --link, or download with --local-dir")
+			assert.NoDirExists(t, e.runs, "nothing is staged")
+		})
+	}
+}
+
+func TestInstallCopiesARequiredFileThatLinksInsideTheSource(t *testing.T) {
+	skipWithoutSymlinks(t)
+	e := newPathEnv(t)
+	put(t, e.source, "blobs/head", "head in a blob")
+	remove(t, e.source, "head.pt")
+	require.NoError(t, os.Symlink(filepath.Join("blobs", "head"), filepath.Join(e.source, "head.pt")))
+
+	_, err := e.install(e.options())
+
+	require.NoError(t, err)
+	assert.Equal(t, "head in a blob", read(t, e.target("run"), "head.pt"))
+}
+
+func TestInstallLinksASourceWhoseFilesLinkOutside(t *testing.T) {
+	skipWithoutSymlinks(t)
+	e := newPathEnv(t)
+	blobs := t.TempDir()
+	put(t, blobs, "weights", "weights in the cache")
+	remove(t, e.source, "adapter_model.safetensors")
+	require.NoError(t, os.Symlink(filepath.Join(blobs, "weights"), filepath.Join(e.source, "adapter_model.safetensors")))
+	opts := e.options()
+	opts.Link = true
+
+	got, err := e.install(opts)
+
+	require.NoError(t, err)
+	assert.Equal(t, "weights in the cache", read(t, e.target("run"), "adapter_model.safetensors"))
+	assert.Contains(t, got.Files, model.FileRecord{Name: "adapter_model.safetensors", Size: int64(len("weights in the cache"))})
 }
 
 func TestInstallKeepsTheModelPrivate(t *testing.T) {
@@ -132,6 +194,11 @@ func TestInstallRejectsBadNames(t *testing.T) {
 		{"leading dash", "-run"},
 		{"too long", strings.Repeat("a", 200)},
 		{"control character", "a\x1bb"},
+		{"device", "CON"},
+		{"device in lower case", "nul"},
+		{"device with an extension", "aux.txt"},
+		{"serial port", "com1"},
+		{"printer port with an extension", "LPT9.run"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -301,18 +368,175 @@ func TestInstallRefusesASourceInsideTheDirectoryItWouldReplace(t *testing.T) {
 	e := newPathEnv(t)
 	_, err := e.install(e.options())
 	require.NoError(t, err)
-	inner := e.target("run") + "/inner"
+	inner := filepath.Join(e.target("run"), "inner")
 	writeRunFiles(t, inner, "inner")
 	e.source = inner
 	opts := e.options()
 	opts.Name = "run"
 	opts.Force = true
-	opts.Link = true
 
 	_, err = e.install(opts)
 
 	require.ErrorIs(t, err, model.ErrExists)
 	assert.FileExists(t, filepath.Join(inner, "head.pt"))
+}
+
+func TestInstallRefusesToLinkADirectoryInsideTheRunsDirectory(t *testing.T) {
+	skipWithoutSymlinks(t)
+	e := newPathEnv(t)
+	_, err := e.install(e.options())
+	require.NoError(t, err)
+	installed := e.target("run")
+	for _, name := range []string{"run", "alias"} {
+		t.Run(name, func(t *testing.T) {
+			e.source = installed
+			opts := e.options()
+			opts.Name = name
+			opts.Link = true
+			opts.Force = true
+
+			_, err := e.install(opts)
+
+			require.ErrorIs(t, err, model.ErrInvalidSource)
+			assert.Contains(t, err.Error(), "lies inside the runs directory")
+			info, err := os.Lstat(installed)
+			require.NoError(t, err)
+			assert.True(t, info.IsDir(), "the installed copy is left alone")
+			record, err := model.ReadRecord(installed)
+			require.NoError(t, err)
+			assert.NotEmpty(t, record.Files[0].SHA256, "its record is not replaced by a link record")
+		})
+	}
+}
+
+func TestInstallRefusesToCopyALinkedModelOntoItself(t *testing.T) {
+	skipWithoutSymlinks(t)
+	e := newPathEnv(t)
+	opts := e.options()
+	opts.Link = true
+	_, err := e.install(opts)
+	require.NoError(t, err)
+	original := e.source
+	e.source = e.target("run")
+	opts = e.options()
+	opts.Force = true
+
+	_, err = e.install(opts)
+
+	require.ErrorIs(t, err, model.ErrExists)
+	assert.Contains(t, err.Error(), "is, or sits inside")
+	got, err := os.Readlink(e.target("run"))
+	require.NoError(t, err)
+	assert.Equal(t, realPath(t, original), got, "the link still points at its source")
+}
+
+func TestInstallFromAChangedSourceNeedsForce(t *testing.T) {
+	tests := []struct {
+		name   string
+		change func(t *testing.T, source string)
+	}{
+		{"new content of the same size", func(t *testing.T, source string) {
+			put(t, source, "tokenizer.json", "[]")
+			later := time.Now().Add(time.Hour)
+			require.NoError(t, os.Chtimes(filepath.Join(source, "tokenizer.json"), later, later))
+		}},
+		{"a larger file", func(t *testing.T, source string) { put(t, source, "head.pt", "a retrained head") }},
+		{"a new file", func(t *testing.T, source string) { put(t, source, "checkpoint-2/head.pt", "x") }},
+		{"a removed file", func(t *testing.T, source string) { remove(t, source, "sub") }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newPathEnv(t)
+			_, err := e.install(e.options())
+			require.NoError(t, err)
+			tt.change(t, e.source)
+
+			_, err = e.install(e.options())
+
+			require.ErrorIs(t, err, model.ErrExists)
+			assert.Contains(t, err.Error(), "the source "+e.source+" changed since it was installed")
+			assert.Contains(t, err.Error(), "--force")
+			assert.Equal(t, "{}", read(t, e.target("run"), "tokenizer.json"), "the installed copy is kept")
+
+			opts := e.options()
+			opts.Force = true
+			got, err := e.install(opts)
+			require.NoError(t, err)
+			assert.False(t, got.AlreadyInstalled)
+			again, err := e.install(e.options())
+			require.NoError(t, err)
+			assert.True(t, again.AlreadyInstalled, "an unchanged source is installed")
+		})
+	}
+}
+
+func TestInstallKeepsLinkRecordsBesideTheLinks(t *testing.T) {
+	skipWithoutSymlinks(t)
+	e := newPathEnv(t)
+	opts := e.options()
+	opts.Link = true
+	for _, name := range []string{"a", "b"} {
+		opts.Name = name
+		_, err := e.install(opts)
+		require.NoError(t, err)
+	}
+
+	assert.NoFileExists(t, filepath.Join(e.source, ".pagevow-model.json"), "nothing is written into the source")
+	for _, name := range []string{"a", "b"} {
+		assert.FileExists(t, filepath.Join(e.runs, ".pagevow-link-"+name+".json"))
+		record, err := model.ReadRecord(e.target(name))
+		require.NoError(t, err)
+		assert.Equal(t, name, record.Name, "each link has its own record")
+		assert.True(t, record.Link)
+	}
+
+	copyOpts := e.options()
+	copyOpts.Name = "a"
+	copyOpts.Force = true
+	_, err := e.install(copyOpts)
+	require.NoError(t, err)
+	assert.NoFileExists(t, filepath.Join(e.runs, ".pagevow-link-a.json"), "replacing the link removes its record")
+	assert.FileExists(t, filepath.Join(e.runs, ".pagevow-link-b.json"))
+	record, err := model.ReadRecord(e.target("a"))
+	require.NoError(t, err)
+	assert.False(t, record.Link)
+}
+
+func TestInstallTreatsAnIncompleteRecordAsForeign(t *testing.T) {
+	complete := map[string]any{
+		"name": "run", "source": "/somewhere", "base_model": baseName, "installed_at": fixedNow,
+		"files": []map[string]any{{"name": "head.pt", "size": 1}},
+	}
+	tests := map[string]string{"empty": "{}"}
+	for _, field := range []string{"name", "source", "base_model", "installed_at", "files"} {
+		partial := map[string]any{}
+		for key, value := range complete {
+			if key != field {
+				partial[key] = value
+			}
+		}
+		data, err := json.Marshal(partial)
+		require.NoError(t, err)
+		tests["without "+field] = string(data)
+	}
+	for name, record := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := newPathEnv(t)
+			trained := e.target("run")
+			writeRunFiles(t, trained, "trained by hand")
+			put(t, trained, ".pagevow-model.json", record)
+			opts := e.options()
+			opts.Force = true
+
+			_, err := e.install(opts)
+
+			require.ErrorIs(t, err, model.ErrExists)
+			assert.Contains(t, err.Error(), "not installed by pagevow")
+			assert.Equal(t, adapterConfig("trained by hand"), read(t, trained, "adapter_config.json"))
+			_, err = model.ReadRecord(trained)
+			require.ErrorIs(t, err, model.ErrBadRecord)
+		})
+	}
 }
 
 func TestInstallAsksTheGuardOnlyWhenItReplacesAnExistingModel(t *testing.T) {
@@ -387,15 +611,18 @@ func TestInstallLinksTheSourceDirectory(t *testing.T) {
 	require.NoError(t, err)
 	target, err := os.Readlink(e.target("run"))
 	require.NoError(t, err)
-	assert.Equal(t, e.source, target)
+	assert.Equal(t, realPath(t, e.source), target)
+	assert.Equal(t, realPath(t, e.source), got.Source)
 	assert.Equal(t, e.target("run"), got.Dir)
 	assert.Equal(t, baseName, got.BaseModel)
+	assert.True(t, got.Link)
 	require.Len(t, got.Files, 5)
 	assert.Equal(t, model.FileRecord{Name: "head.pt", Size: int64(len("head of " + baseName))}, got.Files[2], "a linked file is listed, not hashed")
-	record, err := model.ReadRecord(e.source)
+	record, err := model.ReadRecord(e.target("run"))
 	require.NoError(t, err)
-	assert.Equal(t, got.Source, record.Source)
-	assert.Equal(t, []string{"run"}, entries(t, e.runs))
+	assert.Equal(t, got, record)
+	assert.NoFileExists(t, filepath.Join(e.source, ".pagevow-model.json"))
+	assert.Equal(t, []string{".pagevow-link-run.json", "run"}, entries(t, e.runs))
 
 	again, err := e.install(opts)
 	require.NoError(t, err)
@@ -413,7 +640,6 @@ func TestInstallLinkRejectsAnInvalidSourceAndWritesNoRecord(t *testing.T) {
 
 	require.ErrorIs(t, err, model.ErrInvalid)
 	assert.NoDirExists(t, e.runs)
-	assert.NoFileExists(t, filepath.Join(e.source, ".pagevow-model.json"))
 }
 
 func TestInstallForceReplacesALinkWithoutTouchingItsSource(t *testing.T) {
@@ -432,7 +658,7 @@ func TestInstallForceReplacesALinkWithoutTouchingItsSource(t *testing.T) {
 	require.NoError(t, err)
 	target, err := os.Readlink(e.target("run"))
 	require.NoError(t, err)
-	assert.Equal(t, e.source, target)
+	assert.Equal(t, realPath(t, e.source), target)
 	assert.Equal(t, "weights of "+baseName, read(t, first, "adapter_model.safetensors"), "the old source is intact")
 
 	copyOpts := e.options()
@@ -573,7 +799,9 @@ func TestInstallSweepsOldLeftoversAndKeepsFreshOnes(t *testing.T) {
 	e := newPathEnv(t)
 	require.NoError(t, os.MkdirAll(e.runs, 0o750))
 	old := time.Now().Add(-48 * time.Hour)
-	for _, name := range []string{".staging-run-old", ".old-run-old"} {
+	staleAside := ".old-run-" + strconv.FormatInt(fixedNow.Add(-48*time.Hour).Unix(), 10) + "-ABC"
+	freshAside := ".old-run-" + strconv.FormatInt(fixedNow.Add(-time.Hour).Unix(), 10) + "-ABC"
+	for _, name := range []string{".staging-run-old", staleAside, freshAside, ".old-run-unnamed"} {
 		put(t, e.runs, name+"/partial.bin", "x")
 		require.NoError(t, os.Chtimes(filepath.Join(e.runs, name), old, old))
 	}
@@ -584,7 +812,8 @@ func TestInstallSweepsOldLeftoversAndKeepsFreshOnes(t *testing.T) {
 	_, err := e.install(e.options())
 
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{".staging-run-fresh", "other-model", "run"}, entries(t, e.runs))
+	assert.ElementsMatch(t, []string{".staging-run-fresh", freshAside, ".old-run-unnamed", "other-model", "run"}, entries(t, e.runs),
+		"an aside entry goes by the time in its name, never by its modification time")
 }
 
 func TestInstallCreatesTheRunsDirectory(t *testing.T) {
@@ -611,4 +840,42 @@ func TestReadRecordRejectsACorruptRecord(t *testing.T) {
 
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, os.ErrNotExist)
+}
+
+func TestInstallSweepsTheRecordOfALinkThatWasRemoved(t *testing.T) {
+	skipWithoutSymlinks(t)
+	e := newPathEnv(t)
+	opts := e.options()
+	opts.Link = true
+	for _, name := range []string{"gone", "kept"} {
+		opts.Name = name
+		_, err := e.install(opts)
+		require.NoError(t, err)
+	}
+	require.NoError(t, os.Remove(e.target("gone")))
+
+	opts.Name = "other"
+	_, err := e.install(opts)
+
+	require.NoError(t, err)
+	assert.NoFileExists(t, filepath.Join(e.runs, ".pagevow-link-gone.json"))
+	assert.FileExists(t, filepath.Join(e.runs, ".pagevow-link-kept.json"))
+}
+
+func TestReadRecordRefusesALinkRecordForALinkThatPointsElsewhere(t *testing.T) {
+	skipWithoutSymlinks(t)
+	e := newPathEnv(t)
+	opts := e.options()
+	opts.Link = true
+	_, err := e.install(opts)
+	require.NoError(t, err)
+	require.NoError(t, os.Remove(e.target("run")))
+	require.NoError(t, os.Symlink(t.TempDir(), e.target("run")))
+
+	_, err = model.ReadRecord(e.target("run"))
+	require.ErrorIs(t, err, model.ErrBadRecord)
+
+	opts.Force = true
+	_, err = e.install(opts)
+	require.ErrorIs(t, err, model.ErrExists, "a link that pagevow did not make is never replaced")
 }

@@ -32,12 +32,15 @@ make install    # installs into GOBIN
 
 ```
 pagevow install --model ~/kev/runs/jev-4b            # copies a run directory into <kev_dir>/runs/jev-4b
-pagevow install --model /path/to/run --name mine --link   # links it instead of copying
-pagevow install --model owner/name@main               # downloads a Hugging Face repository, LFS files checked by SHA-256
+pagevow install --model /path/to/run --name mine --link   # links it instead of copying; the record stays in <kev_dir>/runs
+pagevow install --model owner/name@main               # downloads a Hugging Face repository, every file checked by hash
 ```
 
 A run directory holds the LoRA adapter, the pointer head and the tokenizer; the base model named in `adapter_config.json`
-is fetched by kev on first use. For a private repository set `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN`, or store the token
+is fetched by kev on first use. A copy follows a symbolic link only to a file inside the source directory, so a Hugging
+Face cache snapshot needs `--link`, or a download with `--local-dir`. Installing the same unchanged directory again does
+nothing; once the directory changed, `--force` copies it again. A download has no overall time limit and fails only when
+no data arrives for 2 minutes. With `--browser` and `--model`, the model is installed first. For a private repository set `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN`, or store the token
 with `pagevow keys set huggingface`. The token is never printed. After the install, `pagevow use local --model <name>
 --mode nf4` (or `--mode bf16` on macOS) selects it. pagevow ships no model of its own.
 

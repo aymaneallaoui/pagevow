@@ -3,6 +3,7 @@ package model_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,9 +26,39 @@ func TestParseSourceReadsDirectories(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, model.Source{Path: run}, got)
 
-	got, err = model.ParseSource("./jev-4b/../jev-4b")
+	got, err = model.ParseSource("./jev-4b")
 	require.NoError(t, err)
 	assert.Equal(t, model.Source{Path: run}, got)
+}
+
+func TestParseSourceReadsARepositoryShapedDirectoryAsAPath(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "runs", "jev-4b"), 0o750))
+	t.Chdir(dir)
+
+	got, err := model.ParseSource("runs/jev-4b")
+	require.NoError(t, err)
+	assert.Equal(t, model.Source{Path: filepath.Join(dir, "runs", "jev-4b")}, got)
+
+	got, err = model.ParseSource("runs/jev-0.8b")
+	require.NoError(t, err)
+	assert.Equal(t, model.Source{Repo: "runs/jev-0.8b"}, got, "a repository-shaped name that is no directory is a repository")
+}
+
+func TestParseSourceAcceptsALongExistingPath(t *testing.T) {
+	dir := t.TempDir()
+	long := dir
+	for len(long) < 700 {
+		long = filepath.Join(long, strings.Repeat("d", 60))
+	}
+	if err := os.MkdirAll(long, 0o750); err != nil {
+		t.Skipf("the file system refuses a long path: %v", err)
+	}
+
+	got, err := model.ParseSource(long)
+
+	require.NoError(t, err)
+	assert.Equal(t, long, got.Path)
 }
 
 func TestParseSourcePrefersAnExistingDirectoryOverARepository(t *testing.T) {
@@ -80,7 +111,7 @@ func TestParseSourceRejectsWhatIsNeitherADirectoryNorARepository(t *testing.T) {
 		{"leading slash", "/a"},
 		{"absolute path that does not exist", filepath.Join(dir, "missing", "run")},
 		{"empty middle", "a//b"},
-		{"owner dot dot", "../x"},
+		{"leading dot dot to nothing", "../x"},
 		{"name dot dot", "owner/.."},
 		{"dots inside", "own..er/name"},
 		{"hidden owner", ".x/name"},
@@ -92,7 +123,14 @@ func TestParseSourceRejectsWhatIsNeitherADirectoryNorARepository(t *testing.T) {
 		{"revision with a double slash", "a/b@refs//pr"},
 		{"revision with a dash first", "a/b@-x"},
 		{"a file", file},
-		{"too long", "a/" + string(make([]byte, 600))},
+		{"null bytes", "a/" + string(make([]byte, 600))},
+		{"too long for a repository", "a/" + strings.Repeat("b", 600)},
+		{"dot dot after a directory", "./x/../y"},
+		{"dot dot with backslashes", `owner\..`},
+		{"dot dot in the middle", "x/../y"},
+		{"windows drive", `C:\runs\missing`},
+		{"home", "~/runs/missing"},
+		{"backslash first", `\runs\missing`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,4 +138,51 @@ func TestParseSourceRejectsWhatIsNeitherADirectoryNorARepository(t *testing.T) {
 			require.ErrorIs(t, err, model.ErrInvalidSource, tt.arg)
 		})
 	}
+}
+
+func TestParseSourceRejectsDotDotAfterAnotherElementEvenWhenItWouldResolve(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "owner"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "run"), 0o750))
+	t.Chdir(filepath.Join(dir, "owner"))
+	sep := string(filepath.Separator)
+
+	for _, arg := range []string{"owner/..", "x/../y", "./a/../b", `owner\..`, dir + sep + "owner" + sep + ".." + sep + "run"} {
+		_, err := model.ParseSource(arg)
+
+		require.ErrorIs(t, err, model.ErrInvalidSource, arg)
+		assert.Contains(t, err.Error(), "has a .. after another element", arg)
+	}
+}
+
+func TestParseSourceAcceptsLeadingDotDot(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "sibling"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "kev", "runs", "x"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "work", "deep"), 0o750))
+	t.Chdir(filepath.Join(dir, "work", "deep"))
+
+	tests := map[string]string{
+		"../../sibling":    filepath.Join(dir, "sibling"),
+		"../../kev/runs/x": filepath.Join(dir, "kev", "runs", "x"),
+		"..":               filepath.Join(dir, "work"),
+		`..\..\sibling`:    filepath.Join(dir, "sibling"),
+	}
+	for arg, want := range tests {
+		if strings.Contains(arg, `\`) && filepath.Separator != '\\' {
+			continue
+		}
+		got, err := model.ParseSource(arg)
+
+		require.NoError(t, err, arg)
+		assert.Equal(t, model.Source{Path: want}, got, arg)
+	}
+
+	t.Chdir(filepath.Join(dir, "work"))
+	got, err := model.ParseSource("../sibling")
+	require.NoError(t, err)
+	assert.Equal(t, model.Source{Path: filepath.Join(dir, "sibling")}, got)
+
+	_, err = model.ParseSource("../missing")
+	require.ErrorIs(t, err, model.ErrInvalidSource, "a leading .. still needs an existing directory")
 }

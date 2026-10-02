@@ -357,7 +357,11 @@ func (d *doctor) checkLeg(kevDir string, leg modelLeg, bf16Fix string) {
 		runDir = filepath.Join(kevDir, "runs", leg.model)
 	}
 	if !dirExists(runDir) {
-		d.add(prefix+":run", levelFail, "install it with: pagevow install --model PATH|OWNER/NAME --name "+leg.model+", train or copy the run into "+filepath.Join(kevDir, runsDirName)+", or pick another model with: pagevow use local --model NAME", "the run directory %s for the %s does not exist", runDir, leg.label)
+		fix := "install it with: pagevow install --model PATH|OWNER/NAME --name " + leg.model + ", train or copy the run into " + filepath.Join(kevDir, runsDirName) + ", or pick another model with: pagevow use local --model NAME"
+		if filepath.IsAbs(leg.model) {
+			fix = "restore " + runDir + ", or install a model with: pagevow install --model PATH|OWNER/NAME and pick it with: pagevow use local --model NAME"
+		}
+		d.add(prefix+":run", levelFail, fix, "the run directory %s for the %s does not exist", runDir, leg.label)
 		return
 	}
 	d.add(prefix+":run", levelOK, "", "run directory %s exists", runDir)
@@ -394,7 +398,14 @@ func (d *doctor) installedModels() {
 	var names []string
 	for _, entry := range list {
 		dir := filepath.Join(runs, entry.Name())
-		if strings.HasPrefix(entry.Name(), ".") || !dirExists(dir) {
+		if strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+		if _, err := os.Stat(dir); entry.Type()&fs.ModeSymlink != 0 && errors.Is(err, fs.ErrNotExist) {
+			d.brokenLink(dir, entry.Name())
+			continue
+		}
+		if !dirExists(dir) {
 			continue
 		}
 		rec, err := model.ReadRecord(dir)
@@ -406,7 +417,7 @@ func (d *doctor) installedModels() {
 			continue
 		}
 		if _, err := model.Validate(dir); err != nil {
-			d.add("model:installed", levelWarn, "install it again with: pagevow install --model "+rec.Source+" --name "+entry.Name()+" --force", "the installed model %s is incomplete: %v", entry.Name(), err)
+			d.add("model:installed", levelWarn, "install it again with: "+reinstallCommand(rec, entry.Name()), "the installed model %s is incomplete: %v", entry.Name(), err)
 			continue
 		}
 		names = append(names, entry.Name())
@@ -414,6 +425,31 @@ func (d *doctor) installedModels() {
 	if len(names) > 0 {
 		d.add("model:installed", levelOK, "", "pagevow installed %d model(s) under %s: %s", len(names), runs, strings.Join(names, ", "))
 	}
+}
+
+func (d *doctor) brokenLink(dir, name string) {
+	target, err := os.Readlink(dir)
+	if err != nil {
+		target = "its target"
+	}
+	fix := "restore " + target + ", or remove the link " + dir
+	if _, err := model.ReadRecord(dir); err == nil {
+		fix = "restore " + target + ", or replace the link with: pagevow install --model PATH|OWNER/NAME --name " + name + " --force"
+	}
+	d.add("model:installed", levelWarn, fix, "the linked model %s points at a missing directory", name)
+}
+
+// reinstallCommand is the install that puts the recorded model back: the same source, a Hub model at its recorded commit.
+func reinstallCommand(rec model.Installed, name string) string {
+	source := rec.Source
+	if rec.Revision != "" {
+		source += "@" + rec.Revision
+	}
+	command := "pagevow install --model " + source + " --name " + name
+	if rec.Link {
+		command += " --link"
+	}
+	return command + " --force"
 }
 
 func quantisationVariable(mode string) string {

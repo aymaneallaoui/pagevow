@@ -2,9 +2,11 @@ package cli_test
 
 import (
 	"context"
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -79,7 +81,10 @@ func newMiniHub(t *testing.T) *miniHub {
 			var entries []map[string]any
 			for _, name := range []string{"adapter_config.json", "adapter_model.safetensors", "head.pt"} {
 				entry := map[string]any{"type": "file", "path": name, "size": len(contents[name])}
-				if name != "adapter_config.json" {
+				if name == "adapter_config.json" {
+					blob := sha1.Sum(fmt.Appendf(nil, "blob %d\x00%s", len(contents[name]), contents[name]))
+					entry["oid"] = hex.EncodeToString(blob[:])
+				} else {
 					digest := sha256.Sum256([]byte(contents[name]))
 					entry["lfs"] = map[string]any{"oid": hex.EncodeToString(digest[:]), "size": len(contents[name])}
 				}
@@ -216,13 +221,17 @@ func TestInstallModelLinkMakesASymbolicLink(t *testing.T) {
 	h := newHarness(t)
 	runs := h.kevDirectory()
 	src := h.runDirectory("jev-4b", base4B)
+	resolved, err := filepath.EvalSymlinks(src)
+	require.NoError(t, err)
 
 	out := h.mustRun("install", "--model", src, "--link")
 
-	assert.Contains(t, out, "[info] linking "+src+" as "+filepath.Join(runs, "jev-4b"))
+	assert.Contains(t, out, "[info] linking "+resolved+" as "+filepath.Join(runs, "jev-4b"))
 	target, err := os.Readlink(filepath.Join(runs, "jev-4b"))
 	require.NoError(t, err)
-	assert.Equal(t, src, target)
+	assert.Equal(t, resolved, target, "the link points at the resolved source")
+	assert.NoFileExists(t, filepath.Join(src, ".pagevow-model.json"), "nothing is written into the source")
+	assert.FileExists(t, filepath.Join(runs, ".pagevow-link-jev-4b.json"))
 }
 
 func TestInstallModelUsesTheKevDirectoryOfTheConfig(t *testing.T) {
@@ -499,7 +508,7 @@ func TestInstallBrowserAndModelTogetherInText(t *testing.T) {
 	modelAt := strings.Index(out, "[ok] installed model jev-4b at "+filepath.Join(runs, "jev-4b"))
 	require.GreaterOrEqual(t, browserAt, 0, out)
 	require.GreaterOrEqual(t, modelAt, 0, out)
-	assert.Less(t, browserAt, modelAt, "the browser comes first")
+	assert.Less(t, modelAt, browserAt, "the model comes first")
 	assert.FileExists(t, e.executable())
 }
 
@@ -521,18 +530,46 @@ func TestInstallBrowserAndModelTogetherInJSON(t *testing.T) {
 	assert.Equal(t, filepath.Join(runs, "jev-4b"), report.Model["dir"])
 }
 
-func TestInstallBrowserFailureStopsBeforeTheModel(t *testing.T) {
+func TestInstallModelFailureStopsBeforeTheBrowser(t *testing.T) {
 	e := newInstallEnv(t)
-	runs := e.kevDirectory()
-	wrong := e.pin
-	wrong.SHA256 = strings.Repeat("0", 64)
-	e.browserPin = &wrong
+	e.kevDirectory()
+	src := e.runDirectory("jev-4b", base4B)
+	require.NoError(t, os.Remove(filepath.Join(src, "head.pt")))
 
-	_, err := e.run("install", "--browser", "--model", e.runDirectory("jev-4b", base4B))
+	_, err := e.run("install", "--browser", "--model", src)
 
 	require.Error(t, err)
 	assert.Equal(t, 2, cli.ExitCode(err))
-	assert.NoDirExists(t, runs)
+	assert.NoFileExists(t, e.executable(), "nothing was installed")
+}
+
+func TestInstallBrowserFailureAfterTheModelSaysWhatWasInstalled(t *testing.T) {
+	for _, asJSON := range []bool{false, true} {
+		t.Run(map[bool]string{false: "text", true: "json"}[asJSON], func(t *testing.T) {
+			e := newInstallEnv(t)
+			runs := e.kevDirectory()
+			wrong := e.pin
+			wrong.SHA256 = strings.Repeat("0", 64)
+			e.browserPin = &wrong
+			args := []string{"install", "--browser", "--model", e.runDirectory("jev-4b", base4B)}
+			if asJSON {
+				args = append(args, "--json")
+			}
+
+			stdout, _, err := e.runSplit(context.Background(), args...)
+
+			require.Error(t, err)
+			assert.Equal(t, 2, cli.ExitCode(err))
+			assert.Contains(t, err.Error(), "installed model jev-4b at "+filepath.Join(runs, "jev-4b")+", but the browser install failed")
+			assert.DirExists(t, filepath.Join(runs, "jev-4b"))
+			assert.NoFileExists(t, e.executable())
+			if asJSON {
+				var report map[string]any
+				require.NoError(t, json.Unmarshal([]byte(stdout), &report), "the model report: "+stdout)
+				assert.Equal(t, filepath.Join(runs, "jev-4b"), report["dir"])
+			}
+		})
+	}
 }
 
 func TestDoctorListsTheModelsThatPagevowInstalled(t *testing.T) {
@@ -610,4 +647,59 @@ func TestDoctorListsAModelInstalledNextToAHealthyLocalSetup(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "ok", report.check(t, "model:installed").Level)
+}
+
+func TestDoctorWarnsAboutALinkedModelWhoseDirectoryIsGone(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("creating symbolic links needs a privilege on Windows")
+	}
+	h := newHarness(t)
+	h.kevDirectory()
+	h.mustRun("use", "custom", "--url", "http://127.0.0.1:8080")
+	h.procs.answer("http://127.0.0.1:8080/v1/models", 200)
+	src := h.runDirectory("jev-4b", base4B)
+	h.mustRun("install", "--model", src, "--link")
+	resolved, err := filepath.EvalSymlinks(src)
+	require.NoError(t, err)
+	require.NoError(t, os.RemoveAll(src))
+
+	report, err := doctorOf(t, h)
+
+	require.NoError(t, err, "a warning does not fail doctor")
+	check := report.check(t, "model:installed")
+	assert.Equal(t, "warn", check.Level)
+	assert.Contains(t, check.Finding, "the linked model jev-4b points at a missing directory")
+	assert.Contains(t, check.Fix, "restore "+resolved)
+	assert.Contains(t, check.Fix, "--name jev-4b --force")
+}
+
+func TestDoctorRepairsAHubModelAtItsRecordedCommit(t *testing.T) {
+	h := newHarness(t)
+	runs := h.kevDirectory()
+	h.mustRun("use", "custom", "--url", "http://127.0.0.1:8080")
+	hub := newMiniHub(t)
+	h.hubBaseURL = hub.srv.URL
+	h.mustRun("install", "--model", hubRepo)
+	require.NoError(t, os.Remove(filepath.Join(runs, "jev-4b", "head.pt")))
+
+	report, _ := doctorOf(t, h)
+
+	check := report.check(t, "model:installed")
+	assert.Equal(t, "warn", check.Level)
+	assert.Contains(t, check.Fix, "pagevow install --model "+hubRepo+"@"+hubCommit+" --name jev-4b --force")
+}
+
+func TestDoctorPointsAtInstallWithoutANameForAnAbsoluteModelPath(t *testing.T) {
+	h := newHarness(t)
+	healthyLocalSetup(h)
+	gone := filepath.Join(t.TempDir(), "gone")
+	h.setConfig(map[string]any{"backends.local.model": gone})
+
+	report, err := doctorOf(t, h)
+
+	require.Error(t, err)
+	check := report.check(t, "local:model-8009:run")
+	assert.Equal(t, "fail", check.Level)
+	assert.Contains(t, check.Fix, "pagevow install --model PATH|OWNER/NAME and pick it with: pagevow use local --model NAME")
+	assert.NotContains(t, check.Fix, "--name")
 }

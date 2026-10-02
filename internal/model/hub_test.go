@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,6 +36,10 @@ type hubFile struct {
 	served   *string
 	chunked  bool
 	redirect string
+	oid      string
+	stall    bool
+	pause    time.Duration
+	size     int64
 }
 
 type fakeHub struct {
@@ -66,6 +72,8 @@ func newFakeHub(t *testing.T) *fakeHub {
 	h.add("tokenizer/merges.txt", "a b", false)
 	h.add("README.md", "# model", false)
 	h.add(".gitattributes", "*.pt filter=lfs", false)
+	h.add(".github/ci.yml", "on: push", false)
+	h.add(".pagevow-model.json", "{}", false)
 	h.srv = httptest.NewServer(h)
 	t.Cleanup(h.srv.Close)
 	return h
@@ -167,8 +175,14 @@ func (h *fakeHub) tree(w http.ResponseWriter, r *http.Request, commit string) {
 	entries := []map[string]any{{"type": "directory", "path": "tokenizer", "oid": "d"}}
 	for _, name := range h.order {
 		f := h.files[name]
-		size := len(f.content)
-		entry := map[string]any{"type": "file", "path": name, "size": size, "oid": "gitoid-" + name}
+		size := int64(len(f.content))
+		if f.size != 0 {
+			size = f.size
+		}
+		entry := map[string]any{"type": "file", "path": name, "size": size, "oid": gitBlob(f.content)}
+		if f.oid != "" {
+			entry["oid"] = f.oid
+		}
 		if f.lfs {
 			entry["lfs"] = map[string]any{"oid": sum(f.content), "size": size, "pointerSize": 134}
 		}
@@ -210,10 +224,17 @@ func (h *fakeHub) resolve(w http.ResponseWriter, r *http.Request, rest string) {
 	if f.served != nil {
 		body = *f.served
 	}
+	if f.stall {
+		_, _ = w.Write([]byte(body[:len(body)/2]))
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+		return
+	}
 	if f.chunked {
 		half := len(body) / 2
 		_, _ = w.Write([]byte(body[:half]))
 		w.(http.Flusher).Flush()
+		time.Sleep(f.pause)
 		_, _ = w.Write([]byte(body[half:]))
 		return
 	}
@@ -268,21 +289,24 @@ func TestInstallDownloadsARepositoryAtTheResolvedCommit(t *testing.T) {
 			{Name: "tokenizer.json", Size: 2, SHA256: sum("{}")},
 			{Name: "tokenizer/merges.txt", Size: 3, SHA256: sum("a b")},
 			{Name: "README.md", Size: 7, SHA256: sum("# model")},
+			{Name: ".gitattributes", Size: 15, SHA256: sum("*.pt filter=lfs")},
 		},
 	}, got)
 	assert.Equal(t, "lora weights", read(t, dir, "adapter_model.safetensors"))
 	assert.Equal(t, "a b", read(t, dir, "tokenizer/merges.txt"))
-	assert.NoFileExists(t, filepath.Join(dir, ".gitattributes"))
+	assert.Equal(t, "*.pt filter=lfs", read(t, dir, ".gitattributes"), "a dotfile at the root is kept")
+	assert.NoDirExists(t, filepath.Join(dir, ".github"))
 	assert.Equal(t, []string{"name"}, entries(t, e.runs))
 	record, err := model.ReadRecord(dir)
 	require.NoError(t, err)
 	assert.Equal(t, got, record)
 
 	assert.Equal(t, 1, e.count("/revision/main"))
-	assert.Equal(t, 3, e.count("/tree/"+commitOne), "three pages of the file list")
-	assert.Equal(t, 6, e.count("/resolve/"+commitOne+"/"), "every visible file, by commit")
+	assert.Equal(t, 4, e.count("/tree/"+commitOne), "four pages of the file list")
+	assert.Equal(t, 7, e.count("/resolve/"+commitOne+"/"), "every file outside hidden directories, by commit")
 	assert.Zero(t, e.count("/resolve/main/"))
-	assert.Zero(t, e.count(".gitattributes"))
+	assert.Zero(t, e.count(".github"))
+	assert.Zero(t, e.count("/resolve/"+commitOne+"/.pagevow-model.json"))
 	assert.Zero(t, e.count("/tree/main"))
 }
 
@@ -419,10 +443,10 @@ func TestInstallReportsTheHubPlan(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.Plan{
-		Source: repo, Revision: commitOne, Dir: filepath.Join(e.runs, "name"), Files: 6,
-		Bytes: int64(len(adapterConfig(baseName))) + 12 + 12 + 2 + 3 + 7,
+		Source: repo, Revision: commitOne, Dir: filepath.Join(e.runs, "name"), Files: 7,
+		Bytes: int64(len(adapterConfig(baseName))) + 12 + 12 + 2 + 3 + 7 + 15,
 	}, plan)
-	assert.Equal(t, []string{"adapter_config.json", "adapter_model.safetensors", "head.pt", "tokenizer.json", "tokenizer/merges.txt", "README.md"}, seen)
+	assert.Equal(t, []string{"adapter_config.json", "adapter_model.safetensors", "head.pt", "tokenizer.json", "tokenizer/merges.txt", "README.md", ".gitattributes"}, seen)
 }
 
 func TestInstallRejectsALargeFileWhoseChecksumDiffers(t *testing.T) {
@@ -467,19 +491,61 @@ func TestInstallRejectsAFileOfTheWrongSize(t *testing.T) {
 	}
 }
 
-func TestInstallDownloadsASmallFileWithoutAChecksumFromTheHub(t *testing.T) {
+func TestInstallRejectsASmallFileWhoseGitObjectDiffers(t *testing.T) {
 	e := newHubEnv(t)
 	tampered := "{!"
 	e.files["tokenizer.json"].served = &tampered
 
-	got, err := e.install(e.options(e.runs))
+	_, err := e.install(e.options(e.runs))
 
-	require.NoError(t, err, "the hub lists no SHA-256 for a small file, so only its size is checked")
-	for _, file := range got.Files {
-		if file.Name == "tokenizer.json" {
-			assert.Equal(t, sum(tampered), file.SHA256, "the record keeps the digest that pagevow computed")
-		}
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "tokenizer.json: checksum mismatch: expected git object "+gitBlob("{}"))
+	e.noTarget(t)
+}
+
+func TestInstallRejectsAListingWithoutAGitObjectForASmallFile(t *testing.T) {
+	for _, oid := range []string{"not-hex", "0123", strings.Repeat("a", 64)} {
+		t.Run(oid, func(t *testing.T) {
+			e := newHubEnv(t)
+			e.files["README.md"].oid = oid
+
+			_, err := e.install(e.options(e.runs))
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "README.md has an invalid git object id")
+			assert.Zero(t, e.count("/resolve/"))
+			e.noTarget(t)
+		})
 	}
+}
+
+func TestInstallFailsADownloadThatStalls(t *testing.T) {
+	e := newHubEnv(t)
+	e.files["adapter_model.safetensors"].stall = true
+	opts := e.options(e.runs)
+	opts.StallTimeout = 50 * time.Millisecond
+	start := time.Now()
+
+	_, err := e.install(opts)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "download adapter_model.safetensors: no data arrived for 50ms")
+	assert.Less(t, time.Since(start), 10*time.Second)
+	e.noTarget(t)
+}
+
+func TestInstallKeepsASlowDownloadThatKeepsMoving(t *testing.T) {
+	e := newHubEnv(t)
+	for _, name := range []string{"adapter_model.safetensors", "head.pt", "README.md"} {
+		e.files[name].chunked = true
+		e.files[name].pause = 60 * time.Millisecond
+	}
+	opts := e.options(e.runs)
+	opts.StallTimeout = 100 * time.Millisecond
+
+	_, err := e.install(opts)
+
+	require.NoError(t, err, "the stall guard is not an overall timeout: 180ms in all, never 100ms without a byte")
 }
 
 func TestInstallExplainsWhyTheHubRefused(t *testing.T) {
@@ -492,11 +558,11 @@ func TestInstallExplainsWhyTheHubRefused(t *testing.T) {
 		want    []string
 		not     []string
 	}{
-		{"not found without a token", "revision", 404, "", model.ErrNotFound, []string{"private", "HF_TOKEN", "pagevow keys set huggingface"}, nil},
-		{"unauthorized without a token", "revision", 401, "", model.ErrNotFound, []string{"private", "HF_TOKEN", "pagevow keys set huggingface"}, nil},
+		{"not found without a token", "revision", 404, "", model.ErrNotFound, []string{"private", "HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "pagevow keys set huggingface"}, nil},
+		{"unauthorized without a token", "revision", 401, "", model.ErrNotFound, []string{"private", "HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "pagevow keys set huggingface"}, nil},
 		{"not found with a token", "revision", 404, secretToken, model.ErrNotFound, []string{"the token cannot read it"}, []string{"HF_TOKEN"}},
 		{"unauthorized with a token", "revision", 401, secretToken, nil, []string{"rejected by Hugging Face (HTTP 401)", "HUGGING_FACE_HUB_TOKEN"}, nil},
-		{"forbidden without a token", "revision", 403, "", nil, []string{"HTTP 403", "HF_TOKEN"}, nil},
+		{"forbidden without a token", "revision", 403, "", nil, []string{"HTTP 403", "HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "pagevow keys set huggingface"}, nil},
 		{"forbidden with a token", "revision", 403, secretToken, nil, []string{"HTTP 403", "lack access"}, nil},
 		{"rate limited", "revision", 429, "", nil, []string{"rate limit"}, nil},
 		{"server error", "revision", 500, "", nil, []string{"500"}, nil},
@@ -786,6 +852,20 @@ func TestInstallRefusesARepositoryAboveTheSizeLimit(t *testing.T) {
 	e := newHubEnv(t)
 	opts := e.options(e.runs)
 	opts.MaxBytes = 30
+
+	_, err := e.install(opts)
+
+	require.ErrorIs(t, err, model.ErrTooLarge)
+	assert.Zero(t, e.count("/resolve/"), "the listing is enough to refuse")
+	e.noTarget(t)
+}
+
+func TestInstallRefusesAListedSizeThatWouldOverflowTheTotal(t *testing.T) {
+	e := newHubEnv(t)
+	e.files["README.md"].size = math.MaxInt64 - 1
+	e.files["README.md"].chunked = true
+	opts := e.options(e.runs)
+	opts.MaxBytes = 1 << 20
 
 	_, err := e.install(opts)
 

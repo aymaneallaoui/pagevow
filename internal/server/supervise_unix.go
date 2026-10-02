@@ -232,6 +232,9 @@ func (s *supervisor) watch(ctx context.Context, gpu GPUSource, breach chan<- str
 				breach <- message
 				return
 			}
+			if sample.Unified && sample.TempC == 0 {
+				return
+			}
 		}
 		select {
 		case <-ctx.Done():

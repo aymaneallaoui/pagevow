@@ -58,7 +58,7 @@ type gpuState struct {
 	UsedMiB      int  `json:"used_mib"`
 	FreeMiB      int  `json:"free_mib"`
 	TemperatureC int  `json:"temperature_c"`
-	Unified      bool `json:"unified"`
+	Unified      bool `json:"unified,omitempty"`
 
 	Components *memoryComponents `json:"components,omitempty"`
 }

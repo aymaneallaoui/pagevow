@@ -380,11 +380,13 @@ func (s *starter) gpuProblems(peaks []float64, large bool) []string {
 	}
 	reading, err := s.gpu.Read(s.ctx)
 	switch {
+	case err != nil && s.platform.MLX():
+		return []string{fmt.Sprintf("the memory reader (sysctl) failed: %v; the model was not started because memory could not be checked; run: sysctl hw.memsize vm.page_free_count", err)}
 	case errors.Is(err, server.ErrNoGPUTool):
 		s.warn("nvidia-smi was not found, so free GPU memory was not checked")
 		return nil
 	case err != nil:
-		s.warn("free %s could not be read (%v), so it was not checked", memoryName(s.platform), err)
+		s.warn("free GPU memory could not be read (%v), so it was not checked", err)
 		return nil
 	}
 	if large {
@@ -405,13 +407,6 @@ func fitsFix(p server.Platform) string {
 		return "quit other programs to free memory, or choose a model of 1B or less"
 	}
 	return "stop other GPU programs or choose a smaller mode with: pagevow use local --mode nf4"
-}
-
-func memoryName(p server.Platform) string {
-	if p.MLX() {
-		return "memory"
-	}
-	return "GPU memory"
 }
 
 func (s *starter) startOne(t startTarget, live map[string]server.Record, supervisedFailed bool) startedProcess {

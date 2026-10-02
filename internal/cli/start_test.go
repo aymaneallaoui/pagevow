@@ -217,6 +217,41 @@ func TestStartWarnsAndContinuesWithoutNvidiaSmi(t *testing.T) {
 	assert.Len(t, h.procs.spawned, 1)
 }
 
+func TestStartOnAppleSiliconRefusesWhenTheMemoryCannotBeRead(t *testing.T) {
+	for name, readErr := range map[string]error{"sysctl fails": errors.New("sysctl: exit status 1"), "no reader": server.ErrNoGPUTool} {
+		t.Run(name, func(t *testing.T) {
+			h := newHarness(t)
+			h.kevCheckout()
+			h.appleSilicon()
+			h.gpu.err = readErr
+			h.mustRun("use", "local", "--model", "jev-08b-d1a", "--mode", "bf16")
+
+			stdout, _, err := h.runSplit(context.Background(), "start", "--no-browser")
+
+			require.Error(t, err)
+			assert.Equal(t, 2, cli.ExitCode(err))
+			assert.Contains(t, stdout, "the memory reader (sysctl) failed")
+			assert.Contains(t, stdout, "the model was not started because memory could not be checked")
+			assert.NotContains(t, stdout, "so it was not checked")
+			assert.Empty(t, h.procs.spawned)
+			assert.Empty(t, h.managed.launched)
+		})
+	}
+}
+
+func TestStartOnLinuxWarnsAndContinuesWhenTheGPUMemoryCannotBeRead(t *testing.T) {
+	h := newHarness(t)
+	h.kevCheckout()
+	h.gpu.err = errors.New("nvidia-smi: exit status 9")
+	h.mustRun("use", "local")
+
+	stdout, stderr, err := h.runSplit(context.Background(), "start", "--no-browser")
+
+	require.NoError(t, err, stderr)
+	assert.Contains(t, stdout, "free GPU memory could not be read (nvidia-smi: exit status 9), so it was not checked")
+	assert.Len(t, h.procs.spawned, 1)
+}
+
 func TestStartRefusesModeDefaultForAModelThatIsNotA08BModel(t *testing.T) {
 	h := newHarness(t)
 	h.kevCheckout()

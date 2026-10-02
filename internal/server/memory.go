@@ -23,7 +23,7 @@ func UnifiedMemoryArgs() []string {
 }
 
 // ParseUnifiedMemory reads the answer of sysctl -n with the arguments of UnifiedMemoryArgs, one value per line.
-// Free memory is what macOS can reclaim: the free, speculative, purgeable and file-backed pages.
+// Free memory is the free, purgeable and file-backed pages; speculative pages are shown but not added.
 func ParseUnifiedMemory(out string) (GPU, error) {
 	lines := strings.Split(strings.TrimSpace(out), "\n")
 	if len(lines) != len(unifiedMemoryNames) {
@@ -42,7 +42,8 @@ func ParseUnifiedMemory(out string) (GPU, error) {
 		return GPU{}, errors.New("parse unified memory: hw.memsize and hw.pagesize must not be 0")
 	}
 	var pages uint64
-	for _, count := range values[2:] {
+	// XNU counts a speculative page in vm.page_pageable_external_count too, so adding it would count it twice.
+	for _, count := range []uint64{values[2], values[4], values[5]} {
 		var carry uint64
 		pages, carry = bits.Add64(pages, count, 0)
 		if carry != 0 {

@@ -181,7 +181,7 @@ not be stopped is exit code 2.
 destination of the active backend for `/v1/models` with a 2 second timeout, shows GPU memory and temperature when
 `nvidia-smi` answers (on a Mac with Apple Silicon the unified memory, without a temperature), the pagevow version and the browser version, and the messages left by the GPU guard. It exits
 with 0 also when something is down. `--json` adds the keys `processes`, `health`, `gpu` (omitted when unknown; `unified`
-is true on a Mac, where `components` lists the free, speculative, purgeable and file-backed MiB),
+is true on a Mac, where `components` lists the free, speculative, purgeable and file-backed MiB; elsewhere `unified` is omitted),
 `versions`, `tripped` and `stale_removed` to the existing ones.
 
 `pagevow doctor` runs a list of checks, each one `ok`, `warn` or `fail` with a finding and a fix: the config file, the
@@ -228,8 +228,9 @@ pagevow start
 ```
 
 pagevow sets `KEV_BACKEND=mlx`, and `/v1/models` reports `backend: mlx`. Modes `nf4` and `int8` are refused on macOS
-because MLX serves bf16. Free memory is the unified memory read through `sysctl`: the free, speculative, purgeable
-and file-backed pages, which macOS can reclaim. The peaks are estimates until they are measured on a real Mac: 11.5 GiB for a 4B model and 3.0 GiB for a
+because MLX serves bf16. Free memory is the unified memory read through `sysctl`: the free, purgeable and
+file-backed pages (speculative pages are already inside the file-backed count). When `sysctl` cannot be read,
+`start` refuses to start the model. The peaks are estimates until they are measured on a real Mac: 11.5 GiB for a 4B model and 3.0 GiB for a
 model of 1B or less, plus the text helper and the 1.5 GiB margin. A model above 1B also needs 16 GiB of memory in
 total. The temperature is not read, so `server.gpu_max_temp_c` has no effect on a Mac, and the
 `server.gpu_min_free_mib` limit is not applied to unified memory until it is measured on a real Mac.

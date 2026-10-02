@@ -16,6 +16,7 @@ import (
 	"github.com/aymaneallaoui/pagevow/internal/config"
 	"github.com/aymaneallaoui/pagevow/internal/keys"
 	"github.com/aymaneallaoui/pagevow/internal/model"
+	"github.com/aymaneallaoui/pagevow/internal/plugin"
 	"github.com/aymaneallaoui/pagevow/internal/server"
 	"github.com/aymaneallaoui/pagevow/internal/ui"
 )
@@ -413,7 +414,7 @@ func (d *doctor) installedModels() {
 		case errors.Is(err, fs.ErrNotExist):
 			continue
 		case err != nil:
-			d.add("model:installed", levelWarn, "install it again with: pagevow install --model PATH|OWNER/NAME --name "+entry.Name()+" --force", "the install record of %s cannot be read: %v", dir, err)
+			d.add("model:installed", levelWarn, "move or remove "+dir+", then install it again with: pagevow install --model PATH|OWNER/NAME --name "+entry.Name(), "the install record of %s cannot be read: %v", dir, err)
 			continue
 		}
 		if _, err := model.Validate(dir); err != nil {
@@ -442,8 +443,11 @@ func (d *doctor) brokenLink(dir, name string) {
 // reinstallCommand is the install that puts the recorded model back: the same source, a Hub model at its recorded commit.
 func reinstallCommand(rec model.Installed, name string) string {
 	source := rec.Source
-	if rec.Revision != "" {
+	switch {
+	case rec.Revision != "":
 		source += "@" + rec.Revision
+	case filepath.IsAbs(source):
+		source = plugin.ShellQuote(source)
 	}
 	command := "pagevow install --model " + source + " --name " + name
 	if rec.Link {

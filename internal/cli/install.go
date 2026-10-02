@@ -158,7 +158,11 @@ func (a *app) browserFailedAfterModel(cmd *cobra.Command, modelRep modelReport, 
 			return errors.Join(err, jsonErr)
 		}
 	}
-	return infrastructure(fmt.Errorf("installed model %s at %s, but the browser install failed: %w", modelRep.Name, modelRep.Dir, err))
+	done := "installed model %s at %s"
+	if modelRep.AlreadyInstalled {
+		done = "model %s was already installed at %s"
+	}
+	return infrastructure(fmt.Errorf(done+", but the browser install failed: %w", modelRep.Name, modelRep.Dir, err))
 }
 
 func (a *app) installBrowser(cmd *cobra.Command, out *ui.Printer, force, asJSON bool) (installReport, error) {

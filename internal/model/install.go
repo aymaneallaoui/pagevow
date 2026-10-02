@@ -442,9 +442,14 @@ func (in *installer) place(ctx context.Context, staged string) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("install model: %w", err)
 	}
-	if _, err := os.Lstat(in.target); err == nil && in.opts.Force {
-		if err := in.guard(ctx); err != nil {
-			return err
+	if _, err := os.Lstat(in.target); err == nil {
+		if _, err := ReadRecord(in.target); err != nil {
+			return fmt.Errorf("%w: %s appeared during the install and was not installed by pagevow, so pagevow does not replace it; move or remove it", ErrExists, in.target)
+		}
+		if in.opts.Force {
+			if err := in.guard(ctx); err != nil {
+				return err
+			}
 		}
 	}
 	previous, err := swapIn(os.Rename, staged, in.target, in.opts.Force, in.now())

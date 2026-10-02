@@ -302,7 +302,8 @@ size, SHA-256 and, for a copy, modification time, time); a link keeps its record
 `<runs>/.pagevow-link-<name>.json` and never writes into the source. A Hub token comes from `HF_TOKEN`, then
 `HUGGING_FACE_HUB_TOKEN`, then the keychain entry `huggingface`; it is sent only over https or loopback, dropped on a
 cross-host redirect, and never printed. An existing run directory is replaced only with `--force`, only when its record
-proves pagevow installed it, and never while a `model-<port>` record uses it. A copy whose source changed since the
+proves pagevow installed it, and never while a `model-<port>` record uses it. A source that is, or sits inside,
+`<runs>/<name>` is refused, with or without `--force`. A copy whose source changed since the
 install (file names, sizes or modification times) is replaced only with `--force`. `doctor` lists installed models and
 warns when one is incomplete, its record cannot be read, or its link points at a missing directory.
 

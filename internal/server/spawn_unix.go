@@ -45,8 +45,14 @@ func Spawn(ctx context.Context, executable string, spec Spec, store *Store) (Rec
 		return Record{}, fmt.Errorf("spawn supervisor for %s: %w", spec.Name, err)
 	}
 	defer unlock()
-	if existing, err := store.Read(spec.Name); err == nil && store.State(ctx, existing) != StateGone {
-		return Record{}, fmt.Errorf("spawn supervisor for %s: pid %d: %w", spec.Name, existing.PID, ErrAlreadyRunning)
+	if existing, err := store.Read(spec.Name); err == nil {
+		state := store.State(ctx, existing)
+		if err := ctx.Err(); err != nil {
+			return Record{}, fmt.Errorf("spawn supervisor for %s: %w", spec.Name, err)
+		}
+		if state != StateGone {
+			return Record{}, fmt.Errorf("spawn supervisor for %s: pid %d: %w", spec.Name, existing.PID, ErrAlreadyRunning)
+		}
 	}
 	specPath, err := store.WriteSpec(spec)
 	if err != nil {

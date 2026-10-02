@@ -300,6 +300,9 @@ func (a *app) modelInUseGuard() (func(context.Context, string) error, error) {
 				continue
 			}
 			state := procs.State(ctx, rec)
+			if err := ctx.Err(); err != nil {
+				return infrastructure(fmt.Errorf("check the pagevow processes: %w", err))
+			}
 			if state == server.StateGone {
 				continue
 			}
@@ -452,7 +455,14 @@ func (a *app) browserRunningGuard() (func(context.Context) error, error) {
 			return infrastructure(fmt.Errorf("list the pagevow processes: %w", err))
 		}
 		for _, rec := range records {
-			if rec.Kind == server.KindBrowser && procs.State(ctx, rec) == server.StateRunning {
+			if rec.Kind != server.KindBrowser {
+				continue
+			}
+			running := procs.State(ctx, rec) == server.StateRunning
+			if err := ctx.Err(); err != nil {
+				return infrastructure(fmt.Errorf("check the pagevow processes: %w", err))
+			}
+			if running {
 				return infrastructure(fmt.Errorf("the browser that pagevow start keeps running (pid %d, port %d) would use files that the install replaces; run pagevow stop first", rec.PID, rec.Port))
 			}
 		}

@@ -44,7 +44,7 @@ func (s *Store) Alive(ctx context.Context, rec Record) bool {
 	if !rec.Kind.valid() || !usablePID(rec.PID) || otherBoot(rec) {
 		return false
 	}
-	info := inspect(ctx, rec.PID)
+	info := s.inspectPID(ctx, rec.PID)
 	if !info.running() {
 		return false
 	}
@@ -80,11 +80,12 @@ const (
 )
 
 // State reports whether rec is running, orphaned or gone; only a record that is gone may be removed without a signal.
+// A caller whose ctx may end must check ctx.Err() afterwards, because a process table query that ctx cut short reads as gone.
 func (s *Store) State(ctx context.Context, rec Record) State {
 	switch {
 	case s.Alive(ctx, rec):
 		return StateRunning
-	case orphanLives(ctx, rec):
+	case s.orphanLives(ctx, rec):
 		return StateOrphaned
 	}
 	return StateGone
@@ -92,10 +93,25 @@ func (s *Store) State(ctx context.Context, rec Record) State {
 
 // ChildAlive reports whether the managed program of a supervised record is still the process that was started.
 func ChildAlive(ctx context.Context, rec Record) bool {
+	return childAlive(ctx, rec, inspect)
+}
+
+func (s *Store) childAlive(ctx context.Context, rec Record) bool {
+	return childAlive(ctx, rec, s.inspectPID)
+}
+
+func childAlive(ctx context.Context, rec Record, probe func(context.Context, int) procInfo) bool {
 	if !rec.Kind.supervised() || !usablePID(rec.ChildPID) || otherBoot(rec) {
 		return false
 	}
-	return childMatches(rec, inspect(ctx, rec.ChildPID))
+	return childMatches(rec, probe(ctx, rec.ChildPID))
+}
+
+func (s *Store) inspectPID(ctx context.Context, pid int) procInfo {
+	if s.probe != nil {
+		return s.probe(ctx, pid)
+	}
+	return inspect(ctx, pid)
 }
 
 func childMatches(rec Record, info procInfo) bool {

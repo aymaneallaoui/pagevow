@@ -44,7 +44,7 @@ func terminateGroup(int) error { return ErrUnsupported }
 func killGroup(int) error { return ErrUnsupported }
 
 // orphanLives is false on Windows, where pagevow runs no supervisor.
-func orphanLives(context.Context, Record) bool { return false }
+func (*Store) orphanLives(context.Context, Record) bool { return false }
 
 func killProcessTree(ctx context.Context, pid int) error { return killTree(ctx, pid) }
 

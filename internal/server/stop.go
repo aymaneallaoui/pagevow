@@ -68,15 +68,20 @@ func Stop(ctx context.Context, store *Store, rec Record, opts ...StopOption) (St
 	case StateGone:
 		return WasStale, removeFiles(store, rec)
 	case StateOrphaned:
-		if err := stopOrphan(ctx, rec, cfg); err != nil {
+		if err := stopOrphan(ctx, store, rec, cfg); err != nil {
 			return WasOrphaned, err
 		}
 		return WasOrphaned, removeFiles(store, rec)
 	}
 	if rec.Kind.supervised() {
 		err = stopSupervised(ctx, store, rec, cfg)
-		if err == nil && orphanLives(ctx, rec) {
-			err = stopOrphan(ctx, rec, cfg)
+		if err == nil {
+			orphaned := store.orphanLives(ctx, rec)
+			if err = ctx.Err(); err != nil {
+				err = fmt.Errorf("stop %s: %w", rec.Name, err)
+			} else if orphaned {
+				err = stopOrphan(ctx, store, rec, cfg)
+			}
 		}
 	} else {
 		err = stopBrowser(ctx, store, rec, cfg)
@@ -117,7 +122,7 @@ func stopSupervised(ctx context.Context, store *Store, rec Record, cfg stopConfi
 	if ended {
 		return nil
 	}
-	if ChildAlive(ctx, rec) || groupTied(ctx, rec) {
+	if store.childAlive(ctx, rec) || groupTied(ctx, rec) {
 		if err := killGroup(rec.ChildPGID); err != nil && !isGone(err) {
 			return fmt.Errorf("stop %s: kill child group %d: %w", rec.Name, rec.ChildPGID, err)
 		}
@@ -139,8 +144,8 @@ func stopSupervised(ctx context.Context, store *Store, rec Record, cfg stopConfi
 
 // stopOrphan ends the process group of a program whose supervisor is gone, as the supervisor would: SIGTERM, a grace
 // period, then SIGKILL. The group is signalled only while it is still tied to the record.
-func stopOrphan(ctx context.Context, rec Record, cfg stopConfig) error {
-	gone := func() bool { return !orphanLives(ctx, rec) }
+func stopOrphan(ctx context.Context, store *Store, rec Record, cfg stopConfig) error {
+	gone := func() bool { return !store.orphanLives(ctx, rec) }
 	if err := terminateGroup(rec.ChildPGID); err != nil && !isGone(err) {
 		return fmt.Errorf("stop %s: signal child group %d: %w", rec.Name, rec.ChildPGID, err)
 	}
@@ -151,7 +156,7 @@ func stopOrphan(ctx context.Context, rec Record, cfg stopConfig) error {
 	if ended {
 		return nil
 	}
-	if orphanLives(ctx, rec) {
+	if store.orphanLives(ctx, rec) {
 		if err := killGroup(rec.ChildPGID); err != nil && !isGone(err) {
 			return fmt.Errorf("stop %s: kill child group %d: %w", rec.Name, rec.ChildPGID, err)
 		}
@@ -194,21 +199,28 @@ func stopBrowser(ctx context.Context, store *Store, rec Record, cfg stopConfig) 
 	return nil
 }
 
-// waitFor polls done until it is true (true), the limit passes (false) or ctx ends (an error).
+// waitFor polls done until it is true (true), the limit passes (false) or ctx ends (an error). A done that turns true
+// once ctx has ended proves nothing, because a process table query that ctx cut short reads as gone, so ctx wins.
 func waitFor(ctx context.Context, limit time.Duration, done func() bool) (bool, error) {
 	timer := time.NewTimer(limit)
 	defer timer.Stop()
 	ticker := time.NewTicker(stopPollInterval)
 	defer ticker.Stop()
 	for {
-		if done() {
+		if ended := done(); ctx.Err() != nil {
+			return false, fmt.Errorf("wait for process to end: %w", ctx.Err())
+		} else if ended {
 			return true, nil
 		}
 		select {
 		case <-ctx.Done():
 			return false, fmt.Errorf("wait for process to end: %w", ctx.Err())
 		case <-timer.C:
-			return done(), nil
+			ended := done()
+			if err := ctx.Err(); err != nil {
+				return false, fmt.Errorf("wait for process to end: %w", err)
+			}
+			return ended, nil
 		case <-ticker.C:
 		}
 	}

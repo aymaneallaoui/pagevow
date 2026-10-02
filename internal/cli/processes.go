@@ -113,6 +113,9 @@ func (p systemProcesses) Tripped() ([]server.Tripped, error) { return p.store.Tr
 func (p systemProcesses) ClearTripped(name string) error { return p.store.ClearTripped(name) }
 
 func (p systemProcesses) Track(ctx context.Context, rec server.Record) (server.Record, error) {
+	if err := ctx.Err(); err != nil {
+		return rec, fmt.Errorf("track %s: %w", rec.Name, err)
+	}
 	if rec.StartTicks == 0 {
 		if ticks, err := server.StartTicks(ctx, rec.PID); err == nil {
 			rec.StartTicks = ticks

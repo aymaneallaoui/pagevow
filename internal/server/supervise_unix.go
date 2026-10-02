@@ -185,8 +185,9 @@ func Supervise(ctx context.Context, spec Spec, store *Store, gpu GPUSource) (int
 
 func (s *supervisor) writeRecord(ctx context.Context, proc *child) (Record, error) {
 	self := os.Getpid()
-	selfTicks, _ := StartTicks(ctx, self)
-	childTicks, _ := StartTicks(ctx, proc.pid)
+	probeCtx := context.WithoutCancel(ctx)
+	selfTicks, _ := StartTicks(probeCtx, self)
+	childTicks, _ := StartTicks(probeCtx, proc.pid)
 	rec := Record{
 		Name:            s.spec.Name,
 		Kind:            s.spec.Kind,

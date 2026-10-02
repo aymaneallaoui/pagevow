@@ -48,7 +48,7 @@ func killGroup(pgid int) error {
 
 // killProcessTree kills the process group of pid when pid leads its own group, and pid alone otherwise.
 func killProcessTree(ctx context.Context, pid int) error {
-	if inspect(ctx, pid).PGID == pid && safeGroup(pid) == nil {
+	if inspect(context.WithoutCancel(ctx), pid).PGID == pid && safeGroup(pid) == nil {
 		return syscall.Kill(-pid, syscall.SIGKILL)
 	}
 	return syscall.Kill(pid, syscall.SIGKILL)
@@ -65,11 +65,11 @@ func isGone(err error) bool {
 
 // orphanLives reports whether the program of a supervised record still runs and can be tied to the record although
 // the supervisor fails the alive check.
-func orphanLives(ctx context.Context, rec Record) bool {
+func (s *Store) orphanLives(ctx context.Context, rec Record) bool {
 	if otherBoot(rec) {
 		return false
 	}
-	return orphanTied(rec, inspect(ctx, rec.ChildPID), func(rec Record) bool { return groupTied(ctx, rec) })
+	return orphanTied(rec, s.inspectPID(ctx, rec.ChildPID), func(rec Record) bool { return groupTied(ctx, rec) })
 }
 
 // orphanTied decides from the child's process entry and the group tie whether a supervised record has a live orphan;

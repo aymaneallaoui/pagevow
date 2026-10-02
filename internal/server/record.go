@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,7 +48,8 @@ type Tripped struct {
 
 // Store keeps records, spec files and guard messages in one state directory.
 type Store struct {
-	dir string
+	dir   string
+	probe func(ctx context.Context, pid int) procInfo
 }
 
 // NewStore returns a store for dir; the directory is created on the first write.

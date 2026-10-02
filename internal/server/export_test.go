@@ -1,5 +1,7 @@
 package server
 
+import "context"
+
 // ParsePS exposes the ps line parser to the tests.
 var ParsePS = func(line string) (started uint64, pgid int, zombie bool, text string, ok bool) {
 	info, ok := parsePS(line)
@@ -30,3 +32,12 @@ var BootChanged = bootChanged
 
 // SignalFailed exposes the decision whether a failed signal is an error to the tests.
 var SignalFailed = signalFailed
+
+// NewStoreWithProbe returns a store whose process table query is probe, which reports whether a pid runs.
+func NewStoreWithProbe(dir string, probe func(ctx context.Context, pid int) bool) *Store {
+	store := NewStore(dir)
+	store.probe = func(ctx context.Context, pid int) procInfo {
+		return procInfo{Exists: probe(ctx, pid)}
+	}
+	return store
+}

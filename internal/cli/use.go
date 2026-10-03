@@ -43,7 +43,7 @@ var backendSpecs = map[string]backendSpec{
 		"primary-model": "backends.cascade.primary_model", "primary-mode": "backends.cascade.primary_mode",
 		"verifier-model": "backends.cascade.verifier_model", "verifier-mode": "backends.cascade.verifier_mode",
 		"primary-key": "backends.cascade.primary_key", "verifier-key": "backends.cascade.verifier_key",
-		"target-conf": "backends.cascade.target_conf", "veto-cache": "backends.cascade.veto_cache",
+		"target-conf": "backends.cascade.target_conf", "op-conf": "backends.cascade.op_conf", "veto-cache": "backends.cascade.veto_cache",
 	}},
 }
 
@@ -52,7 +52,7 @@ func (a *app) newUseCmd() *cobra.Command {
 		Use:   "use local|jev|custom|cascade",
 		Short: "Choose the decision backend",
 		Long: "Choose the decision backend and store it in the config file.\n\nFlags by backend:\n  local    --url --model --mode\n  jev      --url --key\n  custom   --url --key\n" +
-			"  cascade  --primary --verifier --primary-model --primary-mode --verifier-model --verifier-mode\n           --primary-key --verifier-key --target-conf --veto-cache\n\n" +
+			"  cascade  --primary --verifier --primary-model --primary-mode --verifier-model --verifier-mode\n           --primary-key --verifier-key --target-conf --op-conf --veto-cache\n\n" +
 			"--key, --primary-key and --verifier-key take a reference (keychain:NAME or env:NAME), never the secret itself.\n" +
 			"Modes: nf4, int8, bf16, default. Mode default is only allowed for models of 1B parameters or less.",
 		Args:      cobra.ExactArgs(1),
@@ -75,6 +75,7 @@ func (a *app) newUseCmd() *cobra.Command {
 	flags.String("primary-key", "", "API key reference for the primary model: keychain:NAME or env:NAME (cascade)")
 	flags.String("verifier-key", "", "API key reference for the verifier model: keychain:NAME or env:NAME (cascade)")
 	flags.Float64("target-conf", 0, "confidence below which the verifier is asked, at most 1; 0 means 0.5, a negative value never asks on confidence (cascade)")
+	flags.Float64("op-conf", 0, "operation confidence below which the verifier is asked, from 0 to 1; 0 never asks on it (cascade)")
 	flags.Bool("veto-cache", true, "reuse a verifier override on the same page (cascade)")
 	return cmd
 }

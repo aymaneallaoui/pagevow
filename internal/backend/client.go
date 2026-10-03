@@ -38,10 +38,12 @@ type Options struct {
 	Verifier *Endpoint
 	// TargetConfidence escalates a choice whose target probability is below it, where zero means 0.5 and negative disables.
 	TargetConfidence float64
-	HTTPClient       *http.Client
-	Timeout          time.Duration
-	Sleep            func(ctx context.Context, d time.Duration) error
-	Now              func() time.Time
+	// OperationConfidence escalates a choice whose operation probability is below it, where zero disables.
+	OperationConfidence float64
+	HTTPClient          *http.Client
+	Timeout             time.Duration
+	Sleep               func(ctx context.Context, d time.Duration) error
+	Now                 func() time.Time
 }
 
 // Client talks to one decision backend, optionally with a verifier; it is safe for concurrent use.
@@ -50,6 +52,7 @@ type Client struct {
 	verifier         *endpoint
 	model            string
 	targetConfidence float64
+	opConfidence     float64
 	http             *http.Client
 	timeout          time.Duration
 	sleep            func(ctx context.Context, d time.Duration) error
@@ -78,6 +81,7 @@ func New(opts Options) (*Client, error) {
 		primary:          primary,
 		model:            opts.Model,
 		targetConfidence: opts.TargetConfidence,
+		opConfidence:     opts.OperationConfidence,
 		http:             opts.HTTPClient,
 		timeout:          opts.Timeout,
 		sleep:            opts.Sleep,

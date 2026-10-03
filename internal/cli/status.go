@@ -248,7 +248,7 @@ func activeFields(cfg config.Config) []field {
 		return []field{
 			{"primary", c.Primary}, {"primary_model", c.PrimaryModel}, {"primary_mode", c.PrimaryMode}, {"primary_key", c.PrimaryKey},
 			{"verifier", c.Verifier}, {"verifier_model", c.VerifierModel}, {"verifier_mode", c.VerifierMode}, {"verifier_key", c.VerifierKey},
-			{"target_conf", c.TargetConf}, {"veto_cache", c.VetoCache},
+			{"target_conf", c.TargetConf}, {"op_conf", c.OpConf}, {"veto_cache", c.VetoCache},
 		}
 	}
 	return nil

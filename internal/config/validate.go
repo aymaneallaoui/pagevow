@@ -63,6 +63,9 @@ func Validate(c Config) error {
 	if c.Backends.Cascade.TargetConf > 1 {
 		errs = append(errs, errors.New("backends.cascade.target_conf: must be at most 1 (0 means the default 0.5, a negative value never asks the verifier on target confidence)"))
 	}
+	if c.Backends.Cascade.OpConf < 0 || c.Backends.Cascade.OpConf > 1 {
+		errs = append(errs, errors.New("backends.cascade.op_conf: must be from 0 to 1 (0, the default, never asks the verifier on operation confidence)"))
+	}
 	for _, field := range []struct{ key, value string }{
 		{"backends.local.mode", c.Backends.Local.Mode},
 		{"backends.cascade.primary_mode", c.Backends.Cascade.PrimaryMode},

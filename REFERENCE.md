@@ -44,7 +44,7 @@ Every command accepts `--config FILE`. Without a terminal no command prompts, an
 | `local` | `--url`, `--model`, `--mode` |
 | `jev` | `--url`, `--key` |
 | `custom` | `--url`, `--key` |
-| `cascade` | `--primary`, `--verifier`, `--primary-model`, `--primary-mode`, `--verifier-model`, `--verifier-mode`, `--primary-key`, `--verifier-key`, `--target-conf`, `--veto-cache` |
+| `cascade` | `--primary`, `--verifier`, `--primary-model`, `--primary-mode`, `--verifier-model`, `--verifier-mode`, `--primary-key`, `--verifier-key`, `--target-conf`, `--op-conf`, `--veto-cache` |
 
 Exit codes:
 
@@ -240,8 +240,21 @@ implementation, because the decision model answers differently when the order ch
 
 The default backend is `local`. In `cascade`, the verifier model is asked when the primary model answers `DONE` or
 `BLOCKED`, and when its confidence in the chosen target is below `target_conf` (0 means the default 0.5, a negative
-value never asks for that reason). With `veto_cache` a verifier override of `DONE` or `BLOCKED` is reused on the same
-page.
+value never asks for that reason). When `op_conf` is above 0, it is also asked when the primary model's probability
+for the chosen operation is strictly below `op_conf`; the default 0 never asks for that reason. The verifier's answer
+replaces the primary model's in every case. With `veto_cache` a verifier override of `DONE` or `BLOCKED` is reused on
+the same page; an `op_conf` or `target_conf` escalation never uses the cache.
+
+The operation gate is for a primary model that is confidently wrong. On 7 sites the 0.8B primary model had not seen,
+it answered every `WAIT` or `PRESS_ENTER` error as `CLICK` with operation probability 0.999 or more, so `DONE`,
+`BLOCKED` and `target_conf` never sent those steps to the verifier. Replaying saved probabilities of jev-08b-d1a with
+jev-4b as verifier on those sites, `target_conf` 0.8 with `op_conf` 0.99 raised step accuracy from 0.609 to 0.717 and
+the share of steps sent to the verifier from 20% to 35% (jev-4b alone: 0.902). These thresholds were fitted on the same
+test data they were measured on, so they are not validated until a fresh set of sites confirms them:
+
+```sh
+pagevow use cascade --target-conf 0.8 --op-conf 0.99
+```
 
 ```sh
 pagevow use local --model jev-4b --mode nf4
@@ -383,6 +396,7 @@ backends:
     verifier_model: jev-4b
     verifier_mode: nf4
     target_conf: 0.5           # at most 1; 0 means 0.5, negative never asks on confidence
+    op_conf: 0                 # 0 to 1; 0 never asks on operation confidence
     veto_cache: true
 server:
   kev_dir: "~/kev"

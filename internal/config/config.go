@@ -79,6 +79,7 @@ type Cascade struct {
 	VerifierModel string  `mapstructure:"verifier_model"`
 	VerifierMode  string  `mapstructure:"verifier_mode"`
 	TargetConf    float64 `mapstructure:"target_conf"`
+	OpConf        float64 `mapstructure:"op_conf"`
 	VetoCache     bool    `mapstructure:"veto_cache"`
 }
 

@@ -46,6 +46,10 @@ func (c *Client) escalationReason(v fields) string {
 	if v.target != nil && v.targetProbabilities[*v.target] < c.targetConfidence {
 		return ReasonTargetConf
 	}
+	// Strictly below, so op_conf 0.99 keeps a primary answer of exactly 0.99.
+	if c.opConfidence > 0 && v.operationProbabilities[v.operation] < c.opConfidence {
+		return ReasonOpConf
+	}
 	return ""
 }
 

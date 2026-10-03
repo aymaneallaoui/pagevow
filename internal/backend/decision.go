@@ -7,6 +7,7 @@ const (
 	ReasonDone       = "done"
 	ReasonBlocked    = "blocked"
 	ReasonTargetConf = "target_conf"
+	ReasonOpConf     = "op_conf"
 
 	UsedPrimary  = "primary"
 	UsedVerifier = "verifier"

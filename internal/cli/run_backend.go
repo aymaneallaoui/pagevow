@@ -102,9 +102,10 @@ func (c *collaborators) cascade(cfg config.Cascade, resolver *keys.Resolver) {
 		return
 	}
 	c.client(backend.Options{
-		Endpoint:         backend.Endpoint{BaseURL: cfg.Primary, Key: primaryKey},
-		Verifier:         &backend.Endpoint{BaseURL: cfg.Verifier, Key: verifierKey},
-		TargetConfidence: cfg.TargetConf,
+		Endpoint:            backend.Endpoint{BaseURL: cfg.Primary, Key: primaryKey},
+		Verifier:            &backend.Endpoint{BaseURL: cfg.Verifier, Key: verifierKey},
+		TargetConfidence:    cfg.TargetConf,
+		OperationConfidence: cfg.OpConf,
 	})
 	c.vetoCache = cfg.VetoCache
 	c.checks = append(c.checks, c.pingPrimary(modelUnreachable("primary model", cfg.Primary)))
